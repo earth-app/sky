@@ -26,7 +26,15 @@ compose {
             nativeDistributions {
                 packageName = project.ext["app.packageName"] as String
                 packageVersion = version.toString()
-                targetFormats(*TargetFormat.values())
+
+                targetFormats(
+                    TargetFormat.Exe,
+                    TargetFormat.Msi,
+                    TargetFormat.Dmg,
+                    TargetFormat.Pkg,
+                    TargetFormat.Deb,
+                    TargetFormat.Rpm,
+                )
 
                 windows {
                     iconFile.set(rootProject.file("shared/src/common/resources/icon.ico"))

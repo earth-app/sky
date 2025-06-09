@@ -62,7 +62,7 @@ jobs:
         with:
           name: release-artifact-${{ matrix.name }}
           path: |
-            desktop/build/compose/binaries/main-release/**/*.{exe,msi,app,dmg,deb,rpm}
+            desktop/build/compose/binaries/main-release/**/*.{exe,msi,app,dmg,deb,rpm,pkg}
             android/build/outputs/apk/release/*.apk
           overwrite: true
       - name: Attest Build Artifacts
