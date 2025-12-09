@@ -1,4 +1,8 @@
-* text eol=lf
-*.png binary
-*.jpg binary
-*.ico binary
+*      text eol=lf
+*.bat  text eol=crlf
+*.sh   text eol=lf
+*.png  binary
+*.jar  binary
+*.jpg  binary
+*.ico  binary
+*.icns binary
