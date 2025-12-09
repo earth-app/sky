@@ -5,13 +5,14 @@
 .nitro
 .cache
 dist
-package-lock.json
 .wrangler
-ios/
-android/
 
 # Node dependencies
 node_modules
+
+# Lock files (using bun)
+package-lock.json
+yarn.lock
 
 # Logs
 logs
@@ -22,4 +23,25 @@ logs
 .fleet
 .idea
 
+# Environment files
 .env.local
+
+# iOS (Capacitor)
+ios/App/Pods/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/App/capacitor.plugins.json
+ios/DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Android (Capacitor)
+android/.idea/
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/local.properties

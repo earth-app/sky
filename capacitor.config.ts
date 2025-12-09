@@ -1,15 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-	appId: 'com.earth-app.sky',
+	appId: 'com.earthapp.sky',
 	appName: 'The Earth App',
 	webDir: 'dist',
 	loggingBehavior: 'debug',
-	plugins: {
-		LiveUpdate: {
-			appId: '00000000-0000-0000-0000-000000000000'
-		}
-	}
+	overrideUserAgent: 'The Earth App/Sky',
+	backgroundColor: '#174f96'
 };
 
 export default config;
