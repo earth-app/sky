@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<resources>
+    <string name="app_name">sky</string>
+    <string name="title_activity_main">sky</string>
+    <string name="package_name">com.earthapp.sky</string>
+    <string name="custom_url_scheme">com.earthapp.sky</string>
+</resources>
