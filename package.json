@@ -42,6 +42,7 @@
   "devDependencies": {
     "@capacitor/cli": "8.0.0",
     "@ionic/cli": "^7.2.1",
+    "@prettier/plugin-xml": "^3.4.2",
     "@vue/cli-service": "5.0.9",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
@@ -51,6 +52,6 @@
     "vue-tsc": "^3.1.8"
   },
   "lint-staged": {
-    "*.{ts,vue,css,md}": "prettier --write"
+    "*.{ts,vue,css,md,json,xml}": "prettier --write"
   }
 }

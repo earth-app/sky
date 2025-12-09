@@ -1,7 +1,7 @@
 {
-  "name": "sky",
-  "type": "vue",
-  "integrations": {
-    "capacitor": {}
-  }
+	"name": "sky",
+	"type": "vue",
+	"integrations": {
+		"capacitor": {}
+	}
 }
