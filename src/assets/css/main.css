@@ -1,2 +1,7 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
+
+@theme {
+	--ui-secondary: #174f96;
+	--font-title: 'Noto Sans', sans-serif;
+}
