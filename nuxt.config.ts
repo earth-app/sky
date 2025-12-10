@@ -5,7 +5,7 @@ export default defineNuxtConfig({
 	runtimeConfig: {
 		public: {
 			apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.earth-app.com',
-			cloudBaseUrl: process.env.NUXT_PUBLIC_CLOUD_BASE_URL || 'https://cloud.earth-app.com'
+			crustBaseUrl: process.env.NUXT_PUBLIC_CRUST_BASE_URL || 'https://app.earth-app.com'
 		}
 	},
 	ssr: false,
