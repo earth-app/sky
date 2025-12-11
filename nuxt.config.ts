@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineNuxtConfig } from 'nuxt/config';
 
 export default defineNuxtConfig({
+	extends: ['@earth-app/crust'],
 	runtimeConfig: {
 		public: {
 			apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.earth-app.com',

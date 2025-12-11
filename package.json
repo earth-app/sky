@@ -27,6 +27,7 @@
     "@capacitor/ios": "8.0.0",
     "@capacitor/keyboard": "8.0.0",
     "@capacitor/status-bar": "8.0.0",
+    "@earth-app/crust": "0.1.0-485d79d",
     "@earth-app/ocean": "1.0.0-7615b8a",
     "@nuxt/icon": "^2.1.0",
     "@nuxt/image": "^2.0.0",
@@ -53,7 +54,8 @@
     "prettier": "^3.7.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "vue-tsc": "^3.1.8"
+    "vue-tsc": "^3.1.8",
+    "wrangler": "^4.53.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml}": "prettier --write"
