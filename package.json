@@ -13,6 +13,7 @@
     "dev:android": "bash scripts/dev-android.sh",
     "dev:ios": "bash scripts/dev-ios.sh",
     "sync": "bunx cap sync",
+    "sync:assets": "bun run capacitor-assets generate --ios --android",
     "prettier": "bunx prettier --write .",
     "prettier:check": "bunx prettier --check .",
     "postinstall": "nuxt prepare",
@@ -27,7 +28,7 @@
     "@capacitor/ios": "8.0.0",
     "@capacitor/keyboard": "8.0.0",
     "@capacitor/status-bar": "8.0.0",
-    "@earth-app/crust": "0.1.0-485d79d",
+    "@earth-app/crust": "0.1.0-178ee95",
     "@earth-app/ocean": "1.0.0-7615b8a",
     "@nuxt/icon": "^2.1.0",
     "@nuxt/image": "^2.0.0",
@@ -42,6 +43,7 @@
     "nuxt": "^4.2.2",
     "nuxt-viewport": "^2.3.1",
     "postcss": "^8.5.6",
+    "sharp": "^0.34.5",
     "vue": "^3.5.25"
   },
   "devDependencies": {
@@ -55,7 +57,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "vue-tsc": "^3.1.8",
-    "wrangler": "^4.53.0"
+    "wrangler": "^4.54.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml}": "prettier --write"
