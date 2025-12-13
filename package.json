@@ -28,7 +28,7 @@
     "@capacitor/ios": "8.0.0",
     "@capacitor/keyboard": "8.0.0",
     "@capacitor/status-bar": "8.0.0",
-    "@earth-app/crust": "0.1.0-178ee95",
+    "@earth-app/crust": "0.1.1",
     "@earth-app/ocean": "1.0.0-7615b8a",
     "@nuxt/icon": "^2.1.0",
     "@nuxt/image": "^2.0.0",
