@@ -5,3 +5,13 @@
 	--ui-secondary: #174f96;
 	--font-title: 'Noto Sans', sans-serif;
 }
+
+@layer theme {
+	.light {
+		--ion-background-color: #dad8e7;
+	}
+
+	.dark {
+		--ion-background-color: #1c1b22;
+	}
+}
