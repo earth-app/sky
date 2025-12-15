@@ -1,9 +1,12 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
 
-@theme {
-	--ui-secondary: #174f96;
-	--font-title: 'Noto Sans', sans-serif;
+@layer base {
+	* {
+		--ion-color-primary: #1ebb48;
+		--ion-color-secondary: #174f96;
+		--font-title: 'Noto Sans', sans-serif;
+	}
 }
 
 @layer theme {
