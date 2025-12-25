@@ -41,6 +41,12 @@ export default defineNuxtConfig({
 		locales: [{ code: 'en', language: 'en-US' }],
 		defaultLocale: 'en'
 	},
+	ionic: {
+		config: {
+			mode: 'ios',
+			statusTap: true
+		}
+	},
 	modules: [
 		'@nuxtjs/ionic',
 		'@nuxt/ui',
