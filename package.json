@@ -48,7 +48,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "8.0.0",
-    "@iconify-json/devicon": "^1.2.53",
+    "@iconify-json/logos": "^1.2.10",
     "@ionic/cli": "^7.2.1",
     "@prettier/plugin-xml": "^3.4.2",
     "@vue/cli-service": "5.0.9",

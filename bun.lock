@@ -33,7 +33,7 @@
       },
       "devDependencies": {
         "@capacitor/cli": "8.0.0",
-        "@iconify-json/devicon": "^1.2.53",
+        "@iconify-json/logos": "^1.2.10",
         "@ionic/cli": "^7.2.1",
         "@prettier/plugin-xml": "^3.4.2",
         "@vue/cli-service": "5.0.9",
@@ -264,7 +264,7 @@
 
     "@hutson/parse-repository-url": ["@hutson/parse-repository-url@3.0.2", "", {}, "sha512-H9XAx3hc0BQHY6l+IFSWHDySypcXsvsuLhgYLUGywmJ5pswRVQJUHpOsobnLYp2ZUaUlKiKDrgWWhosOwAEM8Q=="],
 
-    "@iconify-json/devicon": ["@iconify-json/devicon@1.2.53", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-uMBNP2Xmyre5w0XmQ3Sye64d6NokSiee+zb51AMqREjnUfM0s47bA+PO9Sy4M2GBjs6NIovi0rJQucWMpylMcQ=="],
+    "@iconify-json/logos": ["@iconify-json/logos@1.2.10", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-qxaXKJ6fu8jzTMPQdHtNxlfx6tBQ0jXRbHZIYy5Ilh8Lx9US9FsAdzZWUR8MXV8PnWTKGDFO4ZZee9VwerCyMA=="],
 
     "@iconify/collections": ["@iconify/collections@1.0.629", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-1iT8HyMKpOvml6jxZDaW2dkdgzls4Ik7I/tn79hHqbPGWkNpIQsJSB3Dto+vAyboXLtsRvIKIwtSvfgrHR0HRw=="],
 
