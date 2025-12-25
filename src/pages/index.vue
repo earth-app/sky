@@ -26,12 +26,25 @@
 					<IonButton
 						icon="mdi:login"
 						expand="block"
+						size="small"
 						fill="solid"
 						color="success"
 						strong
 						href="/login"
-						>Login</IonButton
 					>
+						<UIcon
+							name="mdi:login"
+							class="mr-2 size-5"
+						/>
+						Login</IonButton
+					>
+					<div class="flex flex-col space-y-2 my-6">
+						<UserOAuthShield
+							v-for="provider in OAUTH_PROVIDERS"
+							:key="provider"
+							:provider="provider"
+						/>
+					</div>
 				</div>
 				<div v-else>
 					<UAvatar
@@ -47,6 +60,8 @@
 </template>
 
 <script setup lang="ts">
+import { OAUTH_PROVIDERS } from '@earth-app/crust/src/shared/types/user';
+
 const { user, fetchUser, avatar } = useAuth();
 
 onMounted(async () => {
