@@ -4,11 +4,7 @@
 			<IonImg
 				src="/cloud.png"
 				alt="Error Image"
-				format="webp"
 				class="size-48 max-w-2xs max-h-2xs mb-6"
-				loading="eager"
-				decoding="async"
-				fetchpriority="high"
 			/>
 			<h1 class="text-4xl font-bold mb-4">Oops! Something went wrong.</h1>
 			<p class="text-lg mb-8">
@@ -16,6 +12,7 @@
 			</p>
 			<IonButton
 				class="hover:cursor-pointer"
+				color="primary"
 				@click="$router.push('/')"
 			>
 				Go Back Home
