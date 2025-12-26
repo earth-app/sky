@@ -13,6 +13,7 @@
         "@capacitor/ios": "8.0.0",
         "@capacitor/keyboard": "8.0.0",
         "@capacitor/status-bar": "8.0.0",
+        "@capacitor/toast": "8.0.0",
         "@earth-app/crust": "0.1.2-54ed795",
         "@earth-app/ocean": "1.0.0-7615b8a",
         "@ionic/vue": "^8.7.15",
@@ -128,6 +129,8 @@
     "@capacitor/keyboard": ["@capacitor/keyboard@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-ycPW6iQyFwzDK95jihesj5EGiyyGSfbBqNek11iNp9tBOB7zDeYkUA2S/vPpOETt3dhP6pWr7a9gNVGuEfj11g=="],
 
     "@capacitor/status-bar": ["@capacitor/status-bar@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-aIj3bc7z8lfPgOen8HlrBrkfnxpFnh21OCx6jCUx4Mvv+B6eEkUQ49b32DOddgVfr+igRHLX2SYi7duqIsNDXg=="],
+
+    "@capacitor/toast": ["@capacitor/toast@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-khWSYsBd+kc28s+nTfswxEfTQ3edY2f0BbvPZmEoBnXclunZbC7Bn1/ZyjKtM9wEA1RC5Umq4RUeFh8TtP+02g=="],
 
     "@capsizecss/unpack": ["@capsizecss/unpack@3.0.1", "", { "dependencies": { "fontkit": "^2.0.2" } }, "sha512-8XqW8xGn++Eqqbz3e9wKuK7mxryeRjs4LOHLxbh2lwKeSbuNR4NFifDZT4KzvjU6HMOPbiNTsWpniK5EJfTWkg=="],
 
