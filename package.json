@@ -30,6 +30,7 @@
     "@capacitor/status-bar": "8.0.0",
     "@earth-app/crust": "0.1.2-54ed795",
     "@earth-app/ocean": "1.0.0-7615b8a",
+    "@ionic/vue": "^8.7.15",
     "@nuxt/icon": "^2.1.1",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.2.1",
