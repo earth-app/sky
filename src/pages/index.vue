@@ -22,13 +22,29 @@
 						class="animate-spin"
 					/>
 				</div>
-				<div v-else-if="user === null">
+				<div
+					v-else-if="user === null"
+					class="space-y-3"
+				>
 					<IonButton
-						icon="mdi:login"
 						expand="block"
 						size="small"
 						fill="solid"
 						color="success"
+						strong
+						href="/signup"
+					>
+						<UIcon
+							name="mdi:account-plus"
+							class="mr-2 size-5"
+						/>
+						Sign Up
+					</IonButton>
+					<IonButton
+						expand="block"
+						size="small"
+						fill="solid"
+						color="tertiary"
 						strong
 						href="/login"
 					>
@@ -36,8 +52,8 @@
 							name="mdi:login"
 							class="mr-2 size-5"
 						/>
-						Login</IonButton
-					>
+						Login
+					</IonButton>
 					<div class="flex flex-col space-y-2 my-6">
 						<UserOAuthShield
 							v-for="provider in OAUTH_PROVIDERS"
@@ -60,11 +76,17 @@
 </template>
 
 <script setup lang="ts">
+import { SplashScreen } from '@capacitor/splash-screen';
 import { OAUTH_PROVIDERS } from '@earth-app/crust/src/shared/types/user';
 
 const { user, fetchUser, avatar } = useAuth();
 
+await SplashScreen.hide();
 onMounted(async () => {
+	await SplashScreen.show({
+		autoHide: false
+	});
 	await fetchUser();
+	await SplashScreen.hide();
 });
 </script>
