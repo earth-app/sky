@@ -5,6 +5,8 @@
 	* {
 		--ion-color-primary: #1ebb48;
 		--ion-color-secondary: #174f96;
+		--ion-color-tertiary: #3d66f8;
+		--ion-color-tertiary-contrast: #000000;
 		--font-title: 'Noto Sans', sans-serif;
 	}
 }

@@ -1,0 +1,17 @@
+<template>
+	<IonPage>
+		<div class="flex flex-col items-center mt-8">
+			<h1 class="text-3xl font-semibold mb-4 mt-24 sm:mt-8">Login</h1>
+			<UserMLoginForm @loginSuccess="handleLoginSuccess" />
+			<Back />
+		</div>
+	</IonPage>
+</template>
+<script setup lang="ts">
+const router = useIonRouter();
+
+function handleLoginSuccess() {
+	router.push('/dashboard');
+	refreshNuxtData();
+}
+</script>
