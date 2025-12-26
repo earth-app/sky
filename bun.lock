@@ -12,6 +12,7 @@
         "@capacitor/haptics": "8.0.0",
         "@capacitor/ios": "8.0.0",
         "@capacitor/keyboard": "8.0.0",
+        "@capacitor/splash-screen": "^8.0.0",
         "@capacitor/status-bar": "8.0.0",
         "@capacitor/toast": "8.0.0",
         "@earth-app/crust": "0.1.2-54ed795",
@@ -127,6 +128,8 @@
     "@capacitor/ios": ["@capacitor/ios@8.0.0", "", { "peerDependencies": { "@capacitor/core": "^8.0.0" } }, "sha512-gwSn6X4uHYNHlM8zZmVmM1zjEhexxbHpPSSnH1DZkp8o3zdK/RmH8tmDma+3zPZrhhTSrMC7sT24dKTOvV8www=="],
 
     "@capacitor/keyboard": ["@capacitor/keyboard@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-ycPW6iQyFwzDK95jihesj5EGiyyGSfbBqNek11iNp9tBOB7zDeYkUA2S/vPpOETt3dhP6pWr7a9gNVGuEfj11g=="],
+
+    "@capacitor/splash-screen": ["@capacitor/splash-screen@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-zkFdUSd6C6gd3s3bIEgtO3DVjfwpaX5mmWU9er8xYTg47zr2toEkGtfyE6CPhhErG09fl4rCqrK5DfnGrXLh9w=="],
 
     "@capacitor/status-bar": ["@capacitor/status-bar@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-aIj3bc7z8lfPgOen8HlrBrkfnxpFnh21OCx6jCUx4Mvv+B6eEkUQ49b32DOddgVfr+igRHLX2SYi7duqIsNDXg=="],
 
