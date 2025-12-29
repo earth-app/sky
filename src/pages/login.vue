@@ -8,10 +8,8 @@
 	</IonPage>
 </template>
 <script setup lang="ts">
-const router = useIonRouter();
-
 function handleLoginSuccess() {
-	router.push('/dashboard');
+	navigateTo('/tabs/dashboard');
 	refreshNuxtData();
 }
 </script>
