@@ -81,14 +81,14 @@ async function handleLogin() {
 			emit('loginSuccess');
 		});
 
-		Toast.show({
+		await Toast.show({
 			text: `Login Successful! Welcome back, ${username.value}!`,
 			duration: 'short'
 		});
 
 		refreshNuxtData(); // Refresh user data
 	} else {
-		Toast.show({
+		await Toast.show({
 			text: `Login Failed: ${result.message || 'An unknown error occurred during login.'}`,
 			duration: 'long'
 		});
