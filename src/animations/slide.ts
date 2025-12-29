@@ -8,9 +8,9 @@ export default (_: HTMLElement, opts?: any) => {
 	const isBack = direction === 'back';
 
 	const enteringFrom = isBack ? '-100%' : '100%';
-	const leavingTo = isBack ? '30%' : '-30%';
+	const leavingTo = isBack ? '100%' : '-100%';
 
-	const duration = 420;
+	const duration = 520;
 
 	const enteringAnimation = createAnimation()
 		.addElement(enteringEl)
@@ -22,8 +22,8 @@ export default (_: HTMLElement, opts?: any) => {
 
 	const leavingAnimation = createAnimation()
 		.addElement(leavingEl)
-		.fromTo('transform', 'translateX(0) scale(1)', `translateX(${leavingTo}) scale(0.98)`)
-		.fromTo('opacity', '1', '0.9')
+		.fromTo('transform', 'translateX(0)', `translateX(${leavingTo})`)
+		.fromTo('opacity', '1', '0')
 		.duration(duration)
 		.easing('cubic-bezier(0.4, 0.0, 0.2, 1)');
 
