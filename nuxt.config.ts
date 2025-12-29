@@ -32,7 +32,13 @@ export default defineNuxtConfig({
 	},
 	compatibilityDate: '2025-12-09',
 	nitro: {
-		preset: 'static'
+		preset: 'static',
+		routeRules: {
+			'/**': {
+				cors: true,
+				headers: { 'Access-Control-Allow-Origin': '*', 'Referrer-Policy': 'no-referrer' }
+			}
+		}
 	},
 	vite: {
 		plugins: [tailwindcss()]
@@ -43,7 +49,6 @@ export default defineNuxtConfig({
 	},
 	ionic: {
 		config: {
-			mode: 'ios',
 			statusTap: true
 		}
 	},
