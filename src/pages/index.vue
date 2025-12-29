@@ -16,14 +16,8 @@
 				Find your Novelty, Try New Things, Discover the World
 			</h2>
 			<div class="mt-8 px-8 max-w-md">
-				<div v-if="user === undefined">
-					<UIcon
-						name="mdi:loading"
-						class="animate-spin"
-					/>
-				</div>
 				<div
-					v-else-if="user === null"
+					v-if="user === null"
 					class="space-y-3"
 				>
 					<IonButton
@@ -63,11 +57,9 @@
 					</div>
 				</div>
 				<div v-else>
-					<UAvatar
-						:src="avatar"
-						width="128"
-						height="128"
-						class="size-32 shadow-lg mx-auto"
+					<UIcon
+						name="mdi:loading"
+						class="animate-spin size-8 text-gray-500 mx-auto"
 					/>
 				</div>
 			</div>
@@ -88,5 +80,13 @@ onMounted(async () => {
 	});
 	await fetchUser();
 	await SplashScreen.hide();
+});
+
+watch(user, (currentUser) => {
+	if (currentUser) {
+		setTimeout(() => {
+			navigateTo('/tabs/dashboard');
+		}, 1000);
+	}
 });
 </script>
