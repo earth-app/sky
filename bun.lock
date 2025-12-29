@@ -9,6 +9,7 @@
         "@capacitor/app": "8.0.0",
         "@capacitor/assets": "^3.0.5",
         "@capacitor/core": "8.0.0",
+        "@capacitor/dialog": "^8.0.0",
         "@capacitor/haptics": "8.0.0",
         "@capacitor/ios": "8.0.0",
         "@capacitor/keyboard": "8.0.0",
@@ -17,6 +18,7 @@
         "@capacitor/toast": "8.0.0",
         "@earth-app/crust": "0.1.3",
         "@earth-app/ocean": "1.0.0",
+        "@ionic/pwa-elements": "^3.3.0",
         "@ionic/vue": "^8.7.15",
         "@nuxt/icon": "^2.1.1",
         "@nuxt/image": "^2.0.0",
@@ -122,6 +124,8 @@
     "@capacitor/cli": ["@capacitor/cli@8.0.0", "", { "dependencies": { "@ionic/cli-framework-output": "^2.2.8", "@ionic/utils-subprocess": "^3.0.1", "@ionic/utils-terminal": "^2.3.5", "commander": "^12.1.0", "debug": "^4.4.0", "env-paths": "^2.2.0", "fs-extra": "^11.2.0", "kleur": "^4.1.5", "native-run": "^2.0.1", "open": "^8.4.0", "plist": "^3.1.0", "prompts": "^2.4.2", "rimraf": "^6.0.1", "semver": "^7.6.3", "tar": "^6.1.11", "tslib": "^2.8.1", "xml2js": "^0.6.2" }, "bin": { "cap": "bin/capacitor", "capacitor": "bin/capacitor" } }, "sha512-v9hEBi69xGxuuZhg55N031bMEenKaPSv71Il8C22VOOH6surDyv/MPeImN0oVfFc7eiklaW3rDFYVz6cmXfJWQ=="],
 
     "@capacitor/core": ["@capacitor/core@8.0.0", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-250HTVd/W/KdMygoqaedisvNbHbpbQTN2Hy/8ZYGm1nAqE0Fx7sGss4l0nDg33STxEdDhtVRoL2fIaaiukKseA=="],
+
+    "@capacitor/dialog": ["@capacitor/dialog@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-ri19ISkWK89JHgVgR1JHZ4Yf6jzZHrXCMG4mqeiuUQqXXu6nw0uVBwEy9MwNQRw3Wlq/KboqLeIs1pQnOswqrQ=="],
 
     "@capacitor/haptics": ["@capacitor/haptics@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-DY1IUOjke1T4ITl7mFHQIKCaJJyHYAYRYHG9bVApU7PDOZiMVGMp48Yjzdqjya+wv/AHS5mDabSTUmhJ5uDvBA=="],
 
@@ -362,6 +366,8 @@
     "@ionic/cli-framework-prompts": ["@ionic/cli-framework-prompts@2.1.13", "", { "dependencies": { "@ionic/utils-terminal": "2.3.5", "debug": "^4.0.0", "inquirer": "^7.0.0", "tslib": "^2.0.1" } }, "sha512-Yj1fz6p7OehreQ8C70bd9+M6tYP/rvzLw5JVj8pT/N9s0kQSjqEFRbs96LKr3lfd3TADZaS8OlZrQIqenFIUpg=="],
 
     "@ionic/core": ["@ionic/core@8.7.15", "", { "dependencies": { "@stencil/core": "4.38.0", "ionicons": "^8.0.13", "tslib": "^2.1.0" } }, "sha512-u1w9c6dx2iuatXIW5X1JY0ighDhQPjBwOHZsrOcnpm891pktuEjJDdyhDulWFa6kKVkXw1q7khwxXBEurvKc2g=="],
+
+    "@ionic/pwa-elements": ["@ionic/pwa-elements@3.3.0", "", {}, "sha512-vbykpxd2nGRlA67AnqDwsiVf8PUmInLyi6lQdnPDjeiML1WZa0CPe6r632nGDV9PTi+sWNde9Xexg9SD6Pwyqw=="],
 
     "@ionic/utils-array": ["@ionic/utils-array@2.1.6", "", { "dependencies": { "debug": "^4.0.0", "tslib": "^2.0.1" } }, "sha512-0JZ1Zkp3wURnv8oq6Qt7fMPo5MpjbLoUoa9Bu2Q4PJuSDWM8H8gwF3dQO7VTeUj3/0o1IB1wGkFWZZYgUXZMUg=="],
 
