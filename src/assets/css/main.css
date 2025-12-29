@@ -13,10 +13,14 @@
 
 @layer theme {
 	.light {
-		--ion-background-color: #dad8e7;
+		--ion-background-color: #f3f2f9;
+		--ion-toolbar-background: #fefefe;
+		--ion-text-color: #1c1b22;
 	}
 
 	.dark {
 		--ion-background-color: #1c1b22;
+		--ion-toolbar-background: #1b1b1b;
+		--ion-text-color: #e1e0e6;
 	}
 }
