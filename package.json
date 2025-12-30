@@ -66,6 +66,6 @@
     "wrangler": "^4.54.0"
   },
   "lint-staged": {
-    "*.{ts,vue,css,md,json,xml}": "prettier --write"
+    "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
   }
 }

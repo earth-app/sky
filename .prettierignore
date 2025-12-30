@@ -7,3 +7,26 @@ package-lock.json
 LICENSE
 tsconfig.json
 tailwind.config.js
+config.xml
+
+# iOS (Capacitor)
+ios/App/Pods/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/App/App/capacitor.plugins.json
+ios/DerivedData/
+ios/App/CapApp-SPM/.build/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Android (Capacitor)
+android/.idea/
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/local.properties
+android/capacitor-cordova-android-plugins/
