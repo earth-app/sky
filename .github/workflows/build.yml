@@ -10,6 +10,8 @@ jobs:
     permissions:
       contents: read
       packages: read
+      id-token: write
+      attestations: write
 
     steps:
       - uses: actions/checkout@v6
@@ -25,3 +27,16 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Build Project
         run: bun run build
+      - name: Archive Build Artifacts
+        id: archive
+        uses: actions/upload-artifact@v6
+        with:
+          name: sky-build-${{ github.run_id }}
+          path: dist/
+          overwrite: true
+      - name: Attest Build Artifacts
+        if: success() || failure()
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: sky-build-${{ github.run_id }}
+          subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
