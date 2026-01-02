@@ -1,6 +1,6 @@
 <template>
 	<IonPage>
-		<div class="flex flex-col size-full">
+		<IonContent :scroll-y="true">
 			<IonHeader class="ion-no-border">
 				<IonToolbar>
 					<IonTitle class="text-center">Profile</IonTitle>
@@ -10,7 +10,7 @@
 				v-if="user"
 				:user="user"
 			/>
-		</div>
+		</IonContent>
 	</IonPage>
 </template>
 

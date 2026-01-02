@@ -7,6 +7,7 @@
 					<IonTabButton
 						tab="dashboard"
 						href="/tabs/dashboard"
+						@click="handleHomeButtonClick"
 					>
 						<div class="flex items-center justify p-1 size-9 rounded-full">
 							<UIcon
@@ -71,6 +72,15 @@
 import slide from '~/animations/slide';
 
 const { avatar128 } = useAuth();
+const route = useRoute();
+
+const refreshDashboard = inject<(() => Promise<void>) | null>('refreshDashboard', null);
+async function handleHomeButtonClick(event: Event) {
+	if (route.path === '/tabs/dashboard' && refreshDashboard) {
+		event.preventDefault();
+		await refreshDashboard();
+	}
+}
 </script>
 
 <style>
