@@ -9,7 +9,7 @@
 		"
 		:icon="activity.fields['icon'] || 'mdi:earth'"
 		:content="trimString(activity.description, 220)"
-		:link="`/activities/${activity.id}`"
+		:link="`/tabs/activities/${activity.id}`"
 		class="p-4"
 	/>
 </template>

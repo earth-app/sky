@@ -51,7 +51,8 @@ onBeforeUnmount(() => {
 });
 
 async function regenerateProfilePhoto() {
-	if (!(await Dialog.confirm({ message: 'Are you sure? You cannot revert this action.' }))) return;
+	const yes = await Dialog.confirm({ message: 'Are you sure? You cannot revert this action.' });
+	if (!yes.value) return;
 
 	avatarLoading.value = true;
 

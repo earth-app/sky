@@ -58,7 +58,7 @@
 					:color="i <= 2 ? 'primary' : 'secondary'"
 					:icon="activity.fields['icon']"
 					variant="solid"
-					@click="$router.push(`/activities/${activity.id}`)"
+					@click="$router.push(`/tabs/activities/${activity.id}`)"
 					:ui="{
 						base: 'text-sm md:text-base lg:text-lg px-1 sm:px-1.5 md:px-2.5 py-1 gap-1 md:gap-1.5 rounded-sm sm:rounded-md',
 						leadingIcon: 'size-4 sm:size-5 md:size-6'

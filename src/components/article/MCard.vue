@@ -2,7 +2,7 @@
 	<MInfoCard
 		:subtitle="article.title"
 		:content="trimString(article.content, 300)"
-		:link="noLink ? undefined : `/articles/${article.id}`"
+		:link="noLink ? undefined : `/tabs/articles/${article.id}`"
 		:footer="footer"
 		:avatar="{
 			src: authorAvatar,
@@ -15,7 +15,8 @@
 				: undefined
 		}"
 		:secondary-avatar="{
-			src: article.ocean?.favicon
+			src: article.ocean?.favicon,
+			size: 'xs'
 		}"
 		:badges="
 			article.tags.map((tag) => ({
@@ -26,7 +27,6 @@
 				size: 'md'
 			}))
 		"
-		secondary-avatar-size="xs"
 		class="p-4"
 	/>
 </template>

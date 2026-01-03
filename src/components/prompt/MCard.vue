@@ -12,11 +12,11 @@
 					}
 				: undefined
 		}"
-		:link="noLink ? undefined : `/prompts/${prompt.id}`"
+		:link="noLink ? undefined : `/tabs/prompts/${prompt.id}`"
 		:footer="`${footer} • ${prompt.responses_count ? withSuffix(prompt.responses_count) + ' Responses' : 'No Responses'}`"
 		:secondary-footer="secondaryFooter"
 		:buttons="
-			hasButtons
+			hasButtons && noLink
 				? [
 						{
 							text: 'Edit',
@@ -41,15 +41,38 @@
 	/>
 	<IonModal
 		v-if="hasButtons"
-		title="Edit Prompt"
-		size="2xl"
-		:closeable="true"
-		v-model:open="editOpen"
-		:overlay="false"
+		can-dismiss
+		:is-open="editOpen"
 	>
-		<template #body>
-			<div class="flex flex-col space-y-4">
-				<IonInput v-model="promptText" />
+		<IonHeader>
+			<IonToolbar>
+				<IonTitle>Edit Prompt</IonTitle>
+				<IonButtons slot="end">
+					<IonButton
+						fill="clear"
+						strong
+						@click="editOpen = false"
+						>Close</IonButton
+					>
+				</IonButtons>
+			</IonToolbar>
+		</IonHeader>
+		<IonContent>
+			<div class="flex flex-col space-y-4 p-4">
+				<IonTextarea
+					:value="promptText"
+					label="Prompt Question"
+					label-placement="stacked"
+					:minlength="10"
+					:maxlength="100"
+					counter
+					class="p-2"
+					@ion-input="
+						(event) => {
+							promptText = event.target.value || '';
+						}
+					"
+				/>
 				<IonButton
 					@click="savePrompt"
 					:loading="editLoading"
@@ -57,7 +80,7 @@
 					>Save</IonButton
 				>
 			</div>
-		</template>
+		</IonContent>
 	</IonModal>
 </template>
 
@@ -156,7 +179,7 @@ async function deletePrompt() {
 		message: 'Are you sure you want to delete this prompt? This action cannot be undone.'
 	});
 
-	if (yes) {
+	if (yes.value) {
 		const res = await removePrompt(props.prompt.id);
 		if (res.success) {
 			await Toast.show({

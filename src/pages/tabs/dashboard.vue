@@ -222,15 +222,30 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		if (data.length > 0) {
 			feedItem = { type, isGroup, data };
 		}
+
+		// prerender routes
+		for (const activity of data) {
+			preloadRouteComponents(`/tabs/activities/${activity.id}`);
+		}
 	} else if (type === 'prompt') {
 		const data = await fetchContent(type, count, useRecommended);
 		if (data.length > 0) {
 			feedItem = { type, isGroup, data };
 		}
+
+		// prerender routes
+		for (const prompt of data) {
+			preloadRouteComponents(`/tabs/prompts/${prompt.id}`);
+		}
 	} else if (type === 'article') {
 		const data = await fetchContent(type, count, useRecommended);
 		if (data.length > 0) {
 			feedItem = { type, isGroup, data };
+		}
+
+		// prerender routes
+		for (const article of data) {
+			preloadRouteComponents(`/tabs/articles/${article.id}`);
 		}
 	}
 
