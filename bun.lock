@@ -8,15 +8,16 @@
         "@capacitor/android": "8.0.0",
         "@capacitor/app": "8.0.0",
         "@capacitor/assets": "^3.0.5",
+        "@capacitor/browser": "8.0.0",
         "@capacitor/core": "8.0.0",
         "@capacitor/dialog": "^8.0.0",
         "@capacitor/haptics": "8.0.0",
         "@capacitor/ios": "8.0.0",
         "@capacitor/keyboard": "8.0.0",
-        "@capacitor/splash-screen": "^8.0.0",
+        "@capacitor/splash-screen": "8.0.0",
         "@capacitor/status-bar": "8.0.0",
         "@capacitor/toast": "8.0.0",
-        "@earth-app/crust": "0.1.4",
+        "@earth-app/crust": "0.1.4-4e62ace",
         "@earth-app/ocean": "1.0.0",
         "@ionic/pwa-elements": "^3.3.0",
         "@ionic/vue": "^8.7.15",
@@ -121,6 +122,8 @@
 
     "@capacitor/assets": ["@capacitor/assets@3.0.5", "", { "dependencies": { "@capacitor/cli": "^5.3.0", "@ionic/utils-array": "2.1.6", "@ionic/utils-fs": "3.1.7", "@trapezedev/project": "^7.0.10", "commander": "8.3.0", "debug": "4.3.4", "fs-extra": "10.1.0", "node-fetch": "2.7.0", "node-html-parser": "5.4.2", "sharp": "0.32.6", "tslib": "2.6.2", "yargs": "17.7.2" }, "bin": { "capacitor-assets": "bin/capacitor-assets" } }, "sha512-ohz/OUq61Y1Fc6aVSt0uDrUdeOA7oTH4pkWDbv/8I3UrPjH7oPkzYhShuDRUjekNp9RBi198VSFdt0CetpEOzw=="],
 
+    "@capacitor/browser": ["@capacitor/browser@8.0.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-xey7maszGABKuStvXDV4vXN+EzIyz0o7zlyzw4JKG6o/1GzqeqHqVuE+8Ux+Hks3DZji4LoriWZVgVF6mR6RGg=="],
+
     "@capacitor/cli": ["@capacitor/cli@8.0.0", "", { "dependencies": { "@ionic/cli-framework-output": "^2.2.8", "@ionic/utils-subprocess": "^3.0.1", "@ionic/utils-terminal": "^2.3.5", "commander": "^12.1.0", "debug": "^4.4.0", "env-paths": "^2.2.0", "fs-extra": "^11.2.0", "kleur": "^4.1.5", "native-run": "^2.0.1", "open": "^8.4.0", "plist": "^3.1.0", "prompts": "^2.4.2", "rimraf": "^6.0.1", "semver": "^7.6.3", "tar": "^6.1.11", "tslib": "^2.8.1", "xml2js": "^0.6.2" }, "bin": { "cap": "bin/capacitor", "capacitor": "bin/capacitor" } }, "sha512-v9hEBi69xGxuuZhg55N031bMEenKaPSv71Il8C22VOOH6surDyv/MPeImN0oVfFc7eiklaW3rDFYVz6cmXfJWQ=="],
 
     "@capacitor/core": ["@capacitor/core@8.0.0", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-250HTVd/W/KdMygoqaedisvNbHbpbQTN2Hy/8ZYGm1nAqE0Fx7sGss4l0nDg33STxEdDhtVRoL2fIaaiukKseA=="],
@@ -169,7 +172,7 @@
 
     "@dxup/unimport": ["@dxup/unimport@0.1.2", "", {}, "sha512-/B8YJGPzaYq1NbsQmwgP8EZqg40NpTw4ZB3suuI0TplbxKHeK94jeaawLmVhCv+YwUnOpiWEz9U6SeThku/8JQ=="],
 
-    "@earth-app/crust": ["@earth-app/crust@0.1.4", "https://npm.pkg.github.com/download/@earth-app/crust/0.1.4/e1d9e578c91d2bb5d4aec878e15531a870ec207e", { "dependencies": { "@earth-app/ocean": "1.0.0", "@nuxt/icon": "^2.1.0", "@nuxt/image": "^2.0.0", "@nuxt/kit": "^4.2.2", "@nuxt/scripts": "^0.13.0", "@nuxt/ui": "^4.2.1", "@nuxthub/core": "^0.10.1", "@nuxtjs/color-mode": "^4.0.0", "@nuxtjs/google-fonts": "^3.2.0", "@nuxtjs/i18n": "^10.2.1", "@nuxtjs/robots": "^5.6.3", "@nuxtjs/sitemap": "^7.4.9", "@nuxtjs/turnstile": "^1.1.1", "@tailwindcss/vite": "^4.1.17", "@types/luxon": "^3.7.1", "luxon": "^3.7.2", "nuxt": "^4.2.2", "nuxt-schema-org": "^5.0.9", "nuxt-viewport": "^2.3.1", "tailwindcss": "^4.1.17", "tailwindcss-motion": "^1.1.1", "vue": "^3.5.25", "vue-router": "^4.6.3", "youtube-sr": "^4.3.12", "zod": "^4.1.13" } }, "sha512-9KbvIvdCs4VToC078D/iclzQWipAIi1jpgi+fF8a8QglnkVIHMCbxyPWdrljBmSquivbx5tgOhZcl8sHiZ3QkA=="],
+    "@earth-app/crust": ["@earth-app/crust@0.1.4-4e62ace", "https://npm.pkg.github.com/download/@earth-app/crust/0.1.4-4e62ace/f1811c5d77530a4f5b28bc52d004d0ec056e1bb0", { "dependencies": { "@earth-app/ocean": "1.0.0", "@nuxt/icon": "^2.1.0", "@nuxt/image": "^2.0.0", "@nuxt/kit": "^4.2.2", "@nuxt/scripts": "^0.13.0", "@nuxt/ui": "^4.2.1", "@nuxthub/core": "^0.10.1", "@nuxtjs/color-mode": "^4.0.0", "@nuxtjs/google-fonts": "^3.2.0", "@nuxtjs/i18n": "^10.2.1", "@nuxtjs/robots": "^5.6.3", "@nuxtjs/sitemap": "^7.4.9", "@nuxtjs/turnstile": "^1.1.1", "@tailwindcss/vite": "^4.1.17", "@types/luxon": "^3.7.1", "luxon": "^3.7.2", "nuxt": "^4.2.2", "nuxt-schema-org": "^5.0.9", "nuxt-viewport": "^2.3.1", "tailwindcss": "^4.1.17", "tailwindcss-motion": "^1.1.1", "vue": "^3.5.25", "vue-router": "^4.6.3", "youtube-sr": "^4.3.12", "zod": "^4.1.13" } }, "sha512-axVqJdGRdLt1VLO6dBNURRjSwMd4wqQjwOjaBCcv+0tS46N1/gaVkMWaffB4jgW2lIpHFjEDOFLCepwIgN4FjA=="],
 
     "@earth-app/ocean": ["@earth-app/ocean@1.0.0", "https://npm.pkg.github.com/download/@earth-app/ocean/1.0.0/04671722502553cd322415cc593951877cd82ea4", { "dependencies": { "rss-parser": "^3.13.0", "ws": "8.18.0" } }, "sha512-gjTNuP1fq2F9EZG/+DEM3H9/tlk5L5VZsf0DpuP+BsPUk/Xwm3eBKre0lJPa/qK+SCQctKMo4yzqPryohRhb+w=="],
 
