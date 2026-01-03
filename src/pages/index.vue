@@ -71,7 +71,7 @@
 import { SplashScreen } from '@capacitor/splash-screen';
 import { OAUTH_PROVIDERS } from '@earth-app/crust/src/shared/types/user';
 
-const { user, fetchUser, avatar } = useAuth();
+const { user, fetchUser } = useAuth();
 
 await SplashScreen.hide();
 onMounted(async () => {
@@ -82,11 +82,10 @@ onMounted(async () => {
 	await SplashScreen.hide();
 });
 
-watch(user, (currentUser) => {
+watch(user, async (currentUser) => {
 	if (currentUser) {
-		setTimeout(() => {
-			navigateTo('/tabs/dashboard');
-		}, 1000);
+		await preloadRouteComponents('/tabs/dashboard');
+		await navigateTo('/tabs/dashboard');
 	}
 });
 </script>
