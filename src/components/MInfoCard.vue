@@ -1,12 +1,21 @@
 <template>
 	<IonCard
 		:color="color"
-		:href="link"
+		:router-link="inBrowser ? undefined : link"
+		:router-animation="slide"
 		class="my-2 pt-2 shadow-md shadow-black/30 light:shadow-black/10"
+		@click="
+			async () => {
+				if (inBrowser && link) {
+					await Browser.open({ url: link });
+				}
+			}
+		"
 	>
 		<IonImg
 			v-if="image"
 			:src="image"
+			alt="Card Image"
 		/>
 		<IonCardHeader class="px-2">
 			<IonCardTitle>
@@ -21,6 +30,13 @@
 							:size="avatar.size || 'md'"
 							:src="avatar.src"
 							class="mr-2"
+							@click="
+								() => {
+									if (avatar?.link) {
+										navigateTo(avatar.link);
+									}
+								}
+							"
 						/>
 					</UChip>
 					<UAvatar
@@ -28,11 +44,18 @@
 						:size="avatar.size || 'md'"
 						:src="avatar.src"
 						class="mr-2"
+						@click="
+							() => {
+								if (avatar?.link) {
+									navigateTo(avatar.link);
+								}
+							}
+						"
 					/>
 					<UIcon
 						v-if="!avatar && icon"
 						:name="icon"
-						class="size-8 mr-2 mt-0.5"
+						class="size-8 min-w-8 mr-2 mt-0.5"
 					/>
 					<div class="flex flex-col">
 						<span
@@ -84,6 +107,45 @@
 				>{{ content }}</span
 			>
 
+			<ClientOnly>
+				<iframe
+					v-if="youtubeId"
+					:src="`https://www.youtube.com/embed/${youtubeId}?autoplay=0&mute=1&controls=1&rel=0&modestbranding=1&origin=${origin}`"
+					class="w-full h-48 object-cover rounded-lg mb-2"
+					allow="
+						accelerometer;
+						autoplay;
+						clipboard-write;
+						encrypted-media;
+						gyroscope;
+						picture-in-picture;
+					"
+					allowfullscreen
+					loading="lazy"
+					referrerpolicy="strict-origin-when-cross-origin"
+				></iframe>
+			</ClientOnly>
+			<ClientOnly>
+				<video
+					v-if="video"
+					class="w-full h-48 object-cover rounded-lg mb-2"
+					controls
+					loading="lazy"
+					preload="metadata"
+				>
+					<source
+						v-if="video.endsWith('.mp4')"
+						:src="video"
+						type="video/mp4"
+					/>
+					<source
+						v-if="video.endsWith('.webm')"
+						:src="video"
+						type="video/webm"
+					/>
+				</video>
+			</ClientOnly>
+
 			<div
 				v-if="badges"
 				class="flex gap-2 flex-wrap my-2"
@@ -124,13 +186,13 @@
 
 			<span
 				v-if="footer"
-				class="text-sm block mt-4 font-sans font-medium"
+				class="text-sm block mt-4 font-sans text-gray-300 light:text-gray-400 font-normal mb-2"
 				>{{ footer }}</span
 			>
 
 			<span
 				v-if="secondaryFooter"
-				class="text-xs block font-sans text-gray-500 light:text-gray-400"
+				class="text-xs block font-sans text-gray-500 light:text-gray-400 mb-2"
 				>{{ secondaryFooter }}</span
 			>
 		</IonCardContent>
@@ -138,9 +200,12 @@
 </template>
 
 <script setup lang="ts">
+import { Browser } from '@capacitor/browser';
 import { type Color } from '@ionic/core';
+import slide from '~/animations/slide';
 
 defineProps<{
+	inBrowser?: boolean;
 	title?: string;
 	subtitle?: string;
 	description?: string;
@@ -150,9 +215,10 @@ defineProps<{
 		src?: string;
 		size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
 		chip?: {
-			color: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
+			color?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
 			size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
 		};
+		link?: string;
 	};
 	secondaryAvatar?: {
 		src?: string;
@@ -180,5 +246,20 @@ defineProps<{
 		onClick: () => void;
 	}[];
 	color?: Color;
+	video?: string;
+	youtubeId?: string;
+	additionalLinks?: {
+		text: string;
+		link: string;
+		inBrowser?: boolean;
+	}[];
 }>();
+
+const origin = computed(() => {
+	if (import.meta.client) {
+		return encodeURIComponent(window.location.origin);
+	}
+
+	return encodeURIComponent('https://app.earth-app.com');
+});
 </script>

@@ -39,7 +39,7 @@
 		>
 			<div
 				ref="carouselContainer"
-				class="flex flex-row items-stretch flex-nowrap transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing *:shrink-0 *:w-full *:px-2"
+				class="flex flex-row items-stretch flex-nowrap transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing *:shrink-0 *:w-full *:h-full *:px-2"
 				:style="{ transform: `translateX(-${currentSlide * slideWidth}px)` }"
 				@mousedown="startDrag"
 				@mousemove="onDrag"
@@ -222,13 +222,28 @@ const endDrag = () => {
 		targetSlide = currentSlide.value - 1;
 	}
 
-	goToSlide(targetSlide);
-	nextTick(() => {
-		if (carouselContainer.value) {
-			carouselContainer.value.style.transition = '';
-			carouselContainer.value.style.transform = '';
+	if (props.loop) {
+		if (targetSlide < 0) {
+			targetSlide = totalSlides.value - 1;
+		} else if (targetSlide >= totalSlides.value) {
+			targetSlide = 0;
 		}
-	});
+	} else {
+		targetSlide = Math.max(0, Math.min(targetSlide, totalSlides.value - 1));
+	}
+
+	if (carouselContainer.value) {
+		carouselContainer.value.style.transition = '';
+		carouselContainer.value.style.transform = '';
+	}
+
+	if (targetSlide !== currentSlide.value) {
+		isTransitioning.value = true;
+		currentSlide.value = targetSlide;
+		setTimeout(() => {
+			isTransitioning.value = false;
+		}, 300);
+	}
 };
 
 const startTouch = (e: TouchEvent) => {
@@ -259,13 +274,28 @@ const endTouch = () => {
 		targetSlide = currentSlide.value - 1;
 	}
 
-	goToSlide(targetSlide);
-	nextTick(() => {
-		if (carouselContainer.value) {
-			carouselContainer.value.style.transition = '';
-			carouselContainer.value.style.transform = '';
+	if (props.loop) {
+		if (targetSlide < 0) {
+			targetSlide = totalSlides.value - 1;
+		} else if (targetSlide >= totalSlides.value) {
+			targetSlide = 0;
 		}
-	});
+	} else {
+		targetSlide = Math.max(0, Math.min(targetSlide, totalSlides.value - 1));
+	}
+
+	if (carouselContainer.value) {
+		carouselContainer.value.style.transition = '';
+		carouselContainer.value.style.transform = '';
+	}
+
+	if (targetSlide !== currentSlide.value) {
+		isTransitioning.value = true;
+		currentSlide.value = targetSlide;
+		setTimeout(() => {
+			isTransitioning.value = false;
+		}, 300);
+	}
 };
 
 onMounted(() => {
