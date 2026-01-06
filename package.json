@@ -32,7 +32,7 @@
     "@capacitor/splash-screen": "8.0.0",
     "@capacitor/status-bar": "8.0.0",
     "@capacitor/toast": "8.0.0",
-    "@earth-app/crust": "0.1.4-4e62ace",
+    "@earth-app/crust": "0.1.4-caec69e",
     "@earth-app/ocean": "1.0.0",
     "@ionic/pwa-elements": "^3.3.0",
     "@ionic/vue": "^8.7.15",
