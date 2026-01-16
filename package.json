@@ -20,19 +20,19 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "@capacitor/android": "8.0.0",
+    "@capacitor/android": "8.0.1",
     "@capacitor/app": "8.0.0",
     "@capacitor/assets": "^3.0.5",
     "@capacitor/browser": "8.0.0",
-    "@capacitor/core": "8.0.0",
+    "@capacitor/core": "8.0.1",
     "@capacitor/dialog": "^8.0.0",
     "@capacitor/haptics": "8.0.0",
-    "@capacitor/ios": "8.0.0",
+    "@capacitor/ios": "8.0.1",
     "@capacitor/keyboard": "8.0.0",
     "@capacitor/splash-screen": "8.0.0",
     "@capacitor/status-bar": "8.0.0",
     "@capacitor/toast": "8.0.0",
-    "@earth-app/crust": "0.1.4-caec69e",
+    "@earth-app/crust": "0.1.4",
     "@earth-app/ocean": "1.0.0",
     "@ionic/pwa-elements": "^3.3.0",
     "@ionic/vue": "^8.7.15",
@@ -53,7 +53,7 @@
     "vue": "^3.5.25"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.0.0",
+    "@capacitor/cli": "8.0.1",
     "@iconify-json/logos": "^1.2.10",
     "@ionic/cli": "^7.2.1",
     "@prettier/plugin-xml": "^3.4.2",
