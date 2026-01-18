@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "nuxt generate",
+    "generate": "nuxt generate",
+    "generate:ios": "nuxt generate --dotenv .env.ios",
+    "generate:android": "nuxt generate --dotenv .env.android",
     "build:dev": "nuxt generate --envName development",
     "build:ios": "bunx cap sync && bunx cap build ios",
     "build:android": "bunx cap sync && bunx cap build android",
@@ -24,7 +26,7 @@
     "@capacitor/app": "8.0.0",
     "@capacitor/assets": "^3.0.5",
     "@capacitor/browser": "8.0.0",
-    "@capacitor/core": "8.0.0",
+    "@capacitor/core": "8.0.1",
     "@capacitor/dialog": "^8.0.0",
     "@capacitor/haptics": "8.0.0",
     "@capacitor/ios": "8.0.0",
@@ -35,7 +37,7 @@
     "@earth-app/crust": "0.1.4-caec69e",
     "@earth-app/ocean": "1.0.0",
     "@ionic/pwa-elements": "^3.3.0",
-    "@ionic/vue": "^8.7.16",
+    "@ionic/vue": "^8.7.17",
     "@nuxt/icon": "^2.2.0",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.3.0",
@@ -50,22 +52,21 @@
     "nuxt": "^4.2.2",
     "nuxt-viewport": "^2.3.1",
     "postcss": "^8.5.6",
-    "sharp": "^0.34.5",
     "vue": "^3.5.26"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.0.0",
+    "@capacitor/cli": "8.0.1",
     "@iconify-json/logos": "^1.2.10",
     "@ionic/cli": "^7.2.1",
     "@prettier/plugin-xml": "^3.4.2",
     "@vue/cli-service": "5.0.9",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "prettier": "^3.7.4",
+    "prettier": "^3.8.0",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "vue-tsc": "^3.2.2",
-    "wrangler": "^4.58.0"
+    "wrangler": "^4.59.2"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"

@@ -53,7 +53,8 @@ export default defineNuxtConfig({
 	},
 	ionic: {
 		config: {
-			statusTap: true
+			statusTap: true,
+			mode: (process.env.NUXT_MODE as 'md' | 'ios') || 'md'
 		}
 	},
 	modules: [
