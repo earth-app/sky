@@ -3,7 +3,45 @@ name: Build Project
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-ios:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+      attestations: write
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 'latest'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@earth-app'
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Build Project
+        run: bun run generate:ios
+      - name: Archive Build Artifacts
+        id: archive
+        uses: actions/upload-artifact@v6
+        with:
+          name: sky-build-ios-${{ github.run_id }}
+          path: dist/
+          overwrite: true
+      - name: Attest Build Artifacts
+        if: success() || failure()
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: sky-build-ios-${{ github.run_id }}
+          subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
+
+  build-android:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -26,17 +64,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Build Project
-        run: bun run build
+        run: bun run generate:android
       - name: Archive Build Artifacts
         id: archive
         uses: actions/upload-artifact@v6
         with:
-          name: sky-build-${{ github.run_id }}
+          name: sky-build-android-${{ github.run_id }}
           path: dist/
           overwrite: true
       - name: Attest Build Artifacts
         if: success() || failure()
         uses: actions/attest-build-provenance@v3
         with:
-          subject-name: sky-build-${{ github.run_id }}
+          subject-name: sky-build-android-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
