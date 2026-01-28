@@ -1,6 +1,6 @@
 {
 	"name": "sky",
-	"type": "vue",
+	"type": "custom",
 	"integrations": {
 		"capacitor": {}
 	}
