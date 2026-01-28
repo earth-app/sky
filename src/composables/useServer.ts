@@ -6,6 +6,7 @@ import type {
 	YouTubeVideo
 } from '@earth-app/crust/src/shared/types/activity';
 import type { Article } from '@earth-app/crust/src/shared/types/article';
+import type { Event, EventAutocompleteSuggestion } from '@earth-app/crust/src/shared/types/event';
 import { capitalizeFully } from '@earth-app/crust/src/shared/util';
 
 export async function makeMServerRequest<T>(
@@ -404,4 +405,252 @@ export async function getSimilarArticlesM(article: Article, count: number = 5) {
 	}
 
 	return res;
+}
+
+// Events
+
+export async function getSimilarEventsM(event: Event, count: number = 5) {
+	const pool = await getRandomEvents(Math.min(count * 3, 15)).then((res) =>
+		res.success ? res.data : res.message
+	);
+
+	if (!pool || typeof pool === 'string') {
+		throw new Error(`Failed to fetch random events: ${pool}`);
+	}
+
+	if ('message' in pool) {
+		throw new Error(`Failed to fetch random events: ${pool.code} ${pool.message}`);
+	}
+
+	if (!pool || pool.length === 0) {
+		return { success: true, data: [] };
+	}
+
+	const res = await makeMServerRequest<Event[]>(
+		`event-${event.id}-similar_events`,
+		`/api/event/similar`,
+		useCurrentSessionToken(),
+		{
+			method: 'POST',
+			body: { event, count, pool }
+		}
+	);
+
+	if (res.success && res.data) {
+		if ('message' in res.data) {
+			return res;
+		}
+
+		// load similar events into state
+		for (const similarEvent of res.data) {
+			useState<Event | null>(`event-${similarEvent.id}`, () => similarEvent);
+		}
+	}
+
+	return res;
+}
+
+export function useEventThumbnailM(id: string) {
+	const { event } = useEvent(id);
+	const thumbnail = useState<string | null>(`event-thumbnail-${id}`, () => null);
+
+	const fetchThumbnail = async () => {
+		const res = await makeMServerRequest<Blob>(
+			`event-thumbnail-${id}`,
+			`/api/event/thumbnail?id=${encodeURIComponent(id)}`,
+			useCurrentSessionToken()
+		);
+
+		if (res.success && res.data) {
+			const url = URL.createObjectURL(res.data);
+			thumbnail.value = url;
+		} else {
+			thumbnail.value = null;
+		}
+
+		return res;
+	};
+
+	if (!thumbnail.value) {
+		fetchThumbnail();
+	}
+
+	const thumbnailAuthor = useState<string | null>(`event-thumbnail-author-${id}`, () => null);
+	const thumbnailSize = useState<number | null>(`event-thumbnail-size-${id}`, () => null);
+
+	const fetchThumbnailMetadata = async () => {
+		const res = await makeMServerRequest<{ author: string; size: number }>(
+			`event-thumbnail-metadata-${id}`,
+			`/api/event/thumbnail?id=${encodeURIComponent(id)}&metadata=true`,
+			useCurrentSessionToken()
+		);
+
+		if (res.success && res.data) {
+			const author =
+				res.data.author === '<user>' ? event.value?.host.full_name || 'Host' : res.data.author;
+			thumbnailAuthor.value = author;
+
+			thumbnailSize.value = res.data.size;
+		} else {
+			thumbnailAuthor.value = null;
+			thumbnailSize.value = null;
+		}
+
+		return res;
+	};
+
+	if (!thumbnailAuthor.value || !thumbnailSize.value) {
+		fetchThumbnailMetadata();
+	}
+
+	const uploadThumbnail = async (file: File) => {
+		const formData = new FormData();
+		formData.append('photo', file);
+
+		const res = await makeMServerRequest(
+			`event-thumbnail-upload-${id}`,
+			`/api/event/thumbnail?id=${encodeURIComponent(id)}`,
+			useCurrentSessionToken(),
+			{
+				method: 'POST',
+				body: formData
+			}
+		);
+
+		if (res.success) {
+			await fetchThumbnail();
+		}
+
+		return res;
+	};
+
+	const deleteThumbnail = async () => {
+		const res = await makeMServerRequest(
+			`event-thumbnail-delete-${id}`,
+			`/api/event/thumbnail?id=${encodeURIComponent(id)}`,
+			useCurrentSessionToken(),
+			{
+				method: 'DELETE'
+			}
+		);
+
+		if (res.success) {
+			if (thumbnail.value) {
+				URL.revokeObjectURL(thumbnail.value);
+				thumbnail.value = null;
+			}
+		}
+
+		return res;
+	};
+
+	const unloadThumbnail = () => {
+		if (thumbnail.value) {
+			URL.revokeObjectURL(thumbnail.value);
+			thumbnail.value = null;
+		}
+	};
+
+	return {
+		thumbnail,
+		thumbnailAuthor,
+		thumbnailSize,
+		fetchThumbnail,
+		fetchThumbnailMetadata,
+		uploadThumbnail,
+		deleteThumbnail,
+		unloadThumbnail
+	};
+}
+
+export function useGeocodingM() {
+	const latitude = useState<number | null>('user-latitude', () => null);
+	const longitude = useState<number | null>('user-longitude', () => null);
+
+	const retrieveLocation = () => {
+		if (navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(
+				(position) => {
+					latitude.value = position.coords.latitude;
+					longitude.value = position.coords.longitude;
+				},
+				(error) => {
+					console.error('Error retrieving location:', error);
+				}
+			);
+		}
+	};
+
+	if (latitude.value === null || longitude.value === null) {
+		retrieveLocation();
+	}
+
+	const autocomplete = async (input: string, sessionToken: string) => {
+		const res = await makeMServerRequest<EventAutocompleteSuggestion[]>(
+			`event-autocomplete-${input}-${latitude.value ?? 'null'}-${longitude.value ?? 'null'}`,
+			`/api/event/autocomplete?input=${encodeURIComponent(
+				input
+			)}&sessionToken=${encodeURIComponent(sessionToken)}${
+				latitude.value !== null && longitude.value !== null
+					? `&latitude=${latitude.value}&longitude=${longitude.value}`
+					: ''
+			}`,
+			useCurrentSessionToken()
+		);
+
+		if (res.success && res.data) {
+			if ('message' in res.data) {
+				return res;
+			}
+
+			return res;
+		}
+
+		return { success: false, message: 'Failed to fetch autocomplete suggestions.' };
+	};
+
+	const geocode = async (address: string) => {
+		const res = await makeMServerRequest<{ latitude: number; longitude: number }>(
+			`event-geocode-${address}`,
+			`/api/event/geocode?address=${encodeURIComponent(address)}`,
+			useCurrentSessionToken()
+		);
+
+		if (res.success && res.data) {
+			if ('message' in res.data) {
+				return res;
+			}
+
+			return res;
+		}
+
+		return { success: false, message: 'Failed to geocode address.' };
+	};
+
+	const reverseGeocode = async (lat: number, lng: number) => {
+		const res = await makeMServerRequest<{ address: string }>(
+			`event-reverse-geocode-${lat}-${lng}`,
+			`/api/event/geocode?lat=${lat}&lng=${lng}`,
+			useCurrentSessionToken()
+		);
+
+		if (res.success && res.data) {
+			if ('message' in res.data) {
+				return res;
+			}
+
+			return res;
+		}
+
+		return { success: false, message: 'Failed to reverse geocode coordinates.' };
+	};
+
+	return {
+		latitude,
+		longitude,
+		retrieveLocation,
+		autocomplete,
+		geocode,
+		reverseGeocode
+	};
 }

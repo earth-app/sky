@@ -97,6 +97,26 @@
 							>
 								<ArticleMCard :article="item.data[0]" />
 							</div>
+							<MInfoCardGroup
+								v-else-if="item.type === 'event' && item.isGroup"
+								title="New Events"
+								description="Join events happening around you"
+								icon="mdi:calendar-star"
+								show-dots
+								class="w-11/12"
+							>
+								<EventMCard
+									v-for="event in item.data"
+									:key="event.id"
+									:event="event"
+								/>
+							</MInfoCardGroup>
+							<div
+								v-else-if="item.type === 'event' && !item.isGroup && item.data[0]"
+								class="w-11/12"
+							>
+								<EventMCard :event="item.data[0]" />
+							</div>
 						</template>
 						<IonInfiniteScroll
 							@ionInfinite="onInfinite"
@@ -115,12 +135,14 @@
 import { Toast } from '@capacitor/toast';
 import { type Activity } from '@earth-app/crust/src/shared/types/activity';
 import { type Article } from '@earth-app/crust/src/shared/types/article';
+import { type Event } from '@earth-app/crust/src/shared/types/event';
 import { type Prompt } from '@earth-app/crust/src/shared/types/prompts';
 
 type FeedItem =
 	| { type: 'activity'; isGroup: boolean; data: Activity[] }
 	| { type: 'prompt'; isGroup: boolean; data: Prompt[] }
-	| { type: 'article'; isGroup: boolean; data: Article[] };
+	| { type: 'article'; isGroup: boolean; data: Article[] }
+	| { type: 'event'; isGroup: boolean; data: Event[] };
 
 type ContentType = FeedItem['type'];
 
@@ -136,11 +158,12 @@ const lastContentType = ref<ContentType | null>(null);
 const GROUP_SIZES = {
 	activity: 5,
 	prompt: 3,
-	article: 4
+	article: 4,
+	event: 5
 };
 
 function getNextContentType(): ContentType {
-	const types: ContentType[] = ['activity', 'prompt', 'article'];
+	const types: ContentType[] = ['activity', 'prompt', 'article', 'event'];
 	const availableTypes = types.filter((t) => t !== lastContentType.value);
 	const randomIndex = Math.floor(Math.random() * availableTypes.length);
 	const nextType = availableTypes[randomIndex]!;
@@ -169,10 +192,15 @@ async function fetchContent(
 	useRecommended?: boolean
 ): Promise<Article[]>;
 async function fetchContent(
+	type: 'event',
+	count: number,
+	useRecommended?: boolean
+): Promise<Event[]>;
+async function fetchContent(
 	type: ContentType,
 	count: number,
 	useRecommended: boolean = false
-): Promise<Activity[] | Prompt[] | Article[]> {
+): Promise<Activity[] | Prompt[] | Article[] | Event[]> {
 	try {
 		if (type === 'activity') {
 			if (useRecommended && user.value) {
@@ -181,6 +209,7 @@ async function fetchContent(
 					return res.data.slice(0, count);
 				}
 			}
+
 			const res = await getRandomActivities(count);
 			if (res.success && res.data && Array.isArray(res.data)) {
 				return res.data;
@@ -192,15 +221,66 @@ async function fetchContent(
 			}
 		} else if (type === 'article') {
 			if (useRecommended && user.value) {
-				const res = await getRecommendedArticles(user.value, count);
+				const res = await getRecommendedArticles(count);
 				if (res.success && res.data && Array.isArray(res.data)) {
 					return res.data;
 				}
 			}
-			const res = await getRandomArticles(count);
-			if (res.success && res.data && Array.isArray(res.data)) {
-				return res.data;
+
+			const split = Math.random() * 0.4 + 0.3; // between 30% and 70%
+			const recCount = Math.floor(count * split);
+			const [res1, res2] = await Promise.all([
+				getRandomArticles(Math.max(1, recCount)),
+				getRecentArticles(Math.max(1, count - recCount))
+			]);
+			const articles: Article[] = [];
+
+			if (res1.success && res1.data && Array.isArray(res1.data)) {
+				articles.push(...res1.data);
 			}
+
+			if (res2.success && res2.data && Array.isArray(res2.data)) {
+				articles.push(...res2.data);
+			}
+
+			// Deduplicate articles by ID
+			const uniqueArticlesMap = new Map<string, Article>();
+			for (const article of articles) {
+				uniqueArticlesMap.set(article.id, article);
+			}
+
+			return Array.from(uniqueArticlesMap.values()).slice(0, count);
+		} else if (type === 'event') {
+			if (useRecommended && user.value) {
+				const res = await getRecommendedEvents(count);
+				if (res.success && res.data && Array.isArray(res.data)) {
+					return res.data;
+				}
+			}
+
+			const split = Math.random() * 0.4 + 0.4; // between 40% and 60%
+			const recCount = Math.floor(count * split);
+			const [res1, res2] = await Promise.all([
+				getRandomEvents(Math.max(1, recCount)),
+				getRecentEvents(Math.max(1, count - recCount))
+			]);
+
+			const events: Event[] = [];
+			if (res1.success && res1.data && Array.isArray(res1.data)) {
+				events.push(...res1.data);
+			}
+
+			if (res2.success && res2.data && Array.isArray(res2.data)) {
+				events.push(...res2.data);
+			}
+
+			// Deduplicate events by ID
+			const uniqueEventsMap = new Map<string, Event>();
+			for (const event of events) {
+				uniqueEventsMap.set(event.id, event);
+			}
+
+			return Array.from(uniqueEventsMap.values()).slice(0, count);
 		}
 	} catch (error) {
 		console.error(`Error fetching ${type}:`, error);
@@ -246,6 +326,16 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		// prerender routes
 		for (const article of data) {
 			preloadRouteComponents(`/tabs/articles/${article.id}`);
+		}
+	} else if (type === 'event') {
+		const data = await fetchContent(type, count, useRecommended);
+		if (data.length > 0) {
+			feedItem = { type, isGroup, data };
+		}
+
+		// prerender routes
+		for (const event of data) {
+			preloadRouteComponents(`/tabs/events/${event.id}`);
 		}
 	}
 
