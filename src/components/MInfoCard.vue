@@ -16,6 +16,7 @@
 			v-if="image"
 			:src="image"
 			alt="Card Image"
+			class="mb-2"
 		/>
 		<IonCardHeader class="px-2">
 			<IonCardTitle>
@@ -33,7 +34,7 @@
 							@click="
 								() => {
 									if (avatar?.link) {
-										navigateTo(avatar.link);
+										goTo(avatar.link);
 									}
 								}
 							"
@@ -47,7 +48,7 @@
 						@click="
 							() => {
 								if (avatar?.link) {
-									navigateTo(avatar.link);
+									goTo(avatar.link);
 								}
 							}
 						"
@@ -100,7 +101,7 @@
 			</IonCardSubtitle>
 		</IonCardHeader>
 
-		<IonCardContent class="w-full py-0! px-1!">
+		<IonCardContent class="w-full py-1! px-2!">
 			<span
 				v-if="content"
 				class="font-sans"
@@ -155,11 +156,19 @@
 					:key="index"
 					:outline="badge.outline"
 					:color="badge.color"
-					class="py-1 px-3 font-semibold"
+					class="flex items-center py-1 px-3 font-semibold"
+					@click="
+						() => {
+							if (badge.link) {
+								goTo(badge.link);
+							}
+						}
+					"
 				>
 					<UIcon
 						v-if="badge.icon"
 						:name="badge.icon"
+						class="mr-1"
 					/>
 					<IonLabel>{{ badge.text }}</IonLabel>
 					<UIcon
@@ -179,11 +188,27 @@
 					:color="button.color"
 					:size="button.size || 'default'"
 					@click="button.onClick"
+					:disabled="button.disabled"
 				>
 					{{ button.text }}
 				</IonButton>
 			</div>
-
+			<div
+				v-if="avatarGroup"
+				class="mt-2"
+			>
+				<UAvatarGroup :max="avatarGroup.max">
+					<UAvatar
+						v-for="(avatar, index) in avatarGroup.avatars"
+						:key="`avatar-group-${index}`"
+						:src="avatar.src"
+						:alt="avatar.alt"
+						:icon="avatar.icon"
+						:size="avatarGroup.size || 'md'"
+						:chip="avatar.chip || undefined"
+					/>
+				</UAvatarGroup>
+			</div>
 			<span
 				v-if="footer"
 				class="text-sm block mt-4 font-sans text-gray-300 light:text-gray-400 font-normal mb-2"
@@ -238,12 +263,14 @@ defineProps<{
 		trailingIcon?: string;
 		color?: Color;
 		outline?: boolean;
+		link?: string;
 	}[];
 	buttons?: {
 		text: string;
 		color?: Color;
 		size?: 'small' | 'default' | 'large';
-		onClick: () => void;
+		onClick?: () => void;
+		disabled?: boolean;
 	}[];
 	color?: Color;
 	video?: string;
@@ -253,6 +280,20 @@ defineProps<{
 		link: string;
 		inBrowser?: boolean;
 	}[];
+	avatarGroup?: {
+		avatars: {
+			src?: string;
+			alt?: string;
+			icon?: string;
+			chip?: {
+				inset?: boolean;
+				color?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
+				size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
+			};
+		}[];
+		size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
+		max?: number;
+	};
 }>();
 
 const origin = computed(() => {
@@ -262,4 +303,8 @@ const origin = computed(() => {
 
 	return encodeURIComponent('https://app.earth-app.com');
 });
+
+function goTo(url: string) {
+	navigateTo(url);
+}
 </script>

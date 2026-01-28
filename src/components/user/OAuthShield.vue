@@ -6,7 +6,6 @@
 		--background-focused: ${bgColor};
 		--color: ${textColor}`"
 		size="small"
-		mode="ios"
 		class="w-full active:brightness-110 hover:brightness-90 hover:scale-105 transition-all duration-250"
 	>
 		<div class="w-full flex items-center justify-evenly">

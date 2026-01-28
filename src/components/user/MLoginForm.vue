@@ -1,6 +1,6 @@
 <template>
 	<IonCard
-		class="min-w-120 p-4"
+		class="min-w-60 w-7/8 max-w-full p-4"
 		color="dark"
 	>
 		<UForm
