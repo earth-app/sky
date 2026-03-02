@@ -57,6 +57,9 @@ export default defineNuxtConfig({
 			mode: (process.env.NUXT_MODE as 'md' | 'ios') || 'md'
 		}
 	},
+	image: {
+		provider: 'none'
+	},
 	modules: [
 		'@nuxtjs/ionic',
 		'@nuxt/ui',
