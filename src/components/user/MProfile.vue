@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-col size-full">
-		<div class="grid grid-cols-2 justify-items-center items-center px-4 mt-6">
+		<div class="flex gap-8 justify-center justify-items-center items-center px-4 mt-6">
 			<div class="flex flex-col items-center justify-evenly self-start py-4">
 				<UAvatar
 					:src="avatar"

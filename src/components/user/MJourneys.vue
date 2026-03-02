@@ -1,5 +1,5 @@
 <template>
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
 		<UserMJourneyProgress
 			v-if="!loading"
 			icon="mdi:leaf"
@@ -25,6 +25,14 @@
 			help="Read articles to increase this number."
 		/>
 		<UserJourneyProgressSkeleton v-else />
+		<UserMJourneyProgress
+			v-if="!loading"
+			icon="mdi:calendar-star"
+			title="Events"
+			:count="event"
+			help="Attend events to increase this number."
+		/>
+		<UserJourneyProgressSkeleton v-else />
 	</div>
 </template>
 
@@ -40,6 +48,7 @@ const loading = ref(false);
 const activity = ref(0);
 const prompt = ref(0);
 const article = ref(0);
+const event = ref(0);
 const { count: totalActivities } = useActivitiesCount();
 
 onMounted(async () => {
@@ -56,7 +65,8 @@ onMounted(async () => {
 	][] = [
 		[activity, async () => await getCurrentJourneyM('activity', props.user.id)],
 		[prompt, async () => await getCurrentJourneyM('prompt', props.user.id)],
-		[article, async () => await getCurrentJourneyM('article', props.user.id)]
+		[article, async () => await getCurrentJourneyM('article', props.user.id)],
+		[event, async () => await getCurrentJourneyM('event', props.user.id)]
 	];
 
 	Promise.all(
