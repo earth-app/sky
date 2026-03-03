@@ -45,7 +45,8 @@ export default defineNuxtConfig({
 		}
 	},
 	vite: {
-		plugins: [tailwindcss()]
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		plugins: [tailwindcss() as any]
 	},
 	i18n: {
 		locales: [{ code: 'en', language: 'en-US' }],
