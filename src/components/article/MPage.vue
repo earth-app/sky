@@ -111,7 +111,7 @@
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
 import type { Article } from '@earth-app/crust/src/shared/types/article';
-import { parseLooseDate, trimString } from '@earth-app/crust/src/shared/util';
+import { parseLooseDate, trimString } from '@earth-app/crust/src/shared/utils/util';
 import { DateTime } from 'luxon';
 
 const props = defineProps<{

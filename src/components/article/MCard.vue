@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import type { Article } from '@earth-app/crust/src/shared/types/article';
-import { trimString } from '@earth-app/crust/src/shared/util';
+import { trimString } from '@earth-app/crust/src/shared/utils/util';
 import { DateTime } from 'luxon';
 
 const props = defineProps<{

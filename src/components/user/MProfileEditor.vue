@@ -187,7 +187,7 @@ import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
 import type { Activity } from '@earth-app/crust/src/shared/types/activity';
 import type { User } from '@earth-app/crust/src/shared/types/user';
-import { capitalizeFully } from '@earth-app/crust/src/shared/util';
+import { capitalizeFully } from '@earth-app/crust/src/shared/utils/util';
 import { com } from '@earth-app/ocean';
 import type { IonModal } from '@ionic/vue';
 
@@ -348,7 +348,8 @@ function updateActivitiesList(search: string) {
 	activitiesSearch.value = search;
 	activitiesLoading.value = true;
 
-	getAllActivities(-1, activitiesSearch.value).then((res) => {
+	const { fetchAll } = useActivities();
+	fetchAll(-1, activitiesSearch.value).then((res) => {
 		if (res.success) {
 			const activities =
 				res.data?.map((activity: Activity) => {

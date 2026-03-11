@@ -31,7 +31,7 @@ defineOptions({
 });
 import { Toast } from '@capacitor/toast';
 import type { Event } from '@earth-app/crust/src/shared/types/event';
-import { capitalizeFully, trimString } from '@earth-app/crust/src/shared/util';
+import { capitalizeFully, trimString } from '@earth-app/crust/src/shared/utils/util';
 import { DateTime } from 'luxon';
 
 const props = defineProps<{

@@ -7,7 +7,7 @@ import type {
 } from '@earth-app/crust/src/shared/types/activity';
 import type { Article } from '@earth-app/crust/src/shared/types/article';
 import type { Event, EventAutocompleteSuggestion } from '@earth-app/crust/src/shared/types/event';
-import { capitalizeFully } from '@earth-app/crust/src/shared/util';
+import { capitalizeFully } from '@earth-app/crust/src/shared/utils/util';
 
 export async function makeMServerRequest<T>(
 	key: string | null,
@@ -367,7 +367,8 @@ export function useActivityCardsM() {
 // Articles
 
 export async function getSimilarArticlesM(article: Article, count: number = 5) {
-	const pool = await getRandomArticles(Math.min(count * 3, 15)).then((res) =>
+	const { getRandom } = useArticles();
+	const pool = await getRandom(Math.min(count * 3, 15)).then((res) =>
 		res.success ? res.data : res.message
 	);
 
@@ -410,7 +411,8 @@ export async function getSimilarArticlesM(article: Article, count: number = 5) {
 // Events
 
 export async function getSimilarEventsM(event: Event, count: number = 5) {
-	const pool = await getRandomEvents(Math.min(count * 3, 15)).then((res) =>
+	const { getRandom } = useEvents();
+	const pool = await getRandom(Math.min(count * 3, 15)).then((res) =>
 		res.success ? res.data : res.message
 	);
 

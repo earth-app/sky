@@ -88,7 +88,7 @@
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
 import { type Prompt } from '@earth-app/crust/src/shared/types/prompts';
-import { withSuffix } from '@earth-app/crust/src/shared/util';
+import { withSuffix } from '@earth-app/crust/src/shared/utils/util';
 import { DateTime } from 'luxon';
 
 const props = defineProps<{
