@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import type { Event } from '@earth-app/crust/src/shared/types/event';
+import type { Event } from 'types/event';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
 
 const { user } = useAuth();

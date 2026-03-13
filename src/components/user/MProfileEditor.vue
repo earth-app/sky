@@ -185,11 +185,11 @@
 <script setup lang="ts">
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
-import type { Activity } from '@earth-app/crust/src/shared/types/activity';
-import type { User } from '@earth-app/crust/src/shared/types/user';
-import { capitalizeFully } from '@earth-app/crust/src/shared/utils/util';
 import { com } from '@earth-app/ocean';
 import type { IonModal } from '@ionic/vue';
+import type { Activity } from 'types/activity';
+import type { User } from 'types/user';
+import { capitalizeFully } from 'utils';
 
 const props = defineProps<{
 	user: User;
@@ -369,10 +369,10 @@ function updateActivitiesList(search: string) {
 			filterActivitiesList(activitiesSearch.value);
 			activitiesLoading.value = false;
 		} else {
-			console.error(res.data?.message || res.message || 'Failed to fetch activities.');
+			console.error(res.message || 'Failed to fetch activities.');
 
 			Toast.show({
-				text: res.data?.message || res.message || 'Failed to fetch activities.',
+				text: res.message || 'Failed to fetch activities.',
 				duration: 'long'
 			});
 
@@ -442,9 +442,10 @@ async function confirmActivityChanges() {
 	const res = await setUserActivities(workingSelectedActivities.value);
 
 	if (res.success && res.data && 'activities' in res.data) {
-		props.user.activities = res.data.activities;
+		const activities = res.data.activities || [];
+		props.user.activities = activities;
 
-		currentActivities.value = res.data.activities.map((activity: Activity) => ({
+		currentActivities.value = activities.map((activity: Activity) => ({
 			label: activity.name,
 			value: activity.id,
 			icon: activity.fields['icon'] || 'material-symbols:activity-zone'

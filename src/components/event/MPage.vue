@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Event } from '@earth-app/crust/src/shared/types/event';
+import type { Event } from 'types/event';
 
 const props = defineProps<{
 	event: Event;

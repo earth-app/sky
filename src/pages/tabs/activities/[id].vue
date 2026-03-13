@@ -1,11 +1,11 @@
 <template>
 	<IonPage>
 		<IonContent
-			v-if="currentActivity"
+			v-if="activity"
 			:scroll-y="true"
 		>
 			<Back />
-			<ActivityMProfile :activity="currentActivity" />
+			<ActivityMProfile :activity="activity" />
 		</IonContent>
 		<div
 			v-else
@@ -21,40 +21,23 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { type Activity } from '@earth-app/crust/src/shared/types/activity';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
 
 const route = useRoute();
-const currentActivity = ref<Activity | null>(null);
-
-async function loadActivity(id?: string) {
-	if (!id) return;
-	const res = await getActivity(id);
-
-	if (res.success && res.data) {
-		if ('message' in res.data) {
-			await Toast.show({
-				text: res.data.message || 'An unknown error occurred.',
-				duration: 'long'
-			});
-
-			currentActivity.value = null;
-		} else {
-			currentActivity.value = res.data;
-		}
-	} else {
-		currentActivity.value = null;
-	}
-}
+const { activity } = useActivity(route.params.id as string);
 
 // User Journey
 
 const { user } = useAuth();
 const { count: totalActivities, refresh: refreshCount } = useActivitiesCount();
+watch(activity, (newActivity) => {
+	if (newActivity) {
+		refreshCount();
+	}
+});
 
 onMounted(async () => {
 	if (!route.params.id) return;
-	await loadActivity(route.params.id as string);
 
 	if (!user.value) return;
 	if (totalActivities.value === null) {

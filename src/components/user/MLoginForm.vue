@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { passwordSchema, usernameSchema } from '@earth-app/crust/src/shared/utils/schemas';
+import { passwordSchema, usernameSchema } from 'schemas';
 import z from 'zod';
 
 const username = ref('');

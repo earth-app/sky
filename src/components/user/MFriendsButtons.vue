@@ -1,5 +1,6 @@
 <template>
 	<div
+		v-if="user"
 		id="friends-buttons"
 		class="flex flex-col items-center p-4 min-w-full space-y-2"
 	>
@@ -69,7 +70,7 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import type { User } from '@earth-app/crust/src/shared/types/user';
+import type { User } from 'types/user';
 
 const props = defineProps<{
 	user: User;

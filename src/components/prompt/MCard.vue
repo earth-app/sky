@@ -87,9 +87,9 @@
 <script setup lang="ts">
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
-import { type Prompt } from '@earth-app/crust/src/shared/types/prompts';
-import { withSuffix } from '@earth-app/crust/src/shared/utils/util';
 import { DateTime } from 'luxon';
+import { type Prompt } from 'types/prompts';
+import { withSuffix } from 'utils';
 
 const props = defineProps<{
 	prompt: Prompt;
@@ -103,6 +103,7 @@ const secondaryFooter = ref<string | undefined>(undefined);
 
 const promptText = ref(props.prompt.prompt);
 const { user } = useAuth();
+const { update, remove } = usePrompt(props.prompt.id);
 const { handle: ownerHandle } = useDisplayName(() => props.prompt.owner);
 const { avatar128: authorAvatar } = useUser(props.prompt.owner_id);
 const authorAvatarChipColor = ref<any | null>(null);
@@ -155,7 +156,7 @@ const editLoading = ref(false);
 
 async function savePrompt() {
 	editLoading.value = true;
-	const res = await updatePrompt(props.prompt.id, promptText.value);
+	const res = await update(promptText.value);
 
 	if (res.success) {
 		editOpen.value = false;
@@ -180,7 +181,7 @@ async function deletePrompt() {
 	});
 
 	if (yes.value) {
-		const res = await removePrompt(props.prompt.id);
+		const res = await remove();
 		if (res.success) {
 			await Toast.show({
 				text: 'Your prompt has been successfully deleted.',

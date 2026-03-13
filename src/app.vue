@@ -9,12 +9,13 @@ import { defineCustomElements } from '@ionic/pwa-elements/loader';
 import slide from './animations/slide';
 
 defineCustomElements(window);
+const config = useAppConfig();
 
 useSeoMeta({
 	charset: 'utf-8',
-	title: SITE_NAME,
+	title: config.name,
 	themeColor: {
-		content: THEME_COLOR,
+		content: config.themeColor,
 		media: '(prefers-color-scheme: dark)'
 	},
 	mobileWebAppCapable: 'yes',

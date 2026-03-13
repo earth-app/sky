@@ -19,8 +19,8 @@
 </template>
 
 <script setup lang="ts">
-import type { OAuthProvider } from '@earth-app/crust/src/shared/types/user';
-import { capitalizeFully } from '@earth-app/crust/src/shared/utils/util';
+import type { OAuthProvider } from 'types/user';
+import { capitalizeFully } from 'utils';
 
 const props = defineProps<{
 	provider: OAuthProvider;

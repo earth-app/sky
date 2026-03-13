@@ -133,10 +133,10 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { type Activity } from '@earth-app/crust/src/shared/types/activity';
-import { type Article } from '@earth-app/crust/src/shared/types/article';
-import { type Event } from '@earth-app/crust/src/shared/types/event';
-import { type Prompt } from '@earth-app/crust/src/shared/types/prompts';
+import { type Activity } from 'types/activity';
+import { type Article } from 'types/article';
+import { type Event } from 'types/event';
+import { type Prompt } from 'types/prompts';
 
 type FeedItem =
 	| { type: 'activity'; isGroup: boolean; data: Activity[] }
@@ -210,18 +210,21 @@ async function fetchContent(
 				}
 			}
 
-			const res = await getRandomActivities(count);
+			const { getRandom } = useActivities();
+			const res = await getRandom(count);
 			if (res.success && res.data && Array.isArray(res.data)) {
 				return res.data;
 			}
 		} else if (type === 'prompt') {
-			const res = await getRandomPrompts(count);
+			const { getRandom } = usePrompts();
+			const res = await getRandom(count);
 			if (res.success && res.data && Array.isArray(res.data)) {
 				return res.data;
 			}
 		} else if (type === 'article') {
+			const { getRecommended, getRandom, getRecent } = useArticles();
 			if (useRecommended && user.value) {
-				const res = await getRecommendedArticles(count);
+				const res = await getRecommended(count);
 				if (res.success && res.data && Array.isArray(res.data)) {
 					return res.data;
 				}
@@ -230,8 +233,8 @@ async function fetchContent(
 			const split = Math.random() * 0.4 + 0.3; // between 30% and 70%
 			const recCount = Math.floor(count * split);
 			const [res1, res2] = await Promise.all([
-				getRandomArticles(Math.max(1, recCount)),
-				getRecentArticles(Math.max(1, count - recCount))
+				getRandom(count - recCount),
+				getRecent(count - recCount)
 			]);
 			const articles: Article[] = [];
 
@@ -251,8 +254,9 @@ async function fetchContent(
 
 			return Array.from(uniqueArticlesMap.values()).slice(0, count);
 		} else if (type === 'event') {
+			const { getRecommended, getRandom, getRecent } = useEvents();
 			if (useRecommended && user.value) {
-				const res = await getRecommendedEvents(count);
+				const res = await getRecommended(count);
 				if (res.success && res.data && Array.isArray(res.data)) {
 					return res.data;
 				}
@@ -261,8 +265,8 @@ async function fetchContent(
 			const split = Math.random() * 0.4 + 0.4; // between 40% and 60%
 			const recCount = Math.floor(count * split);
 			const [res1, res2] = await Promise.all([
-				getRandomEvents(Math.max(1, recCount)),
-				getRecentEvents(Math.max(1, count - recCount))
+				getRandom(count - recCount),
+				getRecent(count - recCount)
 			]);
 
 			const events: Event[] = [];

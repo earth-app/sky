@@ -91,8 +91,8 @@
 <script setup lang="ts">
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
-import { type PromptResponse } from '@earth-app/crust/src/shared/types/prompts';
 import { DateTime } from 'luxon';
+import { type PromptResponse } from 'types/prompts';
 
 const props = defineProps<{
 	response: PromptResponse;
@@ -103,11 +103,10 @@ const emit = defineEmits<{
 }>();
 
 const i18n = useI18n();
-const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const { user } = useAuth();
 const { handle: identifier } = useDisplayName(props.response.owner);
-
 const { avatar128: authorAvatar } = useUser(props.response.owner.id);
+const { updateResponse, removeResponse } = usePromptResponses(props.response.prompt_id);
 
 const time = computed(() => {
 	const created = DateTime.fromISO(props.response.created_at, {
@@ -126,21 +125,6 @@ const time = computed(() => {
 	}
 
 	return str || 'Whenever';
-});
-
-const tooltip = computed(() => {
-	const created = DateTime.fromISO(props.response.created_at, {
-		zone: timezone
-	}).toLocaleString(DateTime.DATETIME_FULL_WITH_SECONDS);
-
-	if (props.response.updated_at && props.response.created_at !== props.response.updated_at) {
-		const updated = DateTime.fromISO(props.response.updated_at, {
-			zone: timezone
-		}).toLocaleString(DateTime.DATETIME_FULL_WITH_SECONDS);
-		return `${created} (edited ${updated})`;
-	}
-
-	return created;
 });
 
 const hasButtons = computed(() => {
@@ -164,11 +148,7 @@ const editLoading = ref(false);
 
 async function saveResponse() {
 	editLoading.value = true;
-	const res = await updatePromptResponse(
-		props.response.prompt_id,
-		props.response.id,
-		responseText.value
-	);
+	const res = await updateResponse(props.response.id, responseText.value);
 
 	if (res.success) {
 		editOpen.value = false;
@@ -193,7 +173,7 @@ async function deleteResponse() {
 	});
 
 	if (yes.value) {
-		const res = await removePromptResponse(props.response.prompt_id, props.response.id);
+		const res = await removeResponse(props.response.id);
 		if (res.success) {
 			await Toast.show({
 				text: 'Your prompt response has been successfully deleted.',

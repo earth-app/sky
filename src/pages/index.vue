@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { SplashScreen } from '@capacitor/splash-screen';
-import { OAUTH_PROVIDERS } from '@earth-app/crust/src/shared/types/user';
+import { OAUTH_PROVIDERS } from 'types/user';
 
 const { user, fetchUser } = useAuth();
 

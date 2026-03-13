@@ -67,6 +67,7 @@ export default defineNuxtConfig({
 		'@nuxt/image',
 		'@nuxtjs/i18n',
 		'nuxt-viewport',
+		'@pinia/nuxt',
 		[
 			'@nuxtjs/google-fonts',
 			{
@@ -87,6 +88,7 @@ export default defineNuxtConfig({
 		]
 	],
 	experimental: {
-		renderJsonPayloads: true
+		renderJsonPayloads: true,
+		payloadExtraction: true
 	}
 });

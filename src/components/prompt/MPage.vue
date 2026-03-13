@@ -77,7 +77,7 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { type Prompt } from '@earth-app/crust/src/shared/types/prompts';
+import { type Prompt } from 'types/prompts';
 
 const { user, avatar128 } = useAuth();
 const { handle } = useDisplayName(user);
@@ -89,7 +89,7 @@ const props = defineProps<{
 	prompt: Prompt;
 }>();
 
-const { responses, fetch: loadResponses } = usePromptResponses(props.prompt.id);
+const { responses, fetch: loadResponses, createResponse } = usePromptResponses(props.prompt.id);
 
 const posting = ref(false);
 const newResponse = ref('');
@@ -99,7 +99,7 @@ async function postResponse() {
 
 	posting.value = true;
 
-	const res = await createPromptResponse(props.prompt.id, newResponse.value);
+	const res = await createResponse(newResponse.value);
 	if (res.success && res.data) {
 		if ('message' in res.data) {
 			await Toast.show({
@@ -138,7 +138,6 @@ async function postResponse() {
 }
 
 async function handleRefresh(event: CustomEvent) {
-	responses.value = [];
 	page.value = 1;
 	hasMore.value = true;
 	await loadResponses();
@@ -153,7 +152,6 @@ async function onInfinite(event: CustomEvent) {
 
 onMounted(async () => {
 	// Clear any existing responses to ensure fresh data on page load
-	responses.value = [];
 	page.value = 1;
 	hasMore.value = true;
 

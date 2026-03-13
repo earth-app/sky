@@ -15,8 +15,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Activity } from '@earth-app/crust/src/shared/types/activity';
-import { capitalizeFully, trimString } from '@earth-app/crust/src/shared/utils/util';
+import type { Activity } from 'types/activity';
+import { capitalizeFully, trimString } from 'utils';
 
 const colors = ['success', 'warning', 'primary'];
 

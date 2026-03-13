@@ -74,8 +74,8 @@
 	</div>
 </template>
 <script setup lang="ts">
-import type { User } from '@earth-app/crust/src/shared/types/user';
-import { withSuffix } from '@earth-app/crust/src/shared/utils/util';
+import type { User } from 'types/user';
+import { withSuffix } from 'utils';
 
 const props = defineProps<{
 	user: User;

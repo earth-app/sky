@@ -110,9 +110,9 @@
 <script setup lang="ts">
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
-import type { Article } from '@earth-app/crust/src/shared/types/article';
-import { parseLooseDate, trimString } from '@earth-app/crust/src/shared/utils/util';
 import { DateTime } from 'luxon';
+import type { Article } from 'types/article';
+import { parseLooseDate, trimString } from 'utils';
 
 const props = defineProps<{
 	article: Article;
@@ -159,6 +159,7 @@ const oceanColor = computed(() => {
 // Owner Actions
 
 const { user } = useAuth();
+const { remove } = useArticle(props.article.id);
 const hasWriteAccess = computed(() => {
 	if (user.value == null) return false;
 	if (props.article.author_id === user.value.id) return true;
@@ -174,7 +175,7 @@ async function removeArticle() {
 	});
 
 	if (yes.value) {
-		const res = await deleteArticle(props.article.id);
+		const res = await remove();
 		if (res.success) {
 			await Toast.show({
 				text: 'The article has been successfully deleted.',

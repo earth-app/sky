@@ -32,9 +32,9 @@
 </template>
 
 <script setup lang="ts">
-import type { Article } from '@earth-app/crust/src/shared/types/article';
-import { trimString } from '@earth-app/crust/src/shared/utils/util';
 import { DateTime } from 'luxon';
+import type { Article } from 'types/article';
+import { trimString } from 'utils';
 
 const props = defineProps<{
 	article: Article;

@@ -4,10 +4,10 @@ import type {
 	PixabayVideo,
 	WikipediaSummary,
 	YouTubeVideo
-} from '@earth-app/crust/src/shared/types/activity';
-import type { Article } from '@earth-app/crust/src/shared/types/article';
-import type { Event, EventAutocompleteSuggestion } from '@earth-app/crust/src/shared/types/event';
-import { capitalizeFully } from '@earth-app/crust/src/shared/utils/util';
+} from 'types/activity';
+import type { Article } from 'types/article';
+import type { Event, EventAutocompleteSuggestion } from 'types/event';
+import { capitalizeFully } from 'utils';
 
 export async function makeMServerRequest<T>(
 	key: string | null,

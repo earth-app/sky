@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Article } from '@earth-app/crust/src/shared/types/article';
+import type { Article } from 'types/article';
 
 const props = defineProps<{
 	article?: Article;

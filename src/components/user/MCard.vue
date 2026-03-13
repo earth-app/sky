@@ -1,5 +1,6 @@
 <template>
 	<div
+		v-if="user"
 		class="flex flex-col p-4 bg-gray-900 light:bg-gray-100 rounded-lg shadow-md border-2 border-gray-700 light:border-gray-300"
 	>
 		<div class="flex items-center">
@@ -50,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import type { User } from '@earth-app/crust/src/shared/types/user';
+import type { User } from 'types/user';
 
 const badgeVariants = ref<('subtle' | 'solid')[]>([]);
 

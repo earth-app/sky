@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Activity } from '@earth-app/crust/src/shared/types/activity';
+import type { Activity } from 'types/activity';
 
 const props = defineProps<{
 	activity: Activity;

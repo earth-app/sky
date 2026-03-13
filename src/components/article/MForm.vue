@@ -136,14 +136,15 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { articleSchema } from '@earth-app/crust/src/shared/schemas';
-import type { Article } from '@earth-app/crust/src/shared/types/article';
+import { articleSchema } from 'schemas';
+import type { Article } from 'types/article';
 
 const props = defineProps<{
 	article?: Article;
 	mode: 'create' | 'edit';
 }>();
 
+const { create } = useArticles();
 const router = useIonRouter();
 const loading = ref(false);
 
@@ -182,7 +183,7 @@ const removeTag = (index: number) => {
 async function handleSubmit() {
 	loading.value = true;
 	if (props.mode === 'create') {
-		const res = await createArticle({
+		const res = await create({
 			title: state.title,
 			description: state.description,
 			content: state.content
@@ -211,7 +212,8 @@ async function handleSubmit() {
 			});
 		}
 	} else {
-		const res = await editArticle({
+		const { update } = useArticle(props.article!.id);
+		const res = await update({
 			id: props.article!.id,
 			title: state.title,
 			description: state.description,
