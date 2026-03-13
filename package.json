@@ -33,7 +33,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.1",
     "@capacitor/toast": "^8.0.1",
-    "@earth-app/crust": "0.3.0",
+    "@earth-app/crust": "0.3.1-8b210f7",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "^8.8.1",
@@ -46,7 +46,7 @@
     "@tiptap/extension-drag-handle": "^3.20.1",
     "@types/luxon": "^3.7.1",
     "luxon": "^3.7.2",
-    "nuxt": "^4.3.1",
+    "nuxt": "^4.4.2",
     "nuxt-viewport": "^2.4.0",
     "vue": "^3.5.30"
   },
@@ -62,7 +62,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "vue-tsc": "^3.2.5",
-    "wrangler": "^4.72.0"
+    "wrangler": "^4.73.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
