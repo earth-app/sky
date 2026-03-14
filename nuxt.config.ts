@@ -46,7 +46,27 @@ export default defineNuxtConfig({
 	},
 	vite: {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		plugins: [tailwindcss() as any]
+		plugins: [tailwindcss() as any],
+		server: {
+			hmr: {
+				host: '127.0.0.1',
+				clientPort: 3001,
+				protocol: 'ws'
+			}
+		},
+		optimizeDeps: {
+			exclude: ['@earth-app/crust', 'stores', 'types', 'utils', 'schemas'],
+			include: [
+				'@vue/devtools-core',
+				'@vue/devtools-kit',
+				'@ionic/vue',
+				'@ionic/pwa-elements/loader',
+				'@capacitor/splash-screen'
+			]
+		}
+	},
+	build: {
+		transpile: ['@earth-app/crust']
 	},
 	i18n: {
 		locales: [{ code: 'en', language: 'en-US' }],
@@ -60,6 +80,9 @@ export default defineNuxtConfig({
 	},
 	image: {
 		provider: 'none'
+	},
+	pinia: {
+		storesDirs: ['stores', '../node_modules/@earth-app/crust/src/stores']
 	},
 	modules: [
 		'@nuxtjs/ionic',
