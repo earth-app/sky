@@ -25,7 +25,6 @@ import { useRoute } from 'vue-router'; // explicit import fixes issues with ioni
 const route = useRoute();
 const { prompt, fetch } = usePrompt(route.params.id as string);
 
-// force fetch on mount to ensure fresh data on page refresh
 onMounted(() => {
 	fetch();
 });

@@ -24,7 +24,10 @@ import { Toast } from '@capacitor/toast';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
 
 const route = useRoute();
-const { activity } = useActivity(route.params.id as string);
+const { activity, fetch } = useActivity(route.params.id as string);
+onMounted(() => {
+	fetch();
+});
 
 // User Journey
 

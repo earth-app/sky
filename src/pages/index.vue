@@ -82,10 +82,14 @@ onMounted(async () => {
 	await SplashScreen.hide();
 });
 
-watch(user, async (currentUser) => {
-	if (currentUser) {
-		await preloadRouteComponents('/tabs/dashboard');
-		await navigateTo('/tabs/dashboard');
-	}
-});
+watch(
+	user,
+	async (currentUser) => {
+		if (currentUser) {
+			await preloadRouteComponents('/tabs/dashboard');
+			await navigateTo('/tabs/dashboard');
+		}
+	},
+	{ immediate: true }
+);
 </script>

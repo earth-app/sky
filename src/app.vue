@@ -22,4 +22,9 @@ useSeoMeta({
 	appleMobileWebAppCapable: 'yes',
 	appleMobileWebAppStatusBarStyle: 'black'
 });
+
+const { fetchUser } = useAuth();
+onMounted(() => {
+	fetchUser();
+});
 </script>

@@ -22,6 +22,44 @@
 						<h4 class="text-lg! m-0!">Welcome, @{{ user?.username }}</h4>
 					</ClientOnly>
 				</div>
+
+				<div
+					v-if="motd"
+					id="motd"
+					class="w-full px-4"
+				>
+					<IonCard
+						:color="motdColor"
+						class="p-4"
+					>
+						<IonCardHeader>
+							<div class="flex items-center">
+								<UIcon
+									v-if="motd.icon"
+									:name="motd.icon"
+									class="size-12 mr-2"
+								/>
+								<IonCardTitle class="text-sm">{{ motd.motd }}</IonCardTitle>
+							</div>
+						</IonCardHeader>
+
+						<div class="flex w-full mt-2">
+							<IonButton
+								v-if="motd.link"
+								color="medium"
+								size="small"
+								@click="() => navigateTo(motd.link, { external: motd.link?.startsWith('http') })"
+							>
+								Learn More
+								<UIcon
+									name="mdi:arrow-right"
+									class="ml-1 size-4"
+								/>
+							</IonButton>
+						</div>
+					</IonCard>
+				</div>
+
 				<ClientOnly>
 					<div
 						v-if="!hasInitialized || isRefreshing"
@@ -147,6 +185,19 @@ type FeedItem =
 type ContentType = FeedItem['type'];
 
 const { user } = useAuth();
+const { motd, fetchMotd } = useMotd();
+
+const motdColor = computed(() => {
+	if (!motd.value) return 'primary';
+	if (motd.value.type === 'info') return 'secondary';
+	if (motd.value.type === 'warning') return 'warning';
+	if (motd.value.type === 'error') return 'danger';
+	return 'primary';
+});
+
+onMounted(() => {
+	fetchMotd();
+});
 
 const contentRef = ref<any>(null);
 const feedItems = ref<FeedItem[]>([]);

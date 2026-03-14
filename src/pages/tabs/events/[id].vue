@@ -52,7 +52,11 @@ const route = useRoute();
 const relatedLoaded = ref(false);
 const relatedEvents = ref<Event[]>([]);
 
-const { event } = useEvent(route.params.id as string);
+const { event, fetch } = useEvent(route.params.id as string);
+onMounted(() => {
+	fetch();
+});
+
 watch(event, async (newEvent) => {
 	if (newEvent) {
 		await loadSimilar(newEvent);

@@ -52,7 +52,11 @@ const route = useRoute();
 const relatedLoaded = ref(false);
 const relatedArticles = ref<Article[]>([]);
 
-const { article } = useArticle(route.params.id as string);
+const { article, fetch } = useArticle(route.params.id as string);
+onMounted(() => {
+	fetch();
+});
+
 watch(article, async (newArticle) => {
 	if (newArticle) {
 		await loadSimilar(newArticle);
