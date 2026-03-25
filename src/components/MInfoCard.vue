@@ -180,7 +180,7 @@
 
 			<div
 				v-if="buttons"
-				class="flex gap-2 mt-4"
+				class="flex flex-wrap gap-2 mt-4"
 			>
 				<IonButton
 					v-for="(button, index) in buttons"
