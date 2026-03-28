@@ -21,34 +21,34 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "@capacitor/android": "^8.2.0",
-    "@capacitor/app": "^8.0.1",
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/browser": "^8.0.2",
-    "@capacitor/core": "^8.2.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/core": "^8.3.0",
     "@capacitor/dialog": "^8.0.1",
-    "@capacitor/haptics": "^8.0.1",
-    "@capacitor/ios": "^8.2.0",
-    "@capacitor/keyboard": "^8.0.1",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.3.0",
+    "@capacitor/keyboard": "^8.0.2",
     "@capacitor/splash-screen": "^8.0.1",
-    "@capacitor/status-bar": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@capacitor/toast": "^8.0.1",
     "@earth-app/crust": "0.3.1-a050a6c",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
-    "@ionic/vue": "^8.8.1",
+    "@ionic/vue": "^8.8.2",
     "@nuxt/icon": "^2.2.1",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.6.0",
     "@nuxtjs/google-fonts": "^3.2.0",
-    "@nuxtjs/i18n": "^10.2.3",
+    "@nuxtjs/i18n": "^10.2.4",
     "@nuxtjs/ionic": "^1.0.2",
-    "@tiptap/extension-drag-handle": "^3.20.4",
+    "@tiptap/extension-drag-handle": "^3.21.0",
     "@types/luxon": "^3.7.1",
     "luxon": "^3.7.2",
     "nuxt": "^4.4.2",
     "nuxt-viewport": "^2.4.0",
-    "vue": "^3.5.30"
+    "vue": "^3.5.31"
   },
   "devDependencies": {
     "@capacitor/cli": "8.1.0",
@@ -62,7 +62,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "vue-tsc": "^3.2.6",
-    "wrangler": "^4.76.0"
+    "wrangler": "^4.78.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
