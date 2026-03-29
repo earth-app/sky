@@ -22,45 +22,46 @@
 						<h4 class="text-lg! m-0!">Welcome, @{{ user?.username }}</h4>
 					</ClientOnly>
 				</div>
-
-				<div
-					v-if="motd"
-					id="motd"
-					class="w-full px-4"
-				>
-					<IonCard
-						:color="motdColor"
-						class="p-4"
-					>
-						<IonCardHeader>
-							<div class="flex items-center">
-								<UIcon
-									v-if="motd.icon"
-									:name="motd.icon"
-									class="size-12 mr-2"
-								/>
-								<IonCardTitle class="text-sm">{{ motd.motd }}</IonCardTitle>
-							</div>
-						</IonCardHeader>
-
-						<div class="flex w-full mt-2">
-							<IonButton
-								v-if="motd.link"
-								color="medium"
-								size="small"
-								@click="() => navigateTo(motd.link, { external: motd.link?.startsWith('http') })"
-							>
-								Learn More
-								<UIcon
-									name="mdi:arrow-right"
-									class="ml-1 size-4"
-								/>
-							</IonButton>
-						</div>
-					</IonCard>
-				</div>
-
 				<ClientOnly>
+					<div
+						v-if="motd"
+						id="motd"
+						class="w-full px-4"
+					>
+						<IonCard
+							:color="motdColor"
+							class="p-2 border-4 border-black/50 light:border-white/50"
+						>
+							<IonCardHeader>
+								<div class="flex items-center">
+									<UIcon
+										v-if="motd.icon"
+										:name="motd.icon"
+										class="size-8 md:size-12 mr-2"
+									/>
+									<IonCardTitle class="text-sm">{{ motd.motd }}</IonCardTitle>
+								</div>
+							</IonCardHeader>
+
+							<div
+								v-if="motd.link"
+								class="flex w-full mt-2"
+							>
+								<IonButton
+									color="medium"
+									size="small"
+									@click="() => navigateTo(motd.link, { external: motd.link?.startsWith('http') })"
+								>
+									Learn More
+									<UIcon
+										name="mdi:arrow-right"
+										class="ml-1 size-4"
+									/>
+								</IonButton>
+							</div>
+						</IonCard>
+					</div>
+
 					<div
 						v-if="!hasInitialized || isRefreshing"
 						class="flex items-center justify-center w-full py-8"
@@ -155,10 +156,24 @@
 							>
 								<EventMCard :event="item.data[0]" />
 							</div>
+							<MInfoCardGroup
+								v-else-if="item.type === 'user' && item.isGroup"
+								title="Discover Users"
+								description="Connect with like-minded individuals"
+								icon="mdi:account-group-outline"
+								show-dots
+								class="w-11/12"
+							>
+								<UserMCard
+									v-for="user in item.data"
+									:key="user.id"
+									:user="user"
+								/>
+							</MInfoCardGroup>
 						</template>
 						<IonInfiniteScroll
 							@ionInfinite="onInfinite"
-							threshold="75%"
+							threshold="40%"
 						>
 							<IonInfiniteScrollContent />
 						</IonInfiniteScroll>
@@ -171,16 +186,14 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { type Activity } from 'types/activity';
-import { type Article } from 'types/article';
 import { type Event } from 'types/event';
-import { type Prompt } from 'types/prompts';
 
 type FeedItem =
 	| { type: 'activity'; isGroup: boolean; data: Activity[] }
 	| { type: 'prompt'; isGroup: boolean; data: Prompt[] }
 	| { type: 'article'; isGroup: boolean; data: Article[] }
-	| { type: 'event'; isGroup: boolean; data: Event[] };
+	| { type: 'event'; isGroup: boolean; data: Event[] }
+	| { type: 'user'; isGroup: true; data: User[] };
 
 type ContentType = FeedItem['type'];
 
@@ -210,11 +223,12 @@ const GROUP_SIZES = {
 	activity: 5,
 	prompt: 3,
 	article: 4,
-	event: 5
+	event: 5,
+	user: 3
 };
 
 function getNextContentType(): ContentType {
-	const types: ContentType[] = ['activity', 'prompt', 'article', 'event'];
+	const types: ContentType[] = ['activity', 'prompt', 'article', 'event', 'user'];
 	const availableTypes = types.filter((t) => t !== lastContentType.value);
 	const randomIndex = Math.floor(Math.random() * availableTypes.length);
 	const nextType = availableTypes[randomIndex]!;
@@ -247,11 +261,12 @@ async function fetchContent(
 	count: number,
 	useRecommended?: boolean
 ): Promise<Event[]>;
+async function fetchContent(type: 'user', count: number, useRecommended?: boolean): Promise<User[]>;
 async function fetchContent(
 	type: ContentType,
 	count: number,
 	useRecommended: boolean = false
-): Promise<Activity[] | Prompt[] | Article[] | Event[]> {
+): Promise<Activity[] | Prompt[] | Article[] | Event[] | User[]> {
 	try {
 		if (type === 'activity') {
 			if (useRecommended && user.value) {
@@ -336,6 +351,30 @@ async function fetchContent(
 			}
 
 			return Array.from(uniqueEventsMap.values()).slice(0, count);
+		} else if (type === 'user') {
+			const split = Math.random() * 0.4 + 0.3; // between 30% and 70%
+			const randCount = Math.floor(count * split);
+			const [res1, res2] = await Promise.all([
+				getUsers(count - randCount),
+				getUsers(randCount, undefined, 'rand')
+			]);
+
+			const users: User[] = [];
+			if (res1.success && res1.data && Array.isArray(res1.data)) {
+				users.push(...res1.data);
+			}
+
+			if (res2.success && res2.data && Array.isArray(res2.data)) {
+				users.push(...res2.data);
+			}
+
+			// Deduplicate users by ID
+			const uniqueUsersMap = new Map<string, User>();
+			for (const user of users) {
+				uniqueUsersMap.set(user.id, user);
+			}
+
+			return Array.from(uniqueUsersMap.values()).slice(0, count);
 		}
 	} catch (error) {
 		console.error(`Error fetching ${type}:`, error);
@@ -391,6 +430,18 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		// prerender routes
 		for (const event of data) {
 			preloadRouteComponents(`/tabs/events/${event.id}`);
+		}
+	} else if (type === 'user') {
+		// users are always groups since single user cards don't make much sense in a feed context
+		const data = await fetchContent(type, Math.max(2, count), useRecommended);
+		if (data.length > 0) {
+			feedItem = { type, isGroup: true, data };
+		}
+
+		// prerender routes
+		for (const user of data) {
+			preloadRouteComponents(`/tabs/profile/${user.id}`);
+			preloadRouteComponents(`/tabs/profile/@${user.username}`);
 		}
 	}
 
@@ -454,10 +505,7 @@ async function refreshFeed() {
 	}
 }
 
-// Provide refresh function globally for tabs.vue
 provide('refreshDashboard', refreshFeed);
-
-// Initialize feed
 onMounted(async () => {
 	await nextTick();
 	await refreshFeed();

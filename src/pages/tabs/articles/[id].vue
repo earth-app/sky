@@ -43,7 +43,6 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import type { Article } from 'types/article';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
 
 const { user } = useAuth();
