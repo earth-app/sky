@@ -15,15 +15,57 @@
 @layer theme {
 	.light {
 		--ion-background-color: #f3f2f9;
+		--ion-background-color-step-50: #eceaf3;
+		--ion-background-color-step-100: #e5e4ed;
+		--ion-background-color-step-150: #dedce7;
+		--ion-background-color-step-200: #d7d5e1;
+		--ion-background-color-step-250: #d0cedb;
+		--ion-background-color-step-300: #c9c7d5;
+		--ion-background-color-step-350: #c2bfcf;
+		--ion-background-color-step-400: #bbb8c9;
+		--ion-background-color-step-450: #b4b1c3;
+		--ion-background-color-step-500: #adaabd;
+		--ion-item-background: #fefefe;
 		--ion-toolbar-background: #fefefe;
 		--ion-text-color: #1c1b22;
+		--ion-text-color-step-50: #23222a;
+		--ion-text-color-step-100: #2a2932;
+		--ion-text-color-step-150: #31303a;
+		--ion-text-color-step-200: #383742;
+		--ion-text-color-step-250: #3f3e4a;
+		--ion-text-color-step-300: #464552;
+		--ion-text-color-step-350: #4d4c5a;
+		--ion-text-color-step-400: #545362;
+		--ion-text-color-step-450: #5b5a6a;
+		--ion-text-color-step-500: #626172;
 		--ion-overlay-background-color: #fafafa;
 	}
 
 	.dark {
 		--ion-background-color: #1c1b22;
+		--ion-background-color-step-50: #23222a;
+		--ion-background-color-step-100: #2a2932;
+		--ion-background-color-step-150: #31303a;
+		--ion-background-color-step-200: #383742;
+		--ion-background-color-step-250: #3f3e4a;
+		--ion-background-color-step-300: #464552;
+		--ion-background-color-step-350: #4d4c5a;
+		--ion-background-color-step-400: #545362;
+		--ion-background-color-step-450: #5b5a6a;
+		--ion-background-color-step-500: #626172;
+		--ion-item-background: #1b1b1b;
 		--ion-toolbar-background: #1b1b1b;
 		--ion-text-color: #e1e0e6;
+		--ion-text-color-step-50: #dad9df;
+		--ion-text-color-step-100: #d3d2d8;
+		--ion-text-color-step-150: #cccbd1;
+		--ion-text-color-step-200: #c5c4ca;
+		--ion-text-color-step-250: #bebdc3;
+		--ion-text-color-step-300: #b7b6bc;
+		--ion-text-color-step-350: #b0afb5;
+		--ion-text-color-step-400: #a9a8ae;
+		--ion-text-color-step-450: #a2a1a7;
+		--ion-text-color-step-500: #9b9aa0;
 		--ion-overlay-background-color: #1c1b24;
 	}
 }
