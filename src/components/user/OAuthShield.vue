@@ -7,26 +7,42 @@
 		--color: ${textColor}`"
 		size="small"
 		class="w-full active:brightness-110 hover:brightness-90 hover:scale-105 transition-all duration-250"
+		@click="startOauth"
 	>
 		<div class="w-full flex items-center justify-evenly">
 			<UIcon
 				:name="icon"
 				class="mr-2 size-5"
 			/>
-			Sign in with {{ name }}
+			{{ label }} {{ name }}
 		</div>
 	</IonButton>
 </template>
 
 <script setup lang="ts">
+import { Toast } from '@capacitor/toast';
 import type { OAuthProvider } from 'types/user';
 import { capitalizeFully } from 'utils';
 
-const props = defineProps<{
-	provider: OAuthProvider;
-}>();
+type OAuthFlowContext = 'login' | 'signup' | 'link' | 'unlink' | 'unknown';
+
+const props = withDefaults(
+	defineProps<{
+		provider: OAuthProvider;
+		label?: string;
+		context?: OAuthFlowContext;
+	}>(),
+	{
+		label: 'Sign in with',
+		context: 'login'
+	}
+);
+
+const { beginFlow } = useMobileOAuth();
+const { impactLight, notifyError } = useAppHaptics();
 
 const name = capitalizeFully(props.provider);
+const label = props.label;
 
 let icon: string = '';
 let bgColor: string = '';
@@ -60,5 +76,19 @@ switch (props.provider) {
 		bgColor = '#000000';
 		textColor = '#ffffff';
 		break;
+}
+
+async function startOauth() {
+	try {
+		await impactLight();
+		const authUrl = authLink(props.provider);
+		await beginFlow(authUrl, props.context);
+	} catch (error: any) {
+		await notifyError();
+		await Toast.show({
+			text: error?.message || 'Failed to start OAuth sign-in.',
+			duration: 'long'
+		});
+	}
 }
 </script>
