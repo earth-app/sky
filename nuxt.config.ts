@@ -5,8 +5,21 @@ export default defineNuxtConfig({
 	extends: ['@earth-app/crust'],
 	runtimeConfig: {
 		public: {
+			baseUrl:
+				process.env.NUXT_PUBLIC_SITE_URL ||
+				process.env.NUXT_BASE_URL ||
+				process.env.NUXT_PUBLIC_CRUST_BASE_URL ||
+				'https://app.earth-app.com',
 			apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.earth-app.com',
-			crustBaseUrl: process.env.NUXT_PUBLIC_CRUST_BASE_URL || 'https://app.earth-app.com'
+			crustBaseUrl: process.env.NUXT_PUBLIC_CRUST_BASE_URL || 'https://app.earth-app.com',
+			// oauth client ids
+			googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || '',
+			microsoftClientId: process.env.NUXT_PUBLIC_MICROSOFT_CLIENT_ID || '',
+			githubClientId: process.env.NUXT_PUBLIC_GITHUB_CLIENT_ID || '',
+			discordClientId: process.env.NUXT_PUBLIC_DISCORD_CLIENT_ID || '',
+			facebookClientId: process.env.NUXT_PUBLIC_FACEBOOK_CLIENT_ID || '',
+			// public keys
+			mapsApiKey: process.env.NUXT_PUBLIC_MAPS_API_KEY || ''
 		}
 	},
 	ssr: false,
