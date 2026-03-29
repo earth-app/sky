@@ -23,6 +23,19 @@
 		}"
 		:footer="footer"
 	/>
+	<MContentDrawer
+		ref="attendeesDrawerRef"
+		:title="`Event Attendees (${comma(reactiveEvent.attendee_count)})`"
+		:is-loading="false"
+	>
+		<template #default="{ search }">
+			<UserMCard
+				v-for="attendee in filteredAttendees(search)"
+				:key="attendee.id"
+				:user="attendee"
+			/>
+		</template>
+	</MContentDrawer>
 </template>
 
 <script setup lang="ts">
@@ -33,6 +46,7 @@ import { Toast } from '@capacitor/toast';
 import { DateTime } from 'luxon';
 import type { Event } from 'types/event';
 import { capitalizeFully, trimString } from 'utils';
+import MContentDrawer from '~/components/MContentDrawer.vue';
 
 const props = defineProps<{
 	event: Event;
@@ -41,25 +55,77 @@ const props = defineProps<{
 }>();
 
 const { user } = useAuth();
-const { attendees, signUpForEvent, leaveEvent, deleteEvent } = useEvent(props.event.id || '');
-const { thumbnail, unloadThumbnail } = useEventThumbnailM(props.event.id || '');
+const {
+	event: eventState,
+	attendees,
+	fetchAttendees,
+	signUpForEvent,
+	leaveEvent,
+	deleteEvent
+} = useEvent(props.event.id || '');
+const { thumbnail, fetchThumbnail, unloadThumbnail } = useEventThumbnailM(props.event.id || '');
+onMounted(() => {
+	fetchThumbnail();
+});
+
+const reactiveEvent = computed(() => eventState.value || props.event);
+
+const attendeesDrawerRef = ref<InstanceType<typeof MContentDrawer>>();
+
+const openAttendeesDrawer = () => {
+	if (!attendees.value) {
+		fetchAttendees();
+	}
+	attendeesDrawerRef.value?.open();
+};
 
 const allAttendees = computed(() => {
-	// Filter out host from attendees to avoid duplicates
 	const filteredAttendees = (attendees.value || []).filter(
-		(attendee) => attendee.id !== props.event.hostId
+		(attendee) => attendee.id !== reactiveEvent.value.hostId
 	);
-	return [props.event.host, ...filteredAttendees];
+	return [reactiveEvent.value.host, ...filteredAttendees];
 });
+
+const normalizeSearch = (value?: string | null) => value?.trim().toLowerCase() || '';
+
+const filteredAttendees = (search?: string) => {
+	const normalizedSearch = normalizeSearch(search);
+	if (!normalizedSearch) return allAttendees.value;
+
+	return allAttendees.value.filter((attendee) => {
+		const searchableValues = [
+			attendee.username,
+			attendee.full_name,
+			attendee.account?.username,
+			attendee.account?.first_name,
+			attendee.account?.last_name
+		].filter(Boolean) as string[];
+
+		return searchableValues.some((value) => value.toLowerCase().includes(normalizedSearch));
+	});
+};
 
 const attendeeAvatars = computed(() => {
 	return allAttendees.value.map((attendee) => {
-		const { avatar128, chipColor } = useUser(attendee.id);
+		const url = attendee.account?.avatar_url;
+
+		// Preload avatar
+		if (url && url.startsWith('http')) {
+			avatarStore.preloadAvatar(url);
+		}
+
+		// Get avatar from store
+		const avatar =
+			url && url.startsWith('http')
+				? avatarStore.get(url)?.avatar128 || '/favicon.png'
+				: '/favicon.png';
+		const chipColor = userStore.getChipColor(attendee);
 
 		return {
-			src: avatar128.value || undefined,
+			src: avatar,
 			alt: attendee.username,
-			chip: chipColor.value ? { color: chipColor.value as any } : undefined
+			link: `/tabs/profile/@${attendee.username}`,
+			chip: chipColor ? { color: chipColor as any } : undefined
 		};
 	});
 });
@@ -221,6 +287,15 @@ const buttons = computed(() => {
 		}
 	}
 
+	if (props.event.can_edit || props.event.is_attending) {
+		array.push({
+			text: `Attendees (${withSuffix(reactiveEvent.value.attendee_count)})`,
+			color: 'medium',
+			size: 'small',
+			onClick: openAttendeesDrawer
+		});
+	}
+
 	if (props.event.can_edit) {
 		array.push({
 			text: 'Manage',
@@ -252,7 +327,22 @@ const buttons = computed(() => {
 
 const footer = computed(() => `Created by @${props.event.host.username} - ${time.value}`);
 
-const { avatar128: authorAvatar, chipColor: authorAvatarChipColor } = useUser(props.event.hostId);
+const avatarStore = useAvatarStore();
+const userStore = useUserStore();
+
+// Use host avatar for event card
+const authorAvatarUrl = computed(() => reactiveEvent.value.host.account?.avatar_url);
+const authorAvatar = computed(() => {
+	const url = authorAvatarUrl.value;
+	if (!url || !url.startsWith('http')) return '/favicon.png';
+	return avatarStore.get(url)?.avatar128 || '/favicon.png';
+});
+const authorAvatarChipColor = computed(() => userStore.getChipColor(reactiveEvent.value.host));
+
+// Preload host avatar
+if (authorAvatarUrl.value) {
+	avatarStore.preloadAvatar(authorAvatarUrl.value);
+}
 
 const i18n = useI18n();
 const time = computed(() => {

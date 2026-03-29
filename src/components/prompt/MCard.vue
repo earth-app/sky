@@ -105,8 +105,20 @@ const promptText = ref(props.prompt.prompt);
 const { user } = useAuth();
 const { update, remove } = usePrompt(props.prompt.id);
 const { handle: ownerHandle } = useDisplayName(() => props.prompt.owner);
-const { avatar128: authorAvatar } = useUser(props.prompt.owner_id);
 const authorAvatarChipColor = ref<any | null>(null);
+
+const avatarStore = useAvatarStore();
+const ownerAvatarUrl = computed(() => props.prompt.owner?.account?.avatar_url);
+const authorAvatar = computed(() => {
+	const url = ownerAvatarUrl.value;
+	if (!url || !url.startsWith('http')) return '/favicon.png';
+	return avatarStore.get(url)?.avatar128 || '/favicon.png';
+});
+
+// Preload owner avatar
+if (ownerAvatarUrl.value) {
+	avatarStore.preloadAvatar(ownerAvatarUrl.value);
+}
 
 const i18n = useI18n();
 const time = computed(() => {
@@ -134,7 +146,7 @@ const updatedTime = computed(() => {
 	return updated.toRelative({ locale: i18n.locale.value }) || 'sometime';
 });
 
-onMounted(async () => {
+onMounted(() => {
 	if (props.prompt.created_at !== props.prompt.updated_at) {
 		secondaryFooter.value = `Updated ${updatedTime.value}`;
 	}

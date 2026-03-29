@@ -7,9 +7,9 @@
 		:avatar="{
 			src: authorAvatar,
 			size: 'xl',
-			chip: chipColor
+			chip: authorAvatarChipColor
 				? {
-						color: chipColor,
+						color: authorAvatarChipColor,
 						size: 'xl'
 					}
 				: undefined
@@ -43,7 +43,20 @@ const props = defineProps<{
 
 const footer = ref<string | undefined>(undefined);
 
-const { avatar128: authorAvatar, chipColor } = useUser(props.article.author_id);
+const avatarStore = useAvatarStore();
+const userStore = useUserStore();
+
+const authorAvatarUrl = computed(() => props.article.author.account?.avatar_url);
+const authorAvatar = computed(() => {
+	const url = authorAvatarUrl.value;
+	if (!url || !url.startsWith('http')) return '/favicon.png';
+	return avatarStore.get(url)?.avatar128 || '/favicon.png';
+});
+const authorAvatarChipColor = computed(() => userStore.getChipColor(props.article.author));
+
+if (authorAvatarUrl.value) {
+	avatarStore.preloadAvatar(authorAvatarUrl.value);
+}
 
 const i18n = useI18n();
 const time = computed(() => {

@@ -3,7 +3,10 @@
 		v-if="user"
 		class="flex flex-col p-4 bg-gray-900 light:bg-gray-100 rounded-lg shadow-md border-2 border-gray-700 light:border-gray-300"
 	>
-		<div class="flex items-center">
+		<div
+			class="flex items-center hover:cursor-pointer"
+			@click="navigateToProfile"
+		>
 			<UChip
 				:color="chipColor"
 				inset
@@ -54,11 +57,25 @@
 import type { User } from 'types/user';
 
 const badgeVariants = ref<('subtle' | 'solid')[]>([]);
+const router = useIonRouter();
 
 const props = defineProps<{
 	user: User;
 }>();
 
-const { avatar128, user, chipColor } = useUser(props.user.id);
+const { avatar128, fetchAvatar, user: userState, chipColor, fetchUser } = useUser(props.user.id);
 const { handle } = useDisplayName(props.user);
+
+const user = computed(() => userState.value || props.user);
+
+onMounted(() => {
+	fetchUser();
+	fetchAvatar();
+});
+
+function navigateToProfile() {
+	if (user.value) {
+		router.push(`/tabs/profile/${user.value.id}`);
+	}
+}
 </script>
