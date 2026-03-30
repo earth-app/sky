@@ -274,7 +274,7 @@
 
     "@hutson/parse-repository-url": ["@hutson/parse-repository-url@3.0.2", "", {}, "sha512-H9XAx3hc0BQHY6l+IFSWHDySypcXsvsuLhgYLUGywmJ5pswRVQJUHpOsobnLYp2ZUaUlKiKDrgWWhosOwAEM8Q=="],
 
-    "@iconify-json/logos": ["@iconify-json/logos@1.2.10", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-qxaXKJ6fu8jzTMPQdHtNxlfx6tBQ0jXRbHZIYy5Ilh8Lx9US9FsAdzZWUR8MXV8PnWTKGDFO4ZZee9VwerCyMA=="],
+    "@iconify-json/logos": ["@iconify-json/logos@1.2.11", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-fOo4pGEatuyuCFNL+cwquYMa2Im0oJHRHV7lt/Qqs5Ode/lPImHCQcfTtPzZj7qYMPb/h8YHN3TG54uEowrjNQ=="],
 
     "@iconify/collections": ["@iconify/collections@1.0.660", "", { "dependencies": { "@iconify/types": "*" } }, "sha512-7SG+ZacgqAhZdjSv4+eyFtJ+amI2PzIrg6NrZ2T5qdRpWOBv0Px1SB0C+4CsGxHenhhWjGMfSHG1vzkPgF0PyA=="],
 
