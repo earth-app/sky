@@ -13,9 +13,10 @@
 	"endOfLine": "lf",
 	"overrides": [
 		{
-			"files": "**/*.{plist,storyboard}",
+			"files": "**/*.{plist,storyboard,xcprivacy}",
 			"options": {
-				"parser": "xml"
+				"parser": "xml",
+				"xmlWhitespaceSensitivity": "ignore"
 			}
 		}
 	]

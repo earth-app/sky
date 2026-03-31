@@ -14,8 +14,10 @@ ios/App/Pods/
 ios/App/App/public/
 ios/App/App/capacitor.config.json
 ios/App/App/capacitor.plugins.json
+ios/App/App.xcodeproj/xcuserdata/
 ios/DerivedData/
 ios/App/CapApp-SPM/.build/
+ios/App/CapApp-SPM/.swiftpm/
 *.xcuserstate
 *.xcworkspace/xcuserdata/
 
