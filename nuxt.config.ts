@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import { defineNuxtConfig } from 'nuxt/config';
+import { dependencies, devDependencies, version } from './package.json';
 
 export default defineNuxtConfig({
 	extends: ['@earth-app/crust'],
@@ -76,6 +77,11 @@ export default defineNuxtConfig({
 				'@ionic/pwa-elements/loader',
 				'@capacitor/splash-screen'
 			]
+		},
+		define: {
+			__APP_VERSION__: JSON.stringify(version),
+			__DEPS__: JSON.stringify(dependencies),
+			__DEV_DEPS__: JSON.stringify(devDependencies)
 		}
 	},
 	build: {
@@ -123,6 +129,9 @@ export default defineNuxtConfig({
 			}
 		]
 	],
+	icon: {
+		serverBundle: 'local'
+	},
 	experimental: {
 		renderJsonPayloads: true,
 		payloadExtraction: true
