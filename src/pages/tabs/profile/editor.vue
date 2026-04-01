@@ -2,30 +2,13 @@
 	<IonPage>
 		<IonHeader>
 			<IonToolbar>
-				<IonTitle class="text-center">Edit Profile</IonTitle>
+				<IonTitle>Edit Profile - {{ user?.username }}</IonTitle>
+				<IonButtons slot="start">
+					<IonBackButton :default-href="profileRoute" />
+				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent>
-			<div class="flex items-center justify-between">
-				<Back />
-				<h2
-					v-if="user"
-					class="m-0! font-sans"
-				>
-					@{{ user.username }}
-				</h2>
-				<IonButton
-					fill="clear"
-					router-link="/tabs/profile/settings"
-					:router-animation="slide"
-					color="tertiary"
-				>
-					<UIcon
-						name="mdi:menu"
-						class="size-7"
-					/>
-				</IonButton>
-			</div>
 			<div
 				v-if="user"
 				class="flex flex-col items-center size-full mt-4"
@@ -37,7 +20,9 @@
 </template>
 
 <script setup lang="ts">
-import slide from '~/animations/slide';
-
 const { user } = useAuth();
+
+const profileRoute = computed(() =>
+	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/tabs/dashboard'
+);
 </script>

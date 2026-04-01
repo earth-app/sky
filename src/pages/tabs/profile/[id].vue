@@ -1,29 +1,42 @@
 <template>
 	<IonPage>
-		<IonContent :scroll-y="true">
-			<IonHeader class="ion-no-border">
-				<IonToolbar>
-					<IonButtons slot="start">
-						<IonBackButton default-href="/tabs/dashboard" />
-					</IonButtons>
-					<IonTitle>Profile - @{{ user?.username }}</IonTitle>
+		<IonHeader class="ion-no-border">
+			<IonToolbar>
+				<IonButtons slot="start">
+					<IonBackButton default-href="/tabs/dashboard" />
+				</IonButtons>
+				<IonTitle>Profile {{ user?.username ? `- @${user.username}` : '' }}</IonTitle>
 
-					<IonButtons
-						v-if="user?.id === currentUser?.id"
-						slot="end"
+				<IonButtons
+					v-if="user?.id === currentUser?.id"
+					slot="end"
+					class="mr-2 gap-1"
+				>
+					<IonButton
+						color="primary"
+						router-link="/tabs/profile/editor"
+						class="size-6"
 					>
-						<IonButton
-							color="primary"
-							router-link="/tabs/profile/editor"
-						>
-							<UIcon
-								name="mdi:pencil-outline"
-								class="size-6"
-							/>
-						</IonButton>
-					</IonButtons>
-				</IonToolbar>
-			</IonHeader>
+						<UIcon
+							name="mdi:pencil-outline"
+							class="min-h-6 min-w-6"
+						/>
+					</IonButton>
+
+					<IonButton
+						color="tertiary"
+						router-link="/tabs/settings"
+						class="size-6"
+					>
+						<UIcon
+							name="mdi:menu"
+							class="min-h-6 min-w-6"
+						/>
+					</IonButton>
+				</IonButtons>
+			</IonToolbar>
+		</IonHeader>
+		<IonContent :scroll-y="true">
 			<UserMProfile
 				v-if="user"
 				:user="user"
