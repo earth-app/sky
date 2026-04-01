@@ -63,6 +63,25 @@
 										{{ actionLoading[item.title] ? 'Working...' : item.placeholder }}
 									</IonButton>
 								</div>
+								<div
+									v-else-if="item.kind === 'link'"
+									class="flex justify-between mb-1"
+								>
+									<IonLabel>{{ item.title }}</IonLabel>
+									<IonButton
+										:router-link="item.link"
+										fill="clear"
+										:color="item.color || 'secondary'"
+										size="small"
+									>
+										<UIcon
+											name="mdi:arrow-right"
+											:aria-label="item.placeholder"
+											:title="item.placeholder"
+											class="min-h-6 min-w-6"
+										/>
+									</IonButton>
+								</div>
 
 								<span class="text-xs opacity-80 mb-1 text-wrap max-w-7/8">{{
 									item.description
@@ -180,9 +199,18 @@ type ActionSettingItem = {
 	action: () => Promise<void> | void;
 };
 
+type LinkSettingItem = {
+	kind: 'link';
+	title: string;
+	description: string;
+	placeholder: string;
+	color?: string;
+	link: string;
+};
+
 type SettingSection = {
 	section: string;
-	items: (SelectSettingItem | ToggleSettingItem | ActionSettingItem)[];
+	items: (SelectSettingItem | ToggleSettingItem | ActionSettingItem | LinkSettingItem)[];
 };
 
 const { settings: appSettings, init: initSettings, setValue, resetToDefaults } = useAppSettings();
@@ -342,6 +370,14 @@ const settingSections = computed<SettingSection[]>(() => [
 				placeholder: 'Clear',
 				color: 'secondary',
 				action: clearCacheAction
+			},
+			{
+				kind: 'link',
+				title: 'View Downloads',
+				description: 'See all downloaded content',
+				placeholder: 'View',
+				color: 'primary',
+				link: '/tabs/downloads'
 			},
 			{
 				kind: 'action',

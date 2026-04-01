@@ -1,8 +1,12 @@
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+import { useAppSettingsState } from '~/composables/useSettings';
 
 async function runHaptic(action: () => Promise<void>) {
 	if (!Capacitor.isNativePlatform()) return;
+
+	const settings = useAppSettingsState();
+	if (!settings.value.hapticFeedback) return;
 
 	try {
 		await action();

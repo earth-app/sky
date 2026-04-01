@@ -9,13 +9,56 @@ import type { Article } from 'types/article';
 import type { Event, EventAutocompleteSuggestion } from 'types/event';
 import { capitalizeFully } from 'utils';
 
+function isOfflineRequestBlocked() {
+	const appSettings = useAppSettingsState();
+	if (appSettings.value.offlineMode) return true;
+
+	const networkOffline = useState<boolean>('network-offline', () => false);
+	if (networkOffline.value) return true;
+
+	if (import.meta.client && typeof navigator !== 'undefined' && !navigator.onLine) {
+		return true;
+	}
+
+	return false;
+}
+
+function isDataSaverConstrained() {
+	const appSettings = useAppSettingsState();
+	const dataSaverEnabledState = useState<boolean>('network-data-saver-enabled', () => false);
+	const connectionType = useState<'wifi' | 'cellular' | 'none' | 'unknown'>(
+		'network-connection-type',
+		() => 'unknown'
+	);
+
+	return (
+		(appSettings.value.dataSaverMode || dataSaverEnabledState.value) &&
+		connectionType.value === 'cellular'
+	);
+}
+
+async function maybeDataSaverDelay() {
+	if (!isDataSaverConstrained()) return;
+
+	await new Promise((resolve) => setTimeout(resolve, 180));
+}
+
 export async function makeMServerRequest<T>(
 	key: string | null,
 	suburl: string,
 	token: string | null | undefined = null,
 	options: any = {}
 ) {
+	if (isOfflineRequestBlocked()) {
+		return {
+			success: false,
+			message: 'Offline mode is enabled. Network requests are unavailable.'
+		};
+	}
+
 	try {
+		await maybeDataSaverDelay();
+
 		const headers: Record<string, string> = {
 			Accept: 'application/json',
 			'User-Agent': `Earth-App Sky/1.0`
@@ -246,6 +289,7 @@ export function useActivityCardsM() {
 			content?: string;
 			link?: string;
 			image?: string;
+			image_offline?: string;
 			video?: string;
 			youtubeId?: string;
 			footer?: string;
@@ -255,6 +299,7 @@ export function useActivityCardsM() {
 
 	const loadCardsForActivity = async (activity: Activity) => {
 		if (!activity) return;
+		const constrained = isDataSaverConstrained();
 
 		// Create a new request token; used to ignore late async responses
 		const reqId = ++loadRequestId.value;
@@ -282,7 +327,9 @@ export function useActivityCardsM() {
 			}
 		};
 
-		const ytQueries = [`what is ${activity.name}`, `how to ${activity.name}`];
+		const ytQueries = constrained
+			? [`what is ${activity.name}`]
+			: [`what is ${activity.name}`, `how to ${activity.name}`];
 		const ytPromises = ytQueries.map((q) =>
 			getActivityYouTubeSearchM(q)
 				.then((res) => {
@@ -306,7 +353,7 @@ export function useActivityCardsM() {
 
 		// Wikipedia searches (name + aliases)
 		try {
-			const terms = [activity.name, ...(activity.aliases || [])];
+			const terms = constrained ? [activity.name] : [activity.name, ...(activity.aliases || [])];
 			await getActivityWikipediaSearchesM(terms, (_, entry) => {
 				const key = `wp:${entry.pageid}`;
 				if (seen.has(key)) return;
@@ -326,38 +373,44 @@ export function useActivityCardsM() {
 		}
 
 		// Pixabay image searches (name + aliases)
-		try {
-			const terms = [activity.name, ...(activity.aliases || [])];
-			await getActivityPixabayImagesM(terms, (_, images) => {
-				safePush(
-					images.map((image) => ({
-						title: capitalizeFully(activity.name),
-						icon: 'mdi:image',
-						description: `Photo by ${image.user} on Pixabay`,
-						link: image.pageURL,
-						image: image.webformatURL
-					}))
-				);
-			});
-		} catch (e) {
-			// ignore
+		if (!constrained) {
+			try {
+				const terms = [activity.name, ...(activity.aliases || [])];
+				await getActivityPixabayImagesM(terms, (_, images) => {
+					safePush(
+						images.map((image) => ({
+							title: capitalizeFully(activity.name),
+							icon: 'mdi:image',
+							description: `Photo by ${image.user} on Pixabay`,
+							link: image.pageURL,
+							image: image.webformatURL
+						}))
+					);
+				});
+			} catch (e) {
+				// ignore
+			}
 		}
 
 		// Pixabay video searches (name + aliases)
-		try {
-			const terms = [activity.name, ...(activity.aliases || [])];
-			await getActivityPixabayVideosM(terms, (_, videos) => {
-				safePush(
-					videos.map((video) => ({
-						title: capitalizeFully(activity.name),
-						icon: 'mdi:video',
-						description: `Video by ${video.user} on Pixabay`,
-						video: video.videos.medium.url
-					}))
-				);
-			});
-		} catch (e) {
-			// ignore
+		if (!constrained) {
+			try {
+				const terms = [activity.name, ...(activity.aliases || [])];
+				await getActivityPixabayVideosM(terms, (_, videos) => {
+					safePush(
+						videos.map((video) => ({
+							title: capitalizeFully(activity.name),
+							icon: 'mdi:video',
+							description: `Video by ${video.user} on Pixabay`,
+							link: video.pageURL,
+							image: video.videos.medium.thumbnail || video.videos.small.thumbnail,
+							video: video.videos.medium.url
+						}))
+					);
+				});
+			} catch (e) {
+				// ignore
+			}
 		}
 	};
 
@@ -367,8 +420,9 @@ export function useActivityCardsM() {
 // Articles
 
 export async function getSimilarArticlesM(article: Article, count: number = 5) {
+	const effectiveCount = isDataSaverConstrained() ? Math.max(2, count - 2) : count;
 	const { getRandom } = useArticles();
-	const pool = await getRandom(Math.min(count * 3, 15)).then((res) =>
+	const pool = await getRandom(Math.min(effectiveCount * 3, 15)).then((res) =>
 		res.success ? res.data : res.message
 	);
 
@@ -390,7 +444,7 @@ export async function getSimilarArticlesM(article: Article, count: number = 5) {
 		useCurrentSessionToken(),
 		{
 			method: 'POST',
-			body: { article, count, pool }
+			body: { article, count: effectiveCount, pool }
 		}
 	);
 
@@ -411,8 +465,9 @@ export async function getSimilarArticlesM(article: Article, count: number = 5) {
 // Events
 
 export async function getSimilarEventsM(event: Event, count: number = 5) {
+	const effectiveCount = isDataSaverConstrained() ? Math.max(2, count - 2) : count;
 	const { getRandom } = useEvents();
-	const pool = await getRandom(Math.min(count * 3, 15)).then((res) =>
+	const pool = await getRandom(Math.min(effectiveCount * 3, 15)).then((res) =>
 		res.success ? res.data : res.message
 	);
 
@@ -434,7 +489,7 @@ export async function getSimilarEventsM(event: Event, count: number = 5) {
 		useCurrentSessionToken(),
 		{
 			method: 'POST',
-			body: { event, count, pool }
+			body: { event, count: effectiveCount, pool }
 		}
 	);
 
