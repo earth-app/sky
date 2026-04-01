@@ -4,6 +4,9 @@
 @layer base {
 	* {
 		--font-title: 'Noto Sans', sans-serif;
+		--ion-font-family:
+			var(--app-font-family), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+			Arial, sans-serif;
 		--ion-color-primary: #1ebb48;
 		--ion-color-secondary: #174f96;
 		--ion-color-tertiary: #3d66f8;
