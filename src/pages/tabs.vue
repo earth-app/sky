@@ -17,12 +17,12 @@
 						</div>
 					</IonTabButton>
 					<IonTabButton
-						tab="discover"
-						href="/tabs/discover"
+						tab="adventure"
+						href="/tabs/adventure"
 					>
 						<div class="flex items-center justify p-1 size-9 rounded-full">
 							<UIcon
-								name="mdi:compass"
+								name="mdi:sword-cross"
 								class="size-full"
 							/>
 						</div>
@@ -39,8 +39,8 @@
 						</div>
 					</IonTabButton>
 					<IonTabButton
-						tab="search"
-						href="/tabs/search"
+						tab="discover"
+						href="/tabs/discover"
 					>
 						<div class="flex items-center justify p-1 size-9 rounded-full">
 							<UIcon
@@ -51,7 +51,7 @@
 					</IonTabButton>
 					<IonTabButton
 						tab="profile"
-						href="/tabs/profile"
+						:href="profileHref"
 					>
 						<div class="flex items-center justify-center rounded-full">
 							<UAvatar
@@ -71,8 +71,12 @@
 <script setup lang="ts">
 import slide from '~/animations/slide';
 
-const { avatar128 } = useAuth();
+const { user, avatar128 } = useAuth();
 const route = useRoute();
+
+const profileHref = computed(() =>
+	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/tabs/dashboard'
+);
 
 const refreshDashboard = inject<(() => Promise<void>) | null>('refreshDashboard', null);
 async function handleHomeButtonClick(event: Event) {
