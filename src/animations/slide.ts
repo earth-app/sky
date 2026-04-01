@@ -1,6 +1,14 @@
 import { createAnimation } from '@ionic/vue';
 
 export default (_: HTMLElement, opts?: any) => {
+	if (import.meta.client && document.documentElement.classList.contains('animations-disabled')) {
+		return createAnimation()
+			.addElement(opts?.enteringEl)
+			.addElement(opts?.leavingEl)
+			.beforeRemoveClass('ion-page-invisible')
+			.duration(0);
+	}
+
 	const enteringEl = opts?.enteringEl;
 	const leavingEl = opts?.leavingEl;
 	const direction = opts?.direction ?? 'forward';
