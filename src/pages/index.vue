@@ -17,7 +17,15 @@
 			</h2>
 			<div class="mt-8 px-8 max-w-md">
 				<div
-					v-if="user === null"
+					v-if="offlineAuthBlocked"
+					class="space-y-3 text-center"
+				>
+					<p class="text-sm text-gray-600">
+						You are offline and logged out. Please come back online to log in.
+					</p>
+				</div>
+				<div
+					v-else-if="user === null"
 					class="space-y-3"
 				>
 					<IonButton
@@ -73,12 +81,44 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { OAUTH_PROVIDERS } from 'types/user';
 
 const { user, fetchUser } = useAuth();
+const { settings: appSettings, init: initSettings } = useAppSettings();
 
-await SplashScreen.hide();
+const offlineAuthBlocked = ref(false);
+
+function isOfflineEntryMode() {
+	if (appSettings.value.offlineMode) return true;
+
+	if (import.meta.client) {
+		return !navigator.onLine;
+	}
+
+	return false;
+}
+
 onMounted(async () => {
 	await SplashScreen.show({
 		autoHide: false
 	});
+
+	await initSettings();
+
+	if (isOfflineEntryMode()) {
+		const cachedUser = await validateSessionAllowOffline();
+		if (cachedUser) {
+			if (appSettings.value.preloadContent) {
+				await preloadRouteComponents('/tabs/downloads');
+			}
+
+			await navigateTo('/tabs/downloads');
+			await SplashScreen.hide();
+			return;
+		}
+
+		offlineAuthBlocked.value = true;
+		await SplashScreen.hide();
+		return;
+	}
+
 	await fetchUser();
 	await SplashScreen.hide();
 });
@@ -87,8 +127,13 @@ watch(
 	user,
 	async (currentUser) => {
 		if (currentUser) {
-			await preloadRouteComponents('/tabs/dashboard');
-			await navigateTo('/tabs/dashboard');
+			const destination = isOfflineEntryMode() ? '/tabs/downloads' : '/tabs/dashboard';
+
+			if (appSettings.value.preloadContent) {
+				await preloadRouteComponents(destination);
+			}
+
+			await navigateTo(destination);
 		}
 	},
 	{ immediate: true }
