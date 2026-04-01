@@ -38,7 +38,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capacitor/toast": "^8.0.1",
-    "@earth-app/crust": "0.3.1-a050a6c",
+    "@earth-app/crust": "0.3.1-3198683",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "^8.8.2",
