@@ -13,7 +13,7 @@
 		"
 	>
 		<IonImg
-			v-if="image"
+			v-if="showCardImage"
 			:src="image"
 			alt="Card Image"
 			class="mb-2"
@@ -209,6 +209,7 @@
 					/>
 				</UAvatarGroup>
 			</div>
+
 			<span
 				v-if="footer"
 				class="text-sm block mt-4 font-sans text-gray-300 light:text-gray-400 font-normal mb-2"
@@ -229,7 +230,7 @@ import { Browser } from '@capacitor/browser';
 import { type Color } from '@ionic/core';
 import slide from '~/animations/slide';
 
-defineProps<{
+const props = defineProps<{
 	inBrowser?: boolean;
 	title?: string;
 	subtitle?: string;
@@ -295,6 +296,9 @@ defineProps<{
 		max?: number;
 	};
 }>();
+
+const appSettings = useAppSettingsState();
+const showCardImage = computed(() => Boolean(props.image && appSettings.value.cardThumbnails));
 
 const origin = computed(() => {
 	if (import.meta.client) {
