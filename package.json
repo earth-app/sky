@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "sky",
+  "name": "@earth-app/sky",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -28,11 +28,13 @@
     "@capacitor/core": "^8.3.0",
     "@capacitor/dialog": "^8.0.1",
     "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/geolocation": "^8.2.0",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.3.0",
     "@capacitor/keyboard": "^8.0.2",
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capacitor/toast": "^8.0.1",
@@ -46,7 +48,7 @@
     "@nuxtjs/google-fonts": "^3.2.0",
     "@nuxtjs/i18n": "^10.2.4",
     "@nuxtjs/ionic": "^1.0.2",
-    "@tiptap/extension-drag-handle": "^3.21.0",
+    "@tiptap/extension-drag-handle": "^3.22.0",
     "@types/luxon": "^3.7.1",
     "luxon": "^3.7.2",
     "nuxt": "^4.4.2",
@@ -55,6 +57,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "8.1.0",
+    "@iconify-json/line-md": "^1.2.16",
     "@iconify-json/logos": "^1.2.11",
     "@ionic/cli": "^7.2.1",
     "@prettier/plugin-xml": "^3.4.2",
@@ -65,7 +68,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "vue-tsc": "^3.2.6",
-    "wrangler": "^4.78.0"
+    "wrangler": "^4.79.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
