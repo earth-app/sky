@@ -11,3 +11,6 @@ insert_final_newline = true
 [*.{yml,json}]
 indent_style = space
 indent_size = 2
+
+[*.{xml,plist,storyboard,xcprivacy}]
+indent_size = 4
