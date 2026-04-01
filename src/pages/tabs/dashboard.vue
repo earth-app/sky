@@ -6,6 +6,7 @@
 		>
 			<IonRefresher
 				slot="fixed"
+				:disabled="isRefreshing || isLoadingMore"
 				@ionRefresh="handleRefresh"
 			>
 				<IonRefresherContent />
@@ -24,7 +25,7 @@
 				</div>
 				<ClientOnly>
 					<div
-						v-if="motd"
+						v-if="motd && motd.motd"
 						id="motd"
 						class="w-full px-4"
 					>
@@ -50,7 +51,7 @@
 								<IonButton
 									color="medium"
 									size="small"
-									@click="() => navigateTo(motd.link, { external: motd.link?.startsWith('http') })"
+									@click="handleMotdLinkClick(motd.link)"
 								>
 									Learn More
 									<UIcon
@@ -199,6 +200,7 @@ type ContentType = FeedItem['type'];
 
 const { user } = useAuth();
 const { motd, fetchMotd } = useMotd();
+const { settings: appSettings, init: initSettings } = useAppSettings();
 
 const motdColor = computed(() => {
 	if (!motd.value) return 'primary';
@@ -206,10 +208,6 @@ const motdColor = computed(() => {
 	if (motd.value.type === 'warning') return 'warning';
 	if (motd.value.type === 'error') return 'danger';
 	return 'primary';
-});
-
-onMounted(() => {
-	fetchMotd();
 });
 
 const contentRef = ref<any>(null);
@@ -227,6 +225,28 @@ const GROUP_SIZES = {
 	user: 3
 };
 
+const groupSizes = computed(() => {
+	const reduction = isDataConstrained.value ? 2 : 0;
+
+	return {
+		activity: Math.max(2, GROUP_SIZES.activity - reduction),
+		prompt: Math.max(2, GROUP_SIZES.prompt - reduction),
+		article: Math.max(2, GROUP_SIZES.article - reduction),
+		event: Math.max(2, GROUP_SIZES.event - reduction),
+		user: Math.max(2, GROUP_SIZES.user - reduction)
+	};
+});
+
+const shouldPreloadRoutes = computed(
+	() =>
+		appSettings.value.preloadContent && !appSettings.value.offlineMode && !isDataConstrained.value
+);
+
+function handleMotdLinkClick(link?: string) {
+	if (!link) return;
+	navigateTo(link, { external: link.startsWith('http') });
+}
+
 function getNextContentType(): ContentType {
 	const types: ContentType[] = ['activity', 'prompt', 'article', 'event', 'user'];
 	const availableTypes = types.filter((t) => t !== lastContentType.value);
@@ -238,6 +258,26 @@ function getNextContentType(): ContentType {
 
 function shouldBeGroup(): boolean {
 	return Math.random() < 0.5;
+}
+
+function withFeedItemTimeout<T>(promise: Promise<T>, label: string, timeoutMs: number = 12_000) {
+	return new Promise<T | null>((resolve) => {
+		const timer = setTimeout(() => {
+			console.warn(`${label} timed out after ${timeoutMs}ms`);
+			resolve(null);
+		}, timeoutMs);
+
+		promise
+			.then((value) => {
+				clearTimeout(timer);
+				resolve(value);
+			})
+			.catch((error) => {
+				clearTimeout(timer);
+				console.error(`${label} failed:`, error);
+				resolve(null);
+			});
+	});
 }
 
 // fetch content based on type
@@ -267,6 +307,10 @@ async function fetchContent(
 	count: number,
 	useRecommended: boolean = false
 ): Promise<Activity[] | Prompt[] | Article[] | Event[] | User[]> {
+	if (isOffline.value) {
+		return [];
+	}
+
 	try {
 		if (type === 'activity') {
 			if (useRecommended && user.value) {
@@ -322,26 +366,40 @@ async function fetchContent(
 		} else if (type === 'event') {
 			const { getRecommended, getRandom, getRecent } = useEvents();
 			if (useRecommended && user.value) {
-				const res = await getRecommended(count);
-				if (res.success && res.data && Array.isArray(res.data)) {
-					return res.data;
+				try {
+					const res = await getRecommended(count);
+					if (res.success && res.data && Array.isArray(res.data)) {
+						return res.data;
+					}
+				} catch (error) {
+					console.warn('Recommended events request failed:', error);
 				}
 			}
 
 			const split = Math.random() * 0.4 + 0.4; // between 40% and 60%
 			const recCount = Math.floor(count * split);
-			const [res1, res2] = await Promise.all([
+			const [res1, res2] = await Promise.allSettled([
 				getRandom(count - recCount),
 				getRecent(count - recCount)
 			]);
 
 			const events: Event[] = [];
-			if (res1.success && res1.data && Array.isArray(res1.data)) {
-				events.push(...res1.data);
+			if (
+				res1.status === 'fulfilled' &&
+				res1.value.success &&
+				res1.value.data &&
+				Array.isArray(res1.value.data)
+			) {
+				events.push(...res1.value.data);
 			}
 
-			if (res2.success && res2.data && Array.isArray(res2.data)) {
-				events.push(...res2.data);
+			if (
+				res2.status === 'fulfilled' &&
+				res2.value.success &&
+				res2.value.data &&
+				Array.isArray(res2.value.data)
+			) {
+				events.push(...res2.value.data);
 			}
 
 			// Deduplicate events by ID
@@ -383,12 +441,15 @@ async function fetchContent(
 }
 
 async function generateFeedItem(): Promise<FeedItem | null> {
+	if (isOffline.value) return null;
+
 	const type = getNextContentType();
 	const isGroup = shouldBeGroup();
-	const count = isGroup ? GROUP_SIZES[type] : 1;
+	const count = isGroup ? groupSizes.value[type] : 1;
 
 	// alternate between random and recommended content
-	const useRecommended = Math.random() < 0.3 && user.value !== null;
+	const useRecommended =
+		Math.random() < (isDataConstrained.value ? 0.15 : 0.3) && user.value !== null;
 	let feedItem: FeedItem | null = null;
 
 	if (type === 'activity') {
@@ -399,7 +460,9 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 
 		// prerender routes
 		for (const activity of data) {
-			preloadRouteComponents(`/tabs/activities/${activity.id}`);
+			if (shouldPreloadRoutes.value) {
+				preloadRouteComponents(`/tabs/activities/${activity.id}`);
+			}
 		}
 	} else if (type === 'prompt') {
 		const data = await fetchContent(type, count, useRecommended);
@@ -409,7 +472,9 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 
 		// prerender routes
 		for (const prompt of data) {
-			preloadRouteComponents(`/tabs/prompts/${prompt.id}`);
+			if (shouldPreloadRoutes.value) {
+				preloadRouteComponents(`/tabs/prompts/${prompt.id}`);
+			}
 		}
 	} else if (type === 'article') {
 		const data = await fetchContent(type, count, useRecommended);
@@ -419,7 +484,9 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 
 		// prerender routes
 		for (const article of data) {
-			preloadRouteComponents(`/tabs/articles/${article.id}`);
+			if (shouldPreloadRoutes.value) {
+				preloadRouteComponents(`/tabs/articles/${article.id}`);
+			}
 		}
 	} else if (type === 'event') {
 		const data = await fetchContent(type, count, useRecommended);
@@ -429,7 +496,9 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 
 		// prerender routes
 		for (const event of data) {
-			preloadRouteComponents(`/tabs/events/${event.id}`);
+			if (shouldPreloadRoutes.value) {
+				preloadRouteComponents(`/tabs/events/${event.id}`);
+			}
 		}
 	} else if (type === 'user') {
 		// users are always groups since single user cards don't make much sense in a feed context
@@ -440,8 +509,10 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 
 		// prerender routes
 		for (const user of data) {
-			preloadRouteComponents(`/tabs/profile/${user.id}`);
-			preloadRouteComponents(`/tabs/profile/@${user.username}`);
+			if (shouldPreloadRoutes.value) {
+				preloadRouteComponents(`/tabs/profile/${user.id}`);
+				preloadRouteComponents(`/tabs/profile/@${user.username}`);
+			}
 		}
 	}
 
@@ -454,7 +525,13 @@ async function loadMoreItems(count: number = 3) {
 	isLoadingMore.value = true;
 
 	try {
-		const promises = Array.from({ length: count }, () => generateFeedItem());
+		if (isDataConstrained.value) {
+			await new Promise((resolve) => setTimeout(resolve, 220));
+		}
+
+		const promises = Array.from({ length: count }, (_, index) =>
+			withFeedItemTimeout(generateFeedItem(), `Feed item ${index + 1}`)
+		);
 		const items = await Promise.all(promises);
 		const validItems = items.filter((item): item is FeedItem => item !== null);
 		feedItems.value.push(...validItems);
@@ -470,13 +547,16 @@ async function loadMoreItems(count: number = 3) {
 }
 
 async function onInfinite(event: CustomEvent) {
-	await loadMoreItems(3);
+	await loadMoreItems(isDataConstrained.value ? 2 : 3);
 	(event.target as any).complete();
 }
 
-async function handleRefresh(event: CustomEvent) {
-	await refreshFeed();
-	(event.target as any).complete();
+async function handleRefresh(event: CustomEvent<{ complete?: () => void }>) {
+	try {
+		await refreshFeed();
+	} finally {
+		event.detail?.complete?.();
+	}
 }
 
 async function refreshFeed() {
@@ -487,7 +567,7 @@ async function refreshFeed() {
 	lastContentType.value = null;
 
 	try {
-		await loadMoreItems(5);
+		await loadMoreItems(isDataConstrained.value ? 3 : 5);
 
 		const scrollElement = await contentRef.value?.$el.getScrollElement();
 		if (scrollElement) {
@@ -507,6 +587,16 @@ async function refreshFeed() {
 
 provide('refreshDashboard', refreshFeed);
 onMounted(async () => {
+	try {
+		await initSettings();
+	} catch (error) {
+		console.error('Failed to initialize dashboard settings:', error);
+	}
+
+	if (!isOffline.value) {
+		void fetchMotd();
+	}
+
 	await nextTick();
 	await refreshFeed();
 });
