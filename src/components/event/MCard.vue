@@ -45,7 +45,7 @@ defineOptions({
 import { Toast } from '@capacitor/toast';
 import { DateTime } from 'luxon';
 import type { Event } from 'types/event';
-import { capitalizeFully, trimString } from 'utils';
+import { capitalizeFully, comma, trimString } from 'utils';
 import MContentDrawer from '~/components/MContentDrawer.vue';
 
 const props = defineProps<{
@@ -65,7 +65,9 @@ const {
 } = useEvent(props.event.id || '');
 const { thumbnail, fetchThumbnail, unloadThumbnail } = useEventThumbnailM(props.event.id || '');
 onMounted(() => {
-	fetchThumbnail();
+	if (!isDataConstrained.value && !isOffline.value) {
+		fetchThumbnail();
+	}
 });
 
 const reactiveEvent = computed(() => eventState.value || props.event);
@@ -110,7 +112,7 @@ const attendeeAvatars = computed(() => {
 		const url = attendee.account?.avatar_url;
 
 		// Preload avatar
-		if (url && url.startsWith('http')) {
+		if (shouldPreloadAvatars.value && url && url.startsWith('http')) {
 			avatarStore.preloadAvatar(url);
 		}
 
@@ -329,6 +331,7 @@ const footer = computed(() => `Created by @${props.event.host.username} - ${time
 
 const avatarStore = useAvatarStore();
 const userStore = useUserStore();
+const shouldPreloadAvatars = computed(() => !isDataConstrained.value);
 
 // Use host avatar for event card
 const authorAvatarUrl = computed(() => reactiveEvent.value.host.account?.avatar_url);
@@ -339,10 +342,15 @@ const authorAvatar = computed(() => {
 });
 const authorAvatarChipColor = computed(() => userStore.getChipColor(reactiveEvent.value.host));
 
-// Preload host avatar
-if (authorAvatarUrl.value) {
-	avatarStore.preloadAvatar(authorAvatarUrl.value);
-}
+watch(
+	[authorAvatarUrl, shouldPreloadAvatars],
+	([url, shouldPreload]) => {
+		if (shouldPreload && url && url.startsWith('http')) {
+			avatarStore.preloadAvatar(url);
+		}
+	},
+	{ immediate: true }
+);
 
 const i18n = useI18n();
 const time = computed(() => {

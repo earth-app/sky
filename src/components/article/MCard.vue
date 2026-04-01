@@ -14,10 +14,14 @@
 					}
 				: undefined
 		}"
-		:secondary-avatar="{
-			src: article.ocean?.favicon,
-			size: 'xs'
-		}"
+		:secondary-avatar="
+			showSecondaryAvatar
+				? {
+						src: articleOceanFavicon,
+						size: 'xs'
+					}
+				: undefined
+		"
 		:badges="
 			article.tags.map((tag) => ({
 				text: tag,
@@ -45,18 +49,35 @@ const footer = ref<string | undefined>(undefined);
 
 const avatarStore = useAvatarStore();
 const userStore = useUserStore();
+const showSecondaryAvatar = computed(() => !isDataConstrained.value);
 
-const authorAvatarUrl = computed(() => props.article.author.account?.avatar_url);
+const authorAvatarUrl = computed(() => {
+	return (
+		(props.article.author?.account as any)?.avatar_url_offline ||
+		props.article.author?.account?.avatar_url
+	);
+});
 const authorAvatar = computed(() => {
 	const url = authorAvatarUrl.value;
-	if (!url || !url.startsWith('http')) return '/favicon.png';
+	if (!url) return '/favicon.png';
+	if (url.startsWith('data:')) return url;
+	if (!url.startsWith('http')) return '/favicon.png';
 	return avatarStore.get(url)?.avatar128 || '/favicon.png';
+});
+const articleOceanFavicon = computed(() => {
+	return (props.article.ocean as any)?.favicon_offline || props.article.ocean?.favicon;
 });
 const authorAvatarChipColor = computed(() => userStore.getChipColor(props.article.author));
 
-if (authorAvatarUrl.value) {
-	avatarStore.preloadAvatar(authorAvatarUrl.value);
-}
+watch(
+	[authorAvatarUrl, () => isDataConstrained.value],
+	([url, constrained]) => {
+		if (!constrained && url && url.startsWith('http')) {
+			avatarStore.preloadAvatar(url);
+		}
+	},
+	{ immediate: true }
+);
 
 const i18n = useI18n();
 const time = computed(() => {

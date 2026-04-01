@@ -108,17 +108,30 @@ const { handle: ownerHandle } = useDisplayName(() => props.prompt.owner);
 const authorAvatarChipColor = ref<any | null>(null);
 
 const avatarStore = useAvatarStore();
-const ownerAvatarUrl = computed(() => props.prompt.owner?.account?.avatar_url);
+const shouldPreloadOwnerAvatar = computed(() => !isDataConstrained.value);
+const ownerAvatarUrl = computed(() => {
+	return (
+		(props.prompt.owner?.account as any)?.avatar_url_offline ||
+		props.prompt.owner?.account?.avatar_url
+	);
+});
 const authorAvatar = computed(() => {
 	const url = ownerAvatarUrl.value;
-	if (!url || !url.startsWith('http')) return '/favicon.png';
+	if (!url) return '/favicon.png';
+	if (url.startsWith('data:')) return url;
+	if (!url.startsWith('http')) return '/favicon.png';
 	return avatarStore.get(url)?.avatar128 || '/favicon.png';
 });
 
-// Preload owner avatar
-if (ownerAvatarUrl.value) {
-	avatarStore.preloadAvatar(ownerAvatarUrl.value);
-}
+watch(
+	[ownerAvatarUrl, shouldPreloadOwnerAvatar],
+	([url, shouldPreload]) => {
+		if (shouldPreload && url && url.startsWith('http')) {
+			avatarStore.preloadAvatar(url);
+		}
+	},
+	{ immediate: true }
+);
 
 const i18n = useI18n();
 const time = computed(() => {
@@ -131,6 +144,8 @@ const time = computed(() => {
 });
 
 const hasButtons = computed(() => {
+	if (isOffline.value) return false; // disable editing while offline
+
 	return (
 		user.value &&
 		(user.value.id === props.prompt.owner_id || user.value.account.account_type === 'ADMINISTRATOR')

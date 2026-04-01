@@ -2,6 +2,7 @@
 	<div class="flex flex-col w-full px-2">
 		<IonRefresher
 			slot="fixed"
+			:disabled="isOfflineMode"
 			@ionRefresh="handleRefresh"
 		>
 			<IonRefresherContent />
@@ -21,9 +22,15 @@
 					<IonTextarea
 						:value="newResponse"
 						class="w-full border-2 p-2 rounded-lg"
-						:placeholder="user ? `Write your response...` : 'Please log in to respond'"
+						:placeholder="
+							isOfflineMode
+								? 'Responses are unavailable offline'
+								: user
+									? `Write your response...`
+									: 'Please log in to respond'
+						"
 						auto-grow
-						:disabled="posting || !user"
+						:disabled="posting || !user || isOfflineMode"
 						:minlength="1"
 						:maxlength="700"
 						counter
@@ -36,13 +43,16 @@
 				</div>
 				<IonButton
 					color="secondary"
-					:disabled="posting || newResponse.trim().length === 0"
+					:disabled="posting || newResponse.trim().length === 0 || isOfflineMode"
 					@click="postResponse"
 					>Post</IonButton
 				>
 			</div>
 		</div>
-		<div class="flex flex-col items-center justify-center">
+		<div
+			v-if="!isOfflineMode"
+			class="flex flex-col items-center justify-center"
+		>
 			<div
 				v-for="response in responses"
 				:key="response.id"
@@ -50,12 +60,7 @@
 			>
 				<PromptMResponse
 					:response="response"
-					@deleted="
-						responses.splice(
-							responses.findIndex((r) => r.id === response.id),
-							1
-						)
-					"
+					@deleted="removeResponse(response.id)"
 				/>
 			</div>
 			<IonInfiniteScroll
@@ -72,6 +77,12 @@
 				Loading more responses...
 			</p>
 		</div>
+		<p
+			v-else
+			class="text-gray-500 text-sm text-center my-4"
+		>
+			Prompt responses are unavailable offline.
+		</p>
 	</div>
 </template>
 
@@ -80,22 +91,60 @@ import { Toast } from '@capacitor/toast';
 import { type Prompt } from 'types/prompts';
 
 const { user, avatar128 } = useAuth();
-const { handle } = useDisplayName(user);
 
 const page = ref(1);
 const isLoading = ref(false);
 const hasMore = ref(true);
 const props = defineProps<{
 	prompt: Prompt;
+	offlineMode?: boolean;
 }>();
+const isOfflineMode = computed(() => Boolean(props.offlineMode));
 
-const { responses, fetch: loadResponses, createResponse } = usePromptResponses(props.prompt.id);
+let promptResponses: ReturnType<typeof usePromptResponses> | null = null;
+const responses = computed(() => promptResponses?.responses.value || []);
+
+function ensurePromptResponses() {
+	if (!promptResponses) {
+		promptResponses = usePromptResponses(props.prompt.id);
+	}
+
+	return promptResponses;
+}
+
+async function loadResponses() {
+	if (isOfflineMode.value) {
+		return { success: true } as const;
+	}
+
+	const promptResponses = ensurePromptResponses();
+	return await promptResponses.fetch();
+}
+
+async function createResponse(content: string) {
+	if (isOfflineMode.value) {
+		return {
+			success: false,
+			message: 'Prompt responses are unavailable offline.'
+		};
+	}
+
+	const promptResponses = ensurePromptResponses();
+	return await promptResponses.createResponse(content);
+}
+
+function removeResponse(id: string) {
+	if (isOfflineMode.value) return;
+
+	// Keep UI consistent with store-backed responses after a child delete action.
+	void loadResponses();
+}
 
 const posting = ref(false);
 const newResponse = ref('');
 
 async function postResponse() {
-	if (posting.value) return;
+	if (posting.value || isOfflineMode.value) return;
 
 	posting.value = true;
 
@@ -111,7 +160,7 @@ async function postResponse() {
 			return;
 		}
 
-		responses.value.unshift(res.data);
+		await loadResponses();
 		newResponse.value = '';
 
 		// Tap Prompts Journey
@@ -138,6 +187,11 @@ async function postResponse() {
 }
 
 async function handleRefresh(event: CustomEvent) {
+	if (isOfflineMode.value) {
+		event.detail.complete();
+		return;
+	}
+
 	page.value = 1;
 	hasMore.value = true;
 	await loadResponses();
@@ -146,11 +200,20 @@ async function handleRefresh(event: CustomEvent) {
 }
 
 async function onInfinite(event: CustomEvent) {
+	if (isOfflineMode.value) {
+		(event.target as any).complete();
+		return;
+	}
+
 	await loadResponses();
 	(event.target as any).complete();
 }
 
 onMounted(async () => {
+	if (isOfflineMode.value) {
+		return;
+	}
+
 	// Clear any existing responses to ensure fresh data on page load
 	page.value = 1;
 	hasMore.value = true;
@@ -158,3 +221,9 @@ onMounted(async () => {
 	await loadResponses();
 });
 </script>
+
+<style>
+textarea {
+	padding-top: 0 !important;
+}
+</style>

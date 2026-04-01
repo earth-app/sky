@@ -88,7 +88,7 @@
 			<MInfoCard
 				:title="article.ocean.title"
 				:avatar="{
-					src: article.ocean.favicon
+					src: articleOceanFavicon
 				}"
 				:subtitle="article.ocean.author"
 				:external="true"
@@ -131,7 +131,15 @@ const oceanBadges = computed(() => {
 	);
 });
 
-const { avatar128: authorAvatar } = useUser(props.article.author_id);
+const { avatar128: userAuthorAvatar } = useUser(props.article.author_id);
+const authorAvatar = computed(() => {
+	const offlineAvatar = (props.article.author?.account as any)?.avatar_url_offline;
+	if (offlineAvatar) return offlineAvatar;
+	return userAuthorAvatar.value || '/favicon.png';
+});
+const articleOceanFavicon = computed(() => {
+	return (props.article.ocean as any)?.favicon_offline || props.article.ocean?.favicon;
+});
 
 const i18n = useI18n();
 const time = computed(() => {
