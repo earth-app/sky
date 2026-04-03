@@ -38,6 +38,7 @@ if (import.meta.client) {
 
 const config = useAppConfig();
 const { fetchUser, user } = useAuth();
+const authStore = useAuthStore();
 const { resolveDeepLink } = useDeepLinkRouting();
 const { closeBrowser, clearFlow, refreshFlowState } = useMobileOAuth();
 const { notifySuccess, notifyWarning } = useAppHaptics();
@@ -53,6 +54,26 @@ const handledDeepLinkTimestamps = new Map<string, number>();
 
 let appUrlListener: PluginListenerHandle | null = null;
 let browserFinishedListener: PluginListenerHandle | null = null;
+
+if (import.meta.client) {
+	const persistedSessionToken = localStorage.getItem('session_token');
+	if (!authStore.sessionToken && persistedSessionToken) {
+		authStore.setSessionToken(persistedSessionToken);
+	}
+
+	watch(
+		() => authStore.sessionToken,
+		(value) => {
+			if (value) {
+				localStorage.setItem('session_token', value);
+				return;
+			}
+
+			localStorage.removeItem('session_token');
+		},
+		{ immediate: true }
+	);
+}
 
 useSeoMeta({
 	charset: 'utf-8',
@@ -91,7 +112,7 @@ async function handleIncomingDeepLink(url: string) {
 		await closeBrowser();
 		clearFlow();
 		if (!isOffline.value) {
-			await fetchUser(true);
+			await hydrateUser();
 		}
 	}
 
@@ -107,8 +128,18 @@ async function handleAppUrlOpen(event: URLOpenListenerEvent) {
 	await handleIncomingDeepLink(event.url);
 }
 
+async function hydrateUser() {
+	const hasToken = Boolean(authStore.sessionToken);
+	const shouldForce = !hasToken;
+	await fetchUser(shouldForce);
+}
+
 onMounted(async () => {
-	await initSettings();
+	try {
+		await initSettings();
+	} catch (error) {
+		console.error('Failed to initialize app settings:', error);
+	}
 
 	stopOfflineSettingWatch = watch(
 		() => appSettings.value.offlineMode,
@@ -137,7 +168,7 @@ onMounted(async () => {
 	}
 
 	if (!isOffline.value) {
-		await fetchUser();
+		await hydrateUser();
 	}
 
 	// On client, persist authenticated user for offline fallback whenever it changes.
@@ -172,7 +203,7 @@ onMounted(async () => {
 
 			clearFlow();
 			if (!isOffline.value) {
-				await fetchUser(true);
+				await hydrateUser();
 			}
 		});
 
