@@ -163,7 +163,7 @@ async function handleSignup() {
 	);
 
 	if (result.success && result.user) {
-		await fetchUser(true);
+		await fetchUser();
 
 		await Toast.show({
 			text: 'Sign up successful. Welcome to The Earth App.',

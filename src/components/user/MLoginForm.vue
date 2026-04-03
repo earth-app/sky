@@ -1,7 +1,7 @@
 <template>
 	<IonCard
 		class="min-w-60 w-7/8 max-w-full p-4"
-		color="dark"
+		color="medium"
 	>
 		<UForm
 			id="login"
@@ -17,6 +17,7 @@
 			>
 				<IonInput
 					v-model="username"
+					:disabled="isSubmitting"
 					placeholder="cooldude78"
 					class="min-w-60 w-2/5 max-w-120"
 					counter
@@ -31,6 +32,7 @@
 			>
 				<IonInput
 					v-model="password"
+					:disabled="isSubmitting"
 					placeholder="SuperSecretPassword_"
 					type="password"
 					class="min-w-60 w-2/5 max-w-120"
@@ -46,14 +48,34 @@
 					type="submit"
 					form="login"
 					color="success"
+					mode="md"
 					fill="solid"
+					:disabled="isSubmitting || !canSubmit"
+					:aria-busy="isSubmitting"
 					class="w-3/5 max-w-60 self-center"
 				>
-					<UIcon name="mdi:lock" />
-					Login
+					<template v-if="isSubmitting">
+						<IonSpinner
+							name="crescent"
+							class="mr-2"
+						/>
+						Logging in...
+					</template>
+					<template v-else>
+						<UIcon name="mdi:lock" />
+						Login
+					</template>
 				</IonButton>
 			</div>
 		</UForm>
+
+		<UAlert
+			v-if="error"
+			icon="mdi:alert-box-outline"
+			:title="error"
+			color="error"
+			class="mt-6 w-full mx-2"
+		/>
 	</IonCard>
 </template>
 
@@ -64,34 +86,73 @@ import z from 'zod';
 
 const username = ref('');
 const password = ref('');
+const isSubmitting = ref(false);
+const canSubmit = computed(() => username.value.trim().length > 0 && password.value.length > 0);
+const error = ref('');
 
 const login = useLogin();
 const { fetchUser } = useAuth();
+const authStore = useAuthStore();
 
 const emit = defineEmits<{
 	loginSuccess: [];
 }>();
 
+function setLoginError(message?: string) {
+	if (message?.includes('401')) {
+		error.value = 'Invalid username/password.';
+		return;
+	}
+
+	if (message?.includes('409')) {
+		error.value = 'Rate limited, try again later.';
+		return;
+	}
+
+	if (message?.includes('403')) {
+		error.value = 'Account disabled.';
+		return;
+	}
+
+	error.value = message || 'An error occurred during login. Please try again.';
+}
+
 async function handleLogin() {
-	const result = await login(username.value, password.value);
+	if (isSubmitting.value || !canSubmit.value) return;
 
-	if (result.success) {
-		// Fetch user data to update the auth state
-		fetchUser(true).then(() => {
+	isSubmitting.value = true;
+	error.value = '';
+
+	try {
+		const result = await login(username.value, password.value);
+
+		if (result.success) {
+			// Avoid force=true when a token already exists; forcing can clear a valid token on native.
+			if (!authStore.currentUser && authStore.sessionToken) {
+				await fetchUser();
+			}
+
+			if (!authStore.currentUser) {
+				error.value = 'Unable to load account data. Please try again.';
+				return;
+			}
+
+			error.value = '';
+
 			emit('loginSuccess');
-		});
 
-		await Toast.show({
-			text: `Login Successful! Welcome back, ${username.value}!`,
-			duration: 'short'
-		});
+			await Toast.show({
+				text: `Login Successful! Welcome back, ${username.value}!`,
+				duration: 'short'
+			});
 
-		refreshNuxtData(); // Refresh user data
-	} else {
-		await Toast.show({
-			text: `Login Failed: ${result.message || 'An unknown error occurred during login.'}`,
-			duration: 'long'
-		});
+			await refreshNuxtData();
+			return;
+		}
+
+		setLoginError(result.message);
+	} finally {
+		isSubmitting.value = false;
 	}
 }
 </script>

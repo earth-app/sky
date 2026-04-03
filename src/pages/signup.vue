@@ -1,37 +1,42 @@
 <template>
 	<IonPage>
-		<div class="flex flex-col items-center mt-8">
-			<h1 class="text-3xl font-semibold mb-4 mt-24 sm:mt-8">Sign Up</h1>
-			<div class="flex flex-col w-full px-8 max-w-sm gap-2 mb-4">
-				<UserOAuthShield
-					v-for="provider in OAUTH_PROVIDERS"
-					:key="provider"
-					:provider="provider"
-					label="Continue with"
-					context="signup"
-				/>
+		<IonContent :fullscreen="true">
+			<div class="flex flex-col items-center mt-8">
+				<h1 class="text-3xl font-semibold mb-4 mt-24 sm:mt-8">Sign Up</h1>
+				<div class="flex flex-col w-full px-8 max-w-sm gap-2 mb-4">
+					<UserOAuthShield
+						v-for="provider in OAUTH_PROVIDERS"
+						:key="provider"
+						:provider="provider"
+						label="Continue with"
+						context="signup"
+					/>
+				</div>
+				<UserMSignupForm @signupSuccess="handleSignupSuccess" />
+				<p class="text-sm text-gray-500 mt-3">
+					Already have an account?
+					<button
+						type="button"
+						class="text-primary font-semibold"
+						@click="goToLogin"
+					>
+						Login
+					</button>
+				</p>
+				<Back text />
 			</div>
-			<UserMSignupForm @signupSuccess="handleSignupSuccess" />
-			<p class="text-sm text-gray-500 mt-3">
-				Already have an account?
-				<NuxtLink
-					to="/login"
-					class="text-primary font-semibold"
-				>
-					Login
-				</NuxtLink>
-			</p>
-			<Back text />
-		</div>
+		</IonContent>
 	</IonPage>
 </template>
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { OAUTH_PROVIDERS, type User } from 'types/user';
+import slide from '~/animations/slide';
 
 const { user, fetchUser } = useAuth();
 const { notifyError } = useAppHaptics();
+const ionRouter = useIonRouter();
 const route = useRoute();
 const redirectingAfterSubmit = ref(false);
 
@@ -95,5 +100,9 @@ async function handleSignupSuccess(_: User, hasEmail: boolean) {
 	}
 
 	refreshNuxtData();
+}
+
+function goToLogin() {
+	ionRouter.push('/login', slide);
 }
 </script>
