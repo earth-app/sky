@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
 	appName: 'The Earth App',
 	webDir: '.output/public',
 	loggingBehavior: 'debug',
-	overrideUserAgent: 'The Earth App/Sky',
+	appendUserAgent: 'The Earth App/Sky',
 	backgroundColor: '#174f96',
 	plugins: {
 		CapacitorCookies: {
