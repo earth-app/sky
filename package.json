@@ -41,7 +41,8 @@
     "@earth-app/crust": "0.3.1-3198683",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
-    "@ionic/vue": "^8.8.2",
+    "@ionic/vue": "8.8.1",
+    "@ionic/vue-router": "8.8.1",
     "@nuxt/icon": "^2.2.1",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.6.0",
@@ -54,6 +55,11 @@
     "nuxt": "^4.4.2",
     "nuxt-viewport": "^2.4.0",
     "vue": "^3.5.31"
+  },
+  "overrides": {
+    "@ionic/core": "8.8.1",
+    "@ionic/vue": "8.8.1",
+    "@ionic/vue-router": "8.8.1"
   },
   "devDependencies": {
     "@capacitor/cli": "8.1.0",

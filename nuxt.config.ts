@@ -61,6 +61,12 @@ export default defineNuxtConfig({
 	vite: {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		plugins: [tailwindcss() as any],
+		resolve: {
+			dedupe: ['@ionic/core', '@ionic/vue', '@ionic/vue-router']
+		},
+		build: {
+			cssCodeSplit: false
+		},
 		server: {
 			hmr: {
 				host: '127.0.0.1',
@@ -92,6 +98,9 @@ export default defineNuxtConfig({
 		defaultLocale: 'en'
 	},
 	ionic: {
+		css: {
+			utilities: true
+		},
 		config: {
 			statusTap: true,
 			mode: (process.env.NUXT_MODE as 'md' | 'ios') || 'md'

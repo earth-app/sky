@@ -1,6 +1,12 @@
 #!/bin/bash
-echo "🍦 Starting local development to ios device"
-echo "🔃 Capacitor installation, podfile installation, sync and copy to app distribution folders..."
+set -euo pipefail
+
+echo "🍦 Starting production-like development for iOS"
+echo "🧱 Building Nuxt static assets with iOS environment..."
+bun run generate:ios
+
+echo "🔃 Syncing Capacitor iOS project with fresh web assets..."
 bunx ionic capacitor sync ios --no-build
-echo "🏃 Select an iOS device to run the build..."
-eval "bunx ionic capacitor run ios --external --mode development --no-build"
+
+echo "🏃 Select an iOS simulator/device to run the app bundle..."
+bunx ionic capacitor run ios --mode development --no-build

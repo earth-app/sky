@@ -10,6 +10,9 @@ const config: CapacitorConfig = {
 	overrideUserAgent: 'The Earth App/Sky',
 	backgroundColor: '#174f96',
 	plugins: {
+		CapacitorCookies: {
+			enabled: true
+		},
 		SplashScreen: {
 			launchShowDuration: 3000,
 			launchAutoHide: true,
