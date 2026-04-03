@@ -198,7 +198,7 @@ type FeedItem =
 
 type ContentType = FeedItem['type'];
 
-const { user } = useAuth();
+const { user, fetchUser } = useAuth();
 const { motd, fetchMotd } = useMotd();
 const { settings: appSettings, init: initSettings } = useAppSettings();
 
@@ -364,17 +364,7 @@ async function fetchContent(
 
 			return Array.from(uniqueArticlesMap.values()).slice(0, count);
 		} else if (type === 'event') {
-			const { getRecommended, getRandom, getRecent } = useEvents();
-			if (useRecommended && user.value) {
-				try {
-					const res = await getRecommended(count);
-					if (res.success && res.data && Array.isArray(res.data)) {
-						return res.data;
-					}
-				} catch (error) {
-					console.warn('Recommended events request failed:', error);
-				}
-			}
+			const { getRandom, getRecent } = useEvents();
 
 			const split = Math.random() * 0.4 + 0.4; // between 40% and 60%
 			const recCount = Math.floor(count * split);
@@ -448,8 +438,9 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 	const count = isGroup ? groupSizes.value[type] : 1;
 
 	// alternate between random and recommended content
+	const hasAuthenticatedUser = Boolean(user.value?.id);
 	const useRecommended =
-		Math.random() < (isDataConstrained.value ? 0.15 : 0.3) && user.value !== null;
+		Math.random() < (isDataConstrained.value ? 0.15 : 0.3) && hasAuthenticatedUser;
 	let feedItem: FeedItem | null = null;
 
 	if (type === 'activity') {
@@ -591,6 +582,19 @@ onMounted(async () => {
 		await initSettings();
 	} catch (error) {
 		console.error('Failed to initialize dashboard settings:', error);
+	}
+
+	const hasSessionToken = Boolean(useCurrentSessionToken());
+	if (!isOffline.value && (user.value === undefined || (user.value === null && hasSessionToken))) {
+		try {
+			await fetchUser(!hasSessionToken);
+		} catch (error) {
+			console.warn('Dashboard auth refresh failed:', error);
+			await Toast.show({
+				text: 'Failed to load user data. Some features may not work properly.',
+				duration: 'long'
+			});
+		}
 	}
 
 	if (!isOffline.value) {
