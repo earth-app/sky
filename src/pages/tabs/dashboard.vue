@@ -64,6 +64,24 @@
 					</div>
 
 					<div
+						v-if="user?.activities"
+						ref="activityScroll"
+						class="w-full max-w-full overflow-x-auto overflow-y-hidden mt-4 min-h-12 px-4 cursor-grab active:cursor-grabbing select-none scrollbar-hide"
+						@mousedown="startDrag"
+						@mousemove="onDrag"
+						@mouseup="stopDrag"
+						@mouseleave="stopDrag"
+					>
+						<div class="flex w-max items-center justify-start gap-2 pr-4">
+							<LazyActivityCircle
+								v-for="activity in user.activities"
+								:key="activity.id"
+								:activity="activity"
+							/>
+						</div>
+					</div>
+
+					<div
 						v-if="!hasInitialized || isRefreshing"
 						class="flex items-center justify-center w-full py-8"
 					>
@@ -604,4 +622,29 @@ onMounted(async () => {
 	await nextTick();
 	await refreshFeed();
 });
+
+// activity scrolling
+
+const activityScroll = ref<HTMLElement | null>(null);
+let isDragging = false;
+let startX = 0;
+let scrollLeft = 0;
+
+function startDrag(e: MouseEvent) {
+	isDragging = true;
+	startX = e.pageX - (activityScroll.value?.offsetLeft ?? 0);
+	scrollLeft = activityScroll.value?.scrollLeft ?? 0;
+}
+
+function onDrag(e: MouseEvent) {
+	if (!isDragging || !activityScroll.value) return;
+	e.preventDefault();
+	const x = e.pageX - activityScroll.value.offsetLeft;
+	const walk = (x - startX) * 1.2;
+	activityScroll.value.scrollLeft = scrollLeft - walk;
+}
+
+function stopDrag() {
+	isDragging = false;
+}
 </script>
