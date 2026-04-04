@@ -39,16 +39,19 @@
 			class="flex gap-2 mt-4 flex-wrap"
 		>
 			<IonChip
-				v-for="(activity, i) in user.activities"
+				v-for="activity in user.activities"
 				:key="activity.id"
 				:router-link="`/tabs/activities/${activity.id}`"
 				:label="activity.name"
-				:icon="activity.fields['icon'] || 'mdi:earth'"
-				:variant="badgeVariants[i] || 'subtle'"
-				@mouseenter="badgeVariants[i] = 'solid'"
-				@mouseleave="badgeVariants[i] = 'subtle'"
-				class="hover:cursor-pointer transition-all duration-500"
-			/>
+				color="primary"
+				class="flex items-center justify-center px-2 hover:cursor-pointer transition-all duration-500"
+			>
+				<UIcon
+					:name="activity.fields['icon'] || 'mdi:earth'"
+					class="min-w-6 min-h-6 mr-1"
+				/>
+				<span class="text-sm font-semibold">{{ activity.name }}</span>
+			</IonChip>
 		</div>
 	</div>
 </template>
@@ -56,7 +59,6 @@
 <script setup lang="ts">
 import type { User } from 'types/user';
 
-const badgeVariants = ref<('subtle' | 'solid')[]>([]);
 const router = useIonRouter();
 
 const props = defineProps<{
