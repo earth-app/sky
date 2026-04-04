@@ -20,7 +20,7 @@
 					/>
 					<h2 class="text-4xl!">The Earth App</h2>
 					<ClientOnly>
-						<h4 class="text-lg! m-0!">Welcome, @{{ user?.username }}</h4>
+						<h4 class="text-lg! m-0!">Welcome, {{ user?.username ? `@${user.username}!` : '' }}</h4>
 					</ClientOnly>
 				</div>
 				<ClientOnly>
@@ -65,19 +65,24 @@
 
 					<div
 						v-if="user?.activities"
-						ref="activityScroll"
-						class="w-full max-w-full overflow-x-auto overflow-y-hidden mt-4 min-h-12 px-4 cursor-grab active:cursor-grabbing select-none scrollbar-hide"
-						@mousedown="startDrag"
-						@mousemove="onDrag"
-						@mouseup="stopDrag"
-						@mouseleave="stopDrag"
+						class="w-full max-w-full mt-4 px-4"
 					>
-						<div class="flex w-max items-center justify-start gap-2 pr-4">
-							<LazyActivityCircle
-								v-for="activity in user.activities"
-								:key="activity.id"
-								:activity="activity"
-							/>
+						<h2 class="text-base! mt-0! mb-1! font-bold!">Your Activities</h2>
+						<div
+							ref="activityScroll"
+							class="w-full max-w-full overflow-x-auto overflow-y-hidden min-h-12 cursor-grab active:cursor-grabbing select-none scrollbar-hide"
+							@mousedown="startDrag"
+							@mousemove="onDrag"
+							@mouseup="stopDrag"
+							@mouseleave="stopDrag"
+						>
+							<div class="flex w-max items-center justify-start gap-2 pr-4">
+								<LazyActivityCircle
+									v-for="activity in user.activities"
+									:key="activity.id"
+									:activity="activity"
+								/>
+							</div>
 						</div>
 					</div>
 
@@ -216,7 +221,7 @@ type FeedItem =
 
 type ContentType = FeedItem['type'];
 
-const { user, fetchUser } = useAuth();
+const { user, fetchUser, fetchRecommendedActivities } = useAuth();
 const { motd, fetchMotd } = useMotd();
 const { settings: appSettings, init: initSettings } = useAppSettings();
 
@@ -234,6 +239,7 @@ const isLoadingMore = ref(false);
 const isRefreshing = ref(false);
 const hasInitialized = ref(false);
 const lastContentType = ref<ContentType | null>(null);
+const dashboardRefreshSignal = useState<number>('dashboard-refresh-signal', () => 0);
 
 const GROUP_SIZES = {
 	activity: 5,
@@ -332,27 +338,27 @@ async function fetchContent(
 	try {
 		if (type === 'activity') {
 			if (useRecommended && user.value) {
-				const res = await getRecommendedActivities(count * 3);
+				const res = await fetchRecommendedActivities(count * 3);
 				if (res.success && res.data && Array.isArray(res.data)) {
 					return res.data.slice(0, count);
 				}
 			}
 
-			const { getRandom } = useActivities();
-			const res = await getRandom(count);
+			const { fetchRandom } = useActivities();
+			const res = await fetchRandom(count);
 			if (res.success && res.data && Array.isArray(res.data)) {
 				return res.data;
 			}
 		} else if (type === 'prompt') {
-			const { getRandom } = usePrompts();
-			const res = await getRandom(count);
+			const { fetchRandom } = usePrompts();
+			const res = await fetchRandom(count);
 			if (res.success && res.data && Array.isArray(res.data)) {
 				return res.data;
 			}
 		} else if (type === 'article') {
-			const { getRecommended, getRandom, getRecent } = useArticles();
+			const { fetchRecommended, fetchRandom, fetchRecent } = useArticles();
 			if (useRecommended && user.value) {
-				const res = await getRecommended(count);
+				const res = await fetchRecommended(count);
 				if (res.success && res.data && Array.isArray(res.data)) {
 					return res.data;
 				}
@@ -361,8 +367,8 @@ async function fetchContent(
 			const split = Math.random() * 0.4 + 0.3; // between 30% and 70%
 			const recCount = Math.floor(count * split);
 			const [res1, res2] = await Promise.all([
-				getRandom(count - recCount),
-				getRecent(count - recCount)
+				fetchRandom(count - recCount),
+				fetchRecent(count - recCount)
 			]);
 			const articles: Article[] = [];
 
@@ -382,13 +388,13 @@ async function fetchContent(
 
 			return Array.from(uniqueArticlesMap.values()).slice(0, count);
 		} else if (type === 'event') {
-			const { getRandom, getRecent } = useEvents();
+			const { fetchRandom, fetchRecent } = useEvents();
 
 			const split = Math.random() * 0.4 + 0.4; // between 40% and 60%
 			const recCount = Math.floor(count * split);
 			const [res1, res2] = await Promise.allSettled([
-				getRandom(count - recCount),
-				getRecent(count - recCount)
+				fetchRandom(count - recCount),
+				fetchRecent(count - recCount)
 			]);
 
 			const events: Event[] = [];
@@ -418,11 +424,13 @@ async function fetchContent(
 
 			return Array.from(uniqueEventsMap.values()).slice(0, count);
 		} else if (type === 'user') {
+			const { fetchAll } = useUsers();
+
 			const split = Math.random() * 0.4 + 0.3; // between 30% and 70%
 			const randCount = Math.floor(count * split);
 			const [res1, res2] = await Promise.all([
-				getUsers(count - randCount),
-				getUsers(randCount, undefined, 'rand')
+				fetchAll(count - randCount),
+				fetchAll(randCount, undefined, 'rand')
 			]);
 
 			const users: User[] = [];
@@ -568,20 +576,38 @@ async function handleRefresh(event: CustomEvent<{ complete?: () => void }>) {
 	}
 }
 
-async function refreshFeed() {
+async function scrollToTop(durationMs: number = 300) {
+	const ionContent = contentRef.value?.$el as
+		| {
+				scrollToTop?: (duration?: number) => Promise<void>;
+				getScrollElement?: () => Promise<HTMLElement | null>;
+		  }
+		| undefined;
+
+	if (ionContent?.scrollToTop) {
+		await ionContent.scrollToTop(durationMs);
+		return;
+	}
+
+	const scrollElement = await ionContent?.getScrollElement?.();
+	if (scrollElement) {
+		scrollElement.scrollTo({ top: 0, behavior: durationMs > 0 ? 'smooth' : 'auto' });
+		if (durationMs > 0) {
+			await new Promise((resolve) => setTimeout(resolve, durationMs));
+		}
+	}
+}
+
+async function refreshFeed(scrollDurationMs: number = 300) {
 	if (isRefreshing.value) return;
 
 	isRefreshing.value = true;
-	feedItems.value = [];
 	lastContentType.value = null;
+	await scrollToTop(scrollDurationMs);
+	feedItems.value = [];
 
 	try {
 		await loadMoreItems(isDataConstrained.value ? 3 : 5);
-
-		const scrollElement = await contentRef.value?.$el.getScrollElement();
-		if (scrollElement) {
-			scrollElement.scrollTo({ top: 0, behavior: 'smooth' });
-		}
 	} catch (error) {
 		console.error('Error refreshing feed:', error);
 		await Toast.show({
@@ -594,7 +620,11 @@ async function refreshFeed() {
 	}
 }
 
-provide('refreshDashboard', refreshFeed);
+watch(dashboardRefreshSignal, async () => {
+	if (!hasInitialized.value) return;
+	await refreshFeed(300);
+});
+
 onMounted(async () => {
 	try {
 		await initSettings();
@@ -620,7 +650,7 @@ onMounted(async () => {
 	}
 
 	await nextTick();
-	await refreshFeed();
+	await refreshFeed(0);
 });
 
 // activity scrolling

@@ -71,16 +71,16 @@ import slide from '~/animations/slide';
 
 const { user, avatar128, fetchUser } = useAuth();
 const route = useRoute();
+const dashboardRefreshSignal = useState<number>('dashboard-refresh-signal', () => 0);
 
 const profileHref = computed(() =>
 	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/profile'
 );
 
-const refreshDashboard = inject<(() => Promise<void>) | null>('refreshDashboard', null);
-async function handleHomeButtonClick(event: Event) {
-	if (route.path === '/tabs/dashboard' && refreshDashboard) {
+function handleHomeButtonClick(event: Event) {
+	if (route.path.startsWith('/tabs/dashboard')) {
 		event.preventDefault();
-		await refreshDashboard();
+		dashboardRefreshSignal.value += 1;
 	}
 }
 
