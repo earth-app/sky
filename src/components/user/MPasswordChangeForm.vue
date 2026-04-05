@@ -82,6 +82,7 @@
 import { Toast } from '@capacitor/toast';
 import { passwordSchema } from 'schemas';
 
+const { changePassword } = useAuth();
 const { impactLight, notifySuccess, notifyWarning, notifyError } = useAppHaptics();
 
 const oldPassword = ref('');

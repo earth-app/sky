@@ -82,7 +82,6 @@ const props = defineProps<{
 }>();
 
 const { user: currentUser } = useAuth();
-const { addFriend, removeFriend, addToCircle, removeFromCircle } = useFriends();
 const isThisUser = computed(() => {
 	return currentUser.value?.id === props.user.id;
 });

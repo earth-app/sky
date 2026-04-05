@@ -75,7 +75,7 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 
-const { user } = useAuth();
+const { user, sendVerificationEmail, verifyEmail } = useAuth();
 const { impactLight, notifySuccess, notifyWarning, notifyError } = useAppHaptics();
 
 const codeInput = ref('');

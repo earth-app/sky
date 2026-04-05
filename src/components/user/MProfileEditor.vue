@@ -601,7 +601,15 @@ const props = defineProps<{
 }>();
 
 const { avatar: oldAvatar, fetchAvatar, fetchUser, points, fetchPoints } = useUser(props.user.id);
-const { user: authUser } = useAuth();
+const {
+	user: authUser,
+	setUserActivities,
+	regenerateAvatar,
+	sendVerificationEmail,
+	updateAccount,
+	updateFieldPrivacy,
+	deleteAccount
+} = useAuth();
 const config = useRuntimeConfig();
 const { beginFlow } = useMobileOAuth();
 const {

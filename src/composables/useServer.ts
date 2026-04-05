@@ -421,8 +421,8 @@ export function useActivityCardsM() {
 
 export async function getSimilarArticlesM(article: Article, count: number = 5) {
 	const effectiveCount = isDataSaverConstrained() ? Math.max(2, count - 2) : count;
-	const { getRandom } = useArticles();
-	const pool = await getRandom(Math.min(effectiveCount * 3, 15)).then((res) =>
+	const { fetchRandom } = useArticles();
+	const pool = await fetchRandom(Math.min(effectiveCount * 3, 15)).then((res) =>
 		res.success ? res.data : res.message
 	);
 
@@ -466,8 +466,8 @@ export async function getSimilarArticlesM(article: Article, count: number = 5) {
 
 export async function getSimilarEventsM(event: Event, count: number = 5) {
 	const effectiveCount = isDataSaverConstrained() ? Math.max(2, count - 2) : count;
-	const { getRandom } = useEvents();
-	const pool = await getRandom(Math.min(effectiveCount * 3, 15)).then((res) =>
+	const { fetchRandom } = useEvents();
+	const pool = await fetchRandom(Math.min(effectiveCount * 3, 15)).then((res) =>
 		res.success ? res.data : res.message
 	);
 
