@@ -577,25 +577,66 @@ async function handleRefresh(event: CustomEvent<{ complete?: () => void }>) {
 }
 
 async function scrollToTop(durationMs: number = 300) {
-	const ionContent = contentRef.value?.$el as
-		| {
-				scrollToTop?: (duration?: number) => Promise<void>;
-				getScrollElement?: () => Promise<HTMLElement | null>;
-		  }
-		| undefined;
+	const rawRef = contentRef.value as {
+		scrollToTop?: (duration?: number) => Promise<void>;
+		getScrollElement?: () => Promise<HTMLElement | null>;
+		$el?: {
+			scrollToTop?: (duration?: number) => Promise<void>;
+			getScrollElement?: () => Promise<HTMLElement | null>;
+		};
+	} | null;
 
-	if (ionContent?.scrollToTop) {
-		await ionContent.scrollToTop(durationMs);
-		return;
+	const targets = [rawRef, rawRef?.$el].filter(Boolean) as {
+		scrollToTop?: (duration?: number) => Promise<void>;
+		getScrollElement?: () => Promise<HTMLElement | null>;
+	}[];
+
+	for (const target of targets) {
+		if (!target.scrollToTop) continue;
+
+		try {
+			await target.scrollToTop(durationMs);
+			return;
+		} catch {
+			// fallback to scroll element method below
+		}
 	}
 
-	const scrollElement = await ionContent?.getScrollElement?.();
-	if (scrollElement) {
-		scrollElement.scrollTo({ top: 0, behavior: durationMs > 0 ? 'smooth' : 'auto' });
+	for (const target of targets) {
+		if (!target.getScrollElement) continue;
+
+		try {
+			const scrollElement = await target.getScrollElement();
+			if (!scrollElement) continue;
+
+			scrollElement.scrollTo({ top: 0, behavior: durationMs > 0 ? 'smooth' : 'auto' });
+			if (durationMs > 0) {
+				await new Promise((resolve) => setTimeout(resolve, durationMs));
+			}
+			return;
+		} catch {
+			// try next target shape
+		}
+	}
+
+	const hostElement =
+		rawRef && typeof rawRef === 'object' && '$el' in rawRef
+			? (rawRef.$el as HTMLElement | undefined)
+			: (rawRef as HTMLElement | null);
+
+	const shadowScrollElement = hostElement?.shadowRoot?.querySelector<HTMLElement>(
+		'.inner-scroll, .scroll-y, main'
+	);
+
+	if (shadowScrollElement) {
+		shadowScrollElement.scrollTo({ top: 0, behavior: durationMs > 0 ? 'smooth' : 'auto' });
 		if (durationMs > 0) {
 			await new Promise((resolve) => setTimeout(resolve, durationMs));
 		}
+		return;
 	}
+
+	window.scrollTo({ top: 0, behavior: durationMs > 0 ? 'smooth' : 'auto' });
 }
 
 async function refreshFeed(scrollDurationMs: number = 300) {
@@ -620,10 +661,15 @@ async function refreshFeed(scrollDurationMs: number = 300) {
 	}
 }
 
-watch(dashboardRefreshSignal, async () => {
-	if (!hasInitialized.value) return;
-	await refreshFeed(300);
-});
+watch(
+	dashboardRefreshSignal,
+	async () => {
+		if (!hasInitialized.value) return;
+		await nextTick();
+		await scrollToTop(300);
+	},
+	{ flush: 'post' }
+);
 
 onMounted(async () => {
 	try {

@@ -40,6 +40,7 @@
 				<IonTabButton
 					tab="discover"
 					href="/tabs/discover"
+					@click.capture="handleDiscoverButtonClick"
 				>
 					<div class="flex items-center justify p-1 size-9 rounded-full">
 						<UIcon
@@ -72,6 +73,7 @@ import slide from '~/animations/slide';
 const { user, avatar128, fetchUser } = useAuth();
 const route = useRoute();
 const dashboardRefreshSignal = useState<number>('dashboard-refresh-signal', () => 0);
+const discoverScrollSignal = useState<number>('discover-scroll-signal', () => 0);
 
 const profileHref = computed(() =>
 	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/profile'
@@ -81,6 +83,12 @@ function handleHomeButtonClick(event: Event) {
 	if (route.path.startsWith('/tabs/dashboard')) {
 		event.preventDefault();
 		dashboardRefreshSignal.value += 1;
+	}
+}
+
+function handleDiscoverButtonClick() {
+	if (route.path.startsWith('/tabs/discover')) {
+		discoverScrollSignal.value += 1;
 	}
 }
 
