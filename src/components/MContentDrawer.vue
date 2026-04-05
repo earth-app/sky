@@ -16,7 +16,6 @@
 				color="light"
 				placeholder="Search..."
 				class="mb-4"
-				icon="mdi:magnify"
 				hydrate-on-interaction
 			/>
 
