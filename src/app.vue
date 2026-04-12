@@ -87,6 +87,8 @@ useSeoMeta({
 	appleMobileWebAppStatusBarStyle: 'black'
 });
 
+// deep linking
+
 function shouldIgnoreDuplicateDeepLink(url: string) {
 	const now = Date.now();
 	const last = handledDeepLinkTimestamps.get(url) || 0;
@@ -127,6 +129,8 @@ async function handleIncomingDeepLink(url: string) {
 async function handleAppUrlOpen(event: URLOpenListenerEvent) {
 	await handleIncomingDeepLink(event.url);
 }
+
+// settings & other
 
 async function hydrateUser() {
 	const hasToken = Boolean(authStore.sessionToken);
@@ -171,7 +175,7 @@ onMounted(async () => {
 		await hydrateUser();
 	}
 
-	// On client, persist authenticated user for offline fallback whenever it changes.
+	// on client persist authenticated user for offline fallback whenever it changes
 	if (import.meta.client && !stopUserCacheWatch) {
 		stopUserCacheWatch = watch(
 			() => user.value,
@@ -214,7 +218,7 @@ onMounted(async () => {
 		return;
 	}
 
-	// Browser fallback
+	// browser fallback
 	const updateFromNavigator = async () => {
 		const wasOffline = isOffline.value;
 		applyNetworkStatus({
