@@ -13,6 +13,9 @@ const config: CapacitorConfig = {
 		CapacitorCookies: {
 			enabled: true
 		},
+		CapacitorHttp: {
+			enabled: true
+		},
 		SplashScreen: {
 			launchShowDuration: 3000,
 			launchAutoHide: true,

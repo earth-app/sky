@@ -39,10 +39,9 @@
 	input:disabled,
 	select:disabled,
 	textarea:disabled,
+	button[aria-disabled='true'],
 	[data-disabled='true'],
-	[aria-disabled='true'],
-	[aria-busy='true'],
-	[data-loading='true'] {
+	button[data-loading='true'] {
 		cursor: not-allowed;
 		opacity: 0.6;
 		pointer-events: none;
