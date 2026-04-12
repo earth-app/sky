@@ -49,7 +49,7 @@
 								class="flex w-full mt-2"
 							>
 								<IonButton
-									color="medium"
+									:color="theme"
 									size="small"
 									@click="handleMotdLinkClick(motd.link)"
 								>

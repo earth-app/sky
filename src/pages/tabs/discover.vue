@@ -8,7 +8,7 @@
 				<IonSearchbar
 					v-model="search"
 					placeholder="Explore..."
-					color="medium"
+					:color="theme"
 					class="w-full max-w-2xl my-4"
 				/>
 

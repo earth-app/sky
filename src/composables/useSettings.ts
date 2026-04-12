@@ -81,11 +81,19 @@ function coerceSetting<K extends AppSettingKey>(key: K, value: unknown): AppSett
 	return (typeof value === 'boolean' ? value : fallback) as AppSettings[K];
 }
 
+export const theme = computed<'light' | 'dark'>(() => useColorMode().value as 'light' | 'dark');
+
 function resolveTheme(theme: ThemeSetting): 'light' | 'dark' {
 	if (theme === 'light' || theme === 'dark') return theme;
 
-	if (import.meta.client && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-		return 'dark';
+	if (import.meta.client) {
+		if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+			return 'dark';
+		}
+
+		if (localStorage.getItem('nuxt-color-mode') === 'dark') {
+			return 'dark';
+		}
 	}
 
 	return 'light';

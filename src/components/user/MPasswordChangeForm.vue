@@ -1,7 +1,7 @@
 <template>
 	<IonCard
 		class="w-full max-w-md p-4"
-		color="dark"
+		:color="theme"
 	>
 		<div class="flex flex-col gap-3">
 			<IonItem class="rounded-lg">
