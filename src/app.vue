@@ -15,6 +15,14 @@
 			</div>
 		</div>
 		<IonRouterOutlet :animation="slide" />
+
+		<ClientOnly>
+			<MSiteTour
+				:steps="welcomeTour"
+				name="Welcome Tour"
+				tour-id="welcome"
+			/>
+		</ClientOnly>
 	</IonApp>
 </template>
 
@@ -43,6 +51,132 @@ const { resolveDeepLink } = useDeepLinkRouting();
 const { closeBrowser, clearFlow, refreshFlowState } = useMobileOAuth();
 const { notifySuccess, notifyWarning } = useAppHaptics();
 const { settings: appSettings, init: initSettings } = useAppSettings();
+
+const profilePath = computed(() =>
+	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/tabs/profile/editor'
+);
+
+const welcomeTour = computed<SiteTourStep[]>(() => [
+	{
+		id: 'title',
+		title: 'Welcome to The Earth App',
+		description:
+			'The Earth App encourages you to explore new things and engage with people who share your interests.',
+		footer: 'Click Next to continue.'
+	},
+	{
+		id: 'navbar',
+		title: 'Navigation Bar',
+		description:
+			'The tab bar lets you quickly move between the main areas of the app, including discover and your profile.',
+		footer: 'Click Next to continue.'
+	},
+	{
+		url: '/tabs/discover?tab=activity',
+		id: 'discover-search',
+		title: 'Activities Page',
+		description:
+			'The Discover page helps you find new activities and interests. Use search to quickly jump into topics you care about.',
+		footer: 'There are lots of things to explore. Click Next to continue.',
+		prerendered: true
+	},
+	{
+		url: '/tabs/discover?tab=article',
+		id: 'discover-search',
+		title: 'Articles Page',
+		description:
+			'Discover also surfaces articles tailored to your interests so you can keep learning and share what you find.',
+		footer:
+			'Your feed gets better as your profile and activity preferences become more complete. Click Next to continue.'
+	},
+	{
+		url: '/tabs/discover?tab=prompt',
+		id: 'discover-search',
+		title: 'Prompts Page',
+		description:
+			'Prompts spark creativity and discussion. Responding to prompts is a great way to share ideas with the community.',
+		footer: 'Click Next to continue.'
+	},
+	{
+		url: profilePath.value,
+		id: 'profile-title',
+		title: 'Your Profile',
+		description:
+			'Your profile helps personalize recommendations and shows others who you are. Keep it updated to get the most out of the app.',
+		footer: 'You can highlight your interests and make your profile stand out.'
+	},
+	{
+		id: 'avatar',
+		title: 'Your Avatar',
+		description:
+			'Your avatar represents you across the app and community. It appears on your profile and in social spaces.',
+		footer: 'Customize it to match your vibe.'
+	},
+	{
+		url: '/tabs/settings',
+		id: 'settings',
+		title: 'Your Settings',
+		description:
+			'In settings, you can tune appearance, performance, and account behavior to match your device and preferences.',
+		footer: 'Review settings any time to tailor your experience.'
+	},
+	{
+		id: 'notifications',
+		title: 'Notifications',
+		description:
+			'Control how the app alerts you so you can stay informed without being overwhelmed.',
+		footer: 'Choose the notification experience that works best for you.'
+	},
+	{
+		url: profilePath.value,
+		id: 'badges',
+		title: 'Badges',
+		description:
+			'Badges are a fun way to show your achievements and interests as you engage with content and activities.',
+		footer: 'Open your badges to see what you have earned.'
+	},
+	// Quests are not currently exposed in the mobile tab shell.
+	// {
+	// 	id: 'quests',
+	// 	title: 'Quests',
+	// 	description: 'Complete quests to explore new interests and earn rewards.'
+	// },
+	{
+		id: 'points-history',
+		title: 'Points History',
+		description:
+			'Engaging with the app rewards Impact Points. You can track how your points change over time here.',
+		footer: 'Keep engaging with content to grow your score.'
+	},
+	{
+		id: 'user-activities',
+		title: 'Your Activities',
+		description:
+			'Your selected activities shape recommendations and help others quickly see what you are into.',
+		footer: 'Updating activities keeps your experience fresh and relevant.'
+	},
+	{
+		id: 'friends-buttons',
+		title: 'Your Friends',
+		description:
+			'Friends help you discover people and content you might otherwise miss. Build your network over time.',
+		footer: 'Connect with friends to see more activity from your community.'
+	},
+	{
+		id: 'user-journeys',
+		title: 'Your Journeys',
+		description:
+			'Journeys summarize how you engage with prompts, articles, events, and activities.',
+		footer: 'Keep exploring to grow each journey category.'
+	},
+	{
+		id: 'user-content',
+		title: 'Your Content',
+		description:
+			'Articles and prompts you create appear here. Sharing content is a great way to contribute to the community.',
+		footer: 'Thank you for taking the tour. Tap Finish to continue exploring.'
+	}
+]);
 
 let networkListener: PluginListenerHandle | null = null;
 let navHandler: (() => void) | null = null;

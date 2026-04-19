@@ -2,7 +2,10 @@
 	<IonPage>
 		<IonTabs>
 			<IonRouterOutlet :animation="slide" />
-			<IonTabBar slot="bottom">
+			<IonTabBar
+				id="navbar"
+				slot="bottom"
+			>
 				<IonTabButton
 					tab="dashboard"
 					href="/tabs/dashboard"

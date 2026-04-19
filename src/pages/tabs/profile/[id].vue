@@ -5,7 +5,9 @@
 				<IonButtons slot="start">
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
-				<IonTitle>Profile {{ user?.username ? `- @${user.username}` : '' }}</IonTitle>
+				<IonTitle id="profile-title"
+					>Profile {{ user?.username ? `- @${user.username}` : '' }}</IonTitle
+				>
 
 				<IonButtons
 					v-if="user?.id === currentUser?.id"
@@ -24,6 +26,7 @@
 					</IonButton>
 
 					<IonButton
+						id="settings-link"
 						color="tertiary"
 						router-link="/tabs/settings"
 						class="size-6"

@@ -18,9 +18,31 @@
 						alt="The Earth App"
 						class="size-16 sm:size-24 md:size-28"
 					/>
-					<h2 class="text-4xl!">The Earth App</h2>
+					<h2
+						id="title"
+						class="text-4xl!"
+					>
+						The Earth App
+					</h2>
 					<ClientOnly>
-						<h4 class="text-lg! m-0!">Welcome, {{ user?.username ? `@${user.username}!` : '' }}</h4>
+						<div class="flex">
+							<h4 class="text-lg! m-0!">
+								Welcome, {{ user?.username ? `@${user.username}!` : '' }}
+							</h4>
+							<IonButton
+								color="primary"
+								shape="round"
+								fill="outline"
+								size="small"
+								@click="startWelcomeTour"
+								class="ml-2 size-5"
+							>
+								<UIcon
+									name="mdi:account-arrow-right"
+									class="min-w-4 min-h-4"
+								/>
+							</IonButton>
+						</div>
 					</ClientOnly>
 				</div>
 				<ClientOnly>
@@ -224,6 +246,7 @@ type ContentType = FeedItem['type'];
 const { user, fetchUser, fetchRecommendedActivities } = useAuth();
 const { motd, fetchMotd } = useMotd();
 const { settings: appSettings, init: initSettings } = useAppSettings();
+const { startTour } = useSiteTour();
 
 const motdColor = computed(() => {
 	if (!motd.value) return 'primary';
@@ -269,6 +292,10 @@ const shouldPreloadRoutes = computed(
 function handleMotdLinkClick(link?: string) {
 	if (!link) return;
 	navigateTo(link, { external: link.startsWith('http') });
+}
+
+function startWelcomeTour() {
+	startTour('welcome');
 }
 
 function getNextContentType(): ContentType {

@@ -3,6 +3,7 @@
 		<div class="flex gap-8 justify-center justify-items-center items-center px-4 mt-6">
 			<div class="flex flex-col items-center justify-evenly self-start py-4">
 				<UAvatar
+					id="avatar"
 					:src="avatar"
 					class="size-24 shadow-lg rounded-full shadow-black/70"
 				/>
@@ -17,10 +18,12 @@
 						:user="user"
 						class="mt-4"
 					/>
-					<UserMJourneys
-						:user="user"
+					<div
+						id="user-journeys"
 						class="m-2"
-					/>
+					>
+						<UserMJourneys :user="user" />
+					</div>
 				</div>
 			</div>
 		</div>
@@ -51,7 +54,10 @@
 					class="mr-2"
 				/>
 			</div>
-			<div class="flex items-center justify-center flex-wrap max-w-80">
+			<div
+				id="user-activities"
+				class="flex items-center justify-center flex-wrap max-w-80"
+			>
 				<UBadge
 					v-for="(activity, i) in props.user.activities"
 					:label="activity.name"
@@ -69,6 +75,7 @@
 		</div>
 		<div class="flex flex-col items-center justify-center px-8 gap-2 mb-6">
 			<IonButton
+				id="badges"
 				fill="outline"
 				color="success"
 				class="w-full"
@@ -94,6 +101,7 @@
 			</MContentDrawer>
 
 			<IonButton
+				id="points-history"
 				fill="outline"
 				color="tertiary"
 				class="w-full"
@@ -165,9 +173,13 @@
 				</template>
 			</MContentDrawer>
 		</div>
-		<div class="flex flex-col items-center justify-center px-8 gap-2">
+		<div
+			id="user-content"
+			class="flex flex-col items-center justify-center px-8 gap-2"
+		>
 			<div
 				v-if="friends.length > 0"
+				id="user-friends"
 				class="flex flex-col items-center"
 			>
 				<h2 class="text-lg! my-0! mb-2">Friends</h2>

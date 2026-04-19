@@ -6,7 +6,7 @@
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
 
-				<IonTitle>Settings</IonTitle>
+				<IonTitle id="settings">Settings</IonTitle>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent :scroll-y="true">
@@ -16,7 +16,12 @@
 					:key="setting.section"
 					class="flex flex-col items-center w-full px-4"
 				>
-					<h2 class="text-lg! my-4 text-center font-semibold">{{ setting.section }}</h2>
+					<h2
+						:id="setting.section === 'Notifications' ? 'notifications' : undefined"
+						class="text-lg! my-4 text-center font-semibold"
+					>
+						{{ setting.section }}
+					</h2>
 					<IonList class="w-full rounded-xl border-2 border-black/40 light:border-gray-300">
 						<IonItem
 							v-for="item in setting.items"

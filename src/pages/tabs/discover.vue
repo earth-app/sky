@@ -6,6 +6,7 @@
 		>
 			<div class="flex flex-col items-center mb-8 px-4">
 				<IonSearchbar
+					id="discover-search"
 					v-model="search"
 					placeholder="Explore..."
 					:color="theme"
@@ -13,7 +14,7 @@
 				/>
 
 				<IonSegment
-					v-if="isSearchMode"
+					v-if="showSegmentSelector"
 					v-model="selectedSegment"
 					color="primary"
 					class="flex items-center w-full max-w-2xl mb-4 *:flex *:items-center *:min-w-12! *:max-w-1/6 *:text-secondary"
@@ -52,9 +53,9 @@
 
 				<div class="w-full max-w-2xl flex flex-col items-center gap-2">
 					<span
-						v-if="isSearchMode"
+						v-if="showResultsSummary"
 						class="text-sm opacity-70 font-semibold"
-						>{{ capitalizeFully(SEGMENT_LABELS[selectedSegment]) }} -
+						>{{ capitalizeFully(SEGMENT_LABELS[activeSegment]) }} -
 						{{ comma(displayedResults.length) }} Results</span
 					>
 					<div
@@ -157,6 +158,8 @@ const SEGMENT_LABELS: Record<SegmentType, string> = {
 	event: 'events'
 };
 
+const route = useRoute();
+
 const search = ref('');
 const activeSearch = ref('');
 const selectedSegment = ref<SegmentType>('user');
@@ -189,13 +192,45 @@ const isLoading = ref(false);
 const loadingGeneration = ref<number | null>(null);
 const queryGeneration = ref(0);
 
+function normalizeRouteQuery(value: unknown): string | null {
+	if (Array.isArray(value)) {
+		const first = value[0];
+		return typeof first === 'string' ? first : null;
+	}
+
+	return typeof value === 'string' ? value : null;
+}
+
+function parseRouteSegment(value: unknown): SegmentType | null {
+	const normalized = normalizeRouteQuery(value)?.toLowerCase();
+	if (!normalized) return null;
+
+	if (normalized === 'user') return 'user';
+	if (normalized === 'activity') return 'activity';
+	if (normalized === 'article') return 'article';
+	if (normalized === 'prompt') return 'prompt';
+	if (normalized === 'event') return 'event';
+	return null;
+}
+
 const isSearchMode = computed(() => activeSearch.value.length > 0);
+const routeSegment = computed<SegmentType | null>(() => {
+	const tabSegment = parseRouteSegment(route.query.tab);
+	if (tabSegment) return tabSegment;
+
+	// Backward compatibility with older tour query usage.
+	return parseRouteSegment(route.query.tour);
+});
+const isSegmentPinnedByRoute = computed(() => routeSegment.value !== null);
+const showSegmentSelector = computed(() => isSearchMode.value || isSegmentPinnedByRoute.value);
+const showResultsSummary = computed(() => isSearchMode.value || isSegmentPinnedByRoute.value);
+const activeSegment = computed<SegmentType>(() => routeSegment.value ?? selectedSegment.value);
 
 const hasMoreForSelectedSegment = computed(() => {
-	if (selectedSegment.value === 'user') return hasMoreUsers.value;
-	if (selectedSegment.value === 'activity') return hasMoreActivities.value;
-	if (selectedSegment.value === 'article') return hasMoreArticles.value;
-	if (selectedSegment.value === 'prompt') return hasMorePrompts.value;
+	if (activeSegment.value === 'user') return hasMoreUsers.value;
+	if (activeSegment.value === 'activity') return hasMoreActivities.value;
+	if (activeSegment.value === 'article') return hasMoreArticles.value;
+	if (activeSegment.value === 'prompt') return hasMorePrompts.value;
 	return hasMoreEvents.value;
 });
 
@@ -210,7 +245,7 @@ const hasMore = computed(
 
 const canLoadMore = computed(() => {
 	if (!hasMore.value) return false;
-	if (!isSearchMode.value) return true;
+	if (!isSearchMode.value && !isSegmentPinnedByRoute.value) return true;
 	return hasMoreForSelectedSegment.value;
 });
 
@@ -219,19 +254,23 @@ const displayedResults = computed(() => {
 		? [...results.value].sort((a, b) => getSortTimestamp(b) - getSortTimestamp(a))
 		: results.value;
 
-	if (!isSearchMode.value) {
+	if (!isSearchMode.value && !isSegmentPinnedByRoute.value) {
 		return source;
 	}
 
-	return source.filter((result) => result.data_type === selectedSegment.value);
+	return source.filter((result) => result.data_type === activeSegment.value);
 });
 
 const emptyStateText = computed(() => {
-	if (!isSearchMode.value) {
+	if (!isSearchMode.value && !isSegmentPinnedByRoute.value) {
 		return 'No discover content available right now.';
 	}
 
-	return `No ${SEGMENT_LABELS[selectedSegment.value]} found for "${activeSearch.value}".`;
+	if (!isSearchMode.value) {
+		return `No ${SEGMENT_LABELS[activeSegment.value]} available right now.`;
+	}
+
+	return `No ${SEGMENT_LABELS[activeSegment.value]} found for "${activeSearch.value}".`;
 });
 
 const page = ref(1);
@@ -245,6 +284,27 @@ watch(search, (nextValue) => {
 		void applySearch(nextValue);
 	}, SEARCH_DEBOUNCE_MS);
 });
+
+watch(
+	routeSegment,
+	async (segment, previousSegment) => {
+		if (!segment) {
+			return;
+		}
+
+		selectedSegment.value = segment;
+
+		if (segment !== previousSegment) {
+			await nextTick();
+			await scrollToTop(200);
+
+			if (!isLoading.value && displayedResults.value.length === 0 && canLoadMore.value) {
+				void loadMore();
+			}
+		}
+	},
+	{ immediate: true }
+);
 
 watch(
 	discoverScrollSignal,
@@ -485,7 +545,7 @@ async function applySearch(rawSearch: string) {
 	loadingGeneration.value = null;
 	isLoading.value = false;
 	activeSearch.value = nextSearch;
-	selectedSegment.value = 'user';
+	selectedSegment.value = routeSegment.value ?? 'user';
 	resetPaginationState();
 
 	await loadMore();
