@@ -18,7 +18,10 @@ export default (_: HTMLElement, opts?: any) => {
 	const enteringFrom = isBack ? '-100%' : '100%';
 	const leavingTo = isBack ? '100%' : '-100%';
 
-	const duration = 520;
+	const duration =
+		typeof opts?.duration === 'number' && Number.isFinite(opts.duration)
+			? Math.max(0, opts.duration)
+			: 520;
 
 	const enteringAnimation = createAnimation()
 		.addElement(enteringEl)
