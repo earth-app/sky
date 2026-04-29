@@ -39,6 +39,7 @@ import {
 	setDataSaverModeEnabled,
 	setOfflineModeEnabled
 } from './composables/useNetwork';
+import { initPushNotifications } from './composables/usePushNotifications';
 
 if (import.meta.client) {
 	defineCustomElements(window);
@@ -51,6 +52,7 @@ const { resolveDeepLink } = useDeepLinkRouting();
 const { closeBrowser, clearFlow, refreshFlowState } = useMobileOAuth();
 const { notifySuccess, notifyWarning } = useAppHaptics();
 const { settings: appSettings, init: initSettings } = useAppSettings();
+const isNative = Capacitor.isNativePlatform();
 
 const profilePath = computed(() =>
 	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/tabs/profile/editor'
@@ -295,7 +297,7 @@ onMounted(async () => {
 		{ immediate: true }
 	);
 
-	if (Capacitor.isNativePlatform()) {
+	if (isNative) {
 		const initialStatus = await Network.getStatus();
 		applyNetworkStatus(initialStatus);
 	} else if (import.meta.client) {
@@ -322,7 +324,7 @@ onMounted(async () => {
 		);
 	}
 
-	if (Capacitor.isNativePlatform()) {
+	if (isNative) {
 		const updateFromStatus = async (s: ConnectionStatus) => {
 			const wasOffline = isOffline.value;
 			applyNetworkStatus(s);
@@ -368,6 +370,11 @@ onMounted(async () => {
 	window.addEventListener('online', updateFromNavigator);
 	window.addEventListener('offline', updateFromNavigator);
 	navHandler = updateFromNavigator;
+
+	// register push notifications
+	if (isNative) {
+		await initPushNotifications();
+	}
 });
 
 onBeforeUnmount(() => {
