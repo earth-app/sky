@@ -32,8 +32,10 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.3.1",
     "@capacitor/keyboard": "^8.0.3",
+    "@capacitor/local-notifications": "^8.0.2",
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
+    "@capacitor/push-notifications": "^8.0.3",
     "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
@@ -45,16 +47,16 @@
     "@ionic/vue-router": "8.8.1",
     "@nuxt/icon": "^2.2.1",
     "@nuxt/image": "^2.0.0",
-    "@nuxt/ui": "^4.6.1",
+    "@nuxt/ui": "^4.7.1",
     "@nuxtjs/google-fonts": "^3.2.0",
-    "@nuxtjs/i18n": "^10.2.4",
+    "@nuxtjs/i18n": "^10.3.0",
     "@nuxtjs/ionic": "^1.0.2",
-    "@tiptap/extension-drag-handle": "^3.22.4",
+    "@tiptap/extension-drag-handle": "^3.22.5",
     "@types/luxon": "^3.7.1",
     "luxon": "^3.7.2",
     "nuxt": "^4.4.2",
     "nuxt-viewport": "^2.4.0",
-    "vue": "^3.5.32"
+    "vue": "^3.5.33"
   },
   "overrides": {
     "@ionic/core": "8.8.1",
@@ -72,9 +74,9 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "prettier-plugin-tailwindcss": "^0.7.2",
+    "prettier-plugin-tailwindcss": "^0.7.4",
     "vue-tsc": "^3.2.7",
-    "wrangler": "^4.84.1"
+    "wrangler": "^4.86.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"

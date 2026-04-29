@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+	"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>API_KEY</key>
+		<string>AIzaSyAmxk7ROFAdk6Z5vw_8dJRGRM96WxB7-rE</string>
+		<key>GCM_SENDER_ID</key>
+		<string>471550197649</string>
+		<key>PLIST_VERSION</key>
+		<string>1</string>
+		<key>BUNDLE_ID</key>
+		<string>com.earthapp.sky</string>
+		<key>PROJECT_ID</key>
+		<string>the-earth-app-0531</string>
+		<key>STORAGE_BUCKET</key>
+		<string>the-earth-app-0531.firebasestorage.app</string>
+		<key>IS_ADS_ENABLED</key>
+		<false />
+		<key>IS_ANALYTICS_ENABLED</key>
+		<false />
+		<key>IS_APPINVITE_ENABLED</key>
+		<true />
+		<key>IS_GCM_ENABLED</key>
+		<true />
+		<key>IS_SIGNIN_ENABLED</key>
+		<true />
+		<key>GOOGLE_APP_ID</key>
+		<string>1:471550197649:ios:2b578f0b5d615c4fade430</string>
+	</dict>
+</plist>

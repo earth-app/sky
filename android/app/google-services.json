@@ -1,0 +1,29 @@
+{
+	"project_info": {
+		"project_number": "471550197649",
+		"project_id": "the-earth-app-0531",
+		"storage_bucket": "the-earth-app-0531.firebasestorage.app"
+	},
+	"client": [
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:471550197649:android:bd13ab1bbc6a5d2cade430",
+				"android_client_info": {
+					"package_name": "com.earthapp.sky"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyCGpv5teb7BNCiqlfRxVvmL02P0StB2iOk"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		}
+	],
+	"configuration_version": "1"
+}
