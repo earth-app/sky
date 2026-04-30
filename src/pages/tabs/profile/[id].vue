@@ -15,6 +15,27 @@
 					class="mr-2 gap-1"
 				>
 					<IonButton
+						color="medium"
+						router-link="/tabs/profile/notifications"
+						class="size-8 flex items-center"
+					>
+						<UChip
+							v-if="unreadCount > 0"
+							:color="hasErrors ? 'error' : hasWarnings ? 'warning' : 'neutral'"
+						>
+							<UIcon
+								name="mdi:bell"
+								class="min-h-6 min-w-6"
+							/>
+						</UChip>
+						<UIcon
+							v-else
+							name="mdi:bell"
+							class="min-h-6 min-w-6"
+						/>
+					</IonButton>
+
+					<IonButton
 						color="primary"
 						router-link="/tabs/profile/editor"
 						class="size-6"
@@ -65,9 +86,11 @@ import { useRoute } from 'vue-router'; // explicit import fixes issues with ioni
 
 const route = useRoute();
 const { user, fetchUser } = useUser(route.params.id as string);
+const { hasErrors, hasWarnings, unreadCount, fetchNotifications } = useNotifications();
 const { user: currentUser } = useAuth();
 
 onMounted(() => {
 	fetchUser();
+	fetchNotifications();
 });
 </script>
