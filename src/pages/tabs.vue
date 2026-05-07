@@ -19,8 +19,8 @@
 					</div>
 				</IonTabButton>
 				<IonTabButton
-					tab="adventure"
-					href="/tabs/adventure"
+					tab="quests"
+					href="/tabs/quests"
 				>
 					<div class="flex items-center justify p-1 size-9 rounded-full">
 						<UIcon

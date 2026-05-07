@@ -711,3 +711,57 @@ export function useGeocodingM() {
 		reverseGeocode
 	};
 }
+
+// Quest Updates
+
+export async function updateQuestM(
+	identifier: string,
+	stepResponse: {
+		type: string;
+		index: number;
+		altIndex?: number;
+		dataUrl?: string;
+		[x: string]: any;
+	},
+	lat: number | null,
+	lng: number | null
+): Promise<{ message: string; completed: boolean; validated: boolean }> {
+	if (!identifier) {
+		return {
+			message: `Invalid user identifier '${identifier}'`,
+			completed: false,
+			validated: false
+		};
+	}
+
+	const { fetchUserQuest } = useUserStore();
+	const authStore = useAuthStore();
+
+	const res = await makeMServerRequest<{
+		message: string;
+		completed: boolean;
+		validated: boolean;
+	}>(null, '/api/user/updateQuest', authStore.sessionToken, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${authStore.sessionToken}`,
+			'X-Latitude': String(lat ?? 0),
+			'X-Longitude': String(lng ?? 0)
+		},
+		body: stepResponse
+	});
+
+	if (!res.success || !res.data) {
+		return {
+			message: res.data?.message || res.message || 'Failed to update quest',
+			completed: false,
+			validated: false
+		};
+	}
+
+	if (res.data.validated) {
+		await fetchUserQuest(identifier, true);
+	}
+
+	return res.data;
+}
