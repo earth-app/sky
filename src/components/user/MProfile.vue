@@ -110,7 +110,7 @@
 				<span class="flex flex-wrap gap-2 items-center justify-center w-full">
 					<UIcon name="mdi:star-circle-outline" />
 					<span>View Points</span>
-					<span>({{ points }})</span>
+					<span>({{ comma(points) }})</span>
 				</span>
 			</IonButton>
 			<MContentDrawer
@@ -121,7 +121,7 @@
 			>
 				<template #default>
 					<div class="flex flex-col w-full px-4">
-						<h2 class="self-center">{{ points }} Points</h2>
+						<h2 class="self-center">{{ comma(points) }} Points</h2>
 						<UTable
 							:data="pointsHistory ? [...pointsHistory].reverse() : []"
 							:loading="pointsHistory === undefined"
