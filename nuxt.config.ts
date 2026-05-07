@@ -81,7 +81,8 @@ export default defineNuxtConfig({
 				'@vue/devtools-kit',
 				'@ionic/vue',
 				'@ionic/pwa-elements/loader',
-				'@capacitor/splash-screen'
+				'@capacitor/splash-screen',
+				'piexifjs'
 			]
 		},
 		define: {
@@ -147,6 +148,7 @@ export default defineNuxtConfig({
 	},
 	experimental: {
 		renderJsonPayloads: true,
-		payloadExtraction: true
+		payloadExtraction: true,
+		viteEnvironmentApi: true
 	}
 });
