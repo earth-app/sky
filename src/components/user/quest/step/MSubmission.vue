@@ -8,10 +8,15 @@
 				:name="step.icon"
 				class="size-16"
 			/>
-			<h2 class="text-lg! font-semibold! opacity-90!">{{ step.description }}</h2>
+			<h2 class="text-lg! font-semibold! opacity-90! mb-0!">{{ step.description }}</h2>
+			<span
+				v-if="step.delay"
+				class="opacity-80"
+				>Can be completed after {{ formatTime(step.delay) }} from previous step</span
+			>
 			<h3
 				v-if="step.reward"
-				class="text-sm! text-neutral-500"
+				class="text-sm! text-neutral-500 m-0!"
 			>
 				+{{ step.reward }} Bonus Points
 			</h3>
@@ -280,6 +285,19 @@ onMounted(() => {
 		fetchLocation();
 	}
 });
+
+function formatTime(seconds: number) {
+	const hours = Math.floor(seconds / 3600);
+	const mins = Math.floor((seconds % 3600) / 60);
+	const secs = seconds % 60;
+
+	if (hours > 0 && mins === 0 && secs === 0) return `${hours}h`;
+	if (hours > 0) return `${hours}h ${mins}m`;
+	if (mins > 0 && secs === 0) return `${mins}m`;
+	if (mins > 0) return `${mins}m ${secs}s`;
+
+	return `${secs}s`;
+}
 
 async function submitPhoto(file: File) {
 	submitError.value = '';

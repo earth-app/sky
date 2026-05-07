@@ -109,13 +109,6 @@
 						class="text-xs opacity-70"
 						>+{{ altStep.reward }}</span
 					>
-
-					<span
-						v-if="altStep.delay"
-						class="text-xs opacity-70 mt-1 w-48 text-wrap text-center"
-					>
-						Can be completed after {{ formatTime(altStep.delay) }} from previous step
-					</span>
 				</div>
 				<div
 					v-else
@@ -156,13 +149,6 @@
 						class="text-xs opacity-70"
 						>+{{ item.reward }}</span
 					>
-
-					<span
-						v-if="item.delay"
-						class="text-xs opacity-70 w-48 text-wrap text-center"
-					>
-						Can be completed after {{ formatTime(item.delay) }} from previous step
-					</span>
 				</div>
 			</div>
 
@@ -257,19 +243,6 @@ const isCurrentQuest = computed(() => !!quest.value && quest.value.questId === p
 function isCurrentStep(index: number) {
 	if (!quest.value) return false;
 	return currentIndex.value === index;
-}
-
-function formatTime(seconds: number) {
-	const hours = Math.floor(seconds / 3600);
-	const mins = Math.floor((seconds % 3600) / 60);
-	const secs = seconds % 60;
-
-	if (hours > 0 && mins === 0 && secs === 0) return `${hours}h`;
-	if (hours > 0) return `${hours}h ${mins}m`;
-	if (mins > 0 && secs === 0) return `${mins}m`;
-	if (mins > 0) return `${mins}m ${secs}s`;
-
-	return `${secs}s`;
 }
 
 const hasOtherActiveQuest = computed(
