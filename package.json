@@ -25,6 +25,7 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/assets": "^3.0.5",
     "@capacitor/browser": "^8.0.3",
+    "@capacitor/camera": "^8.2.0",
     "@capacitor/core": "^8.3.1",
     "@capacitor/dialog": "^8.0.1",
     "@capacitor/filesystem": "^8.1.2",
@@ -40,12 +41,12 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capacitor/toast": "^8.0.1",
-    "@earth-app/crust": "0.3.2-8f83d53",
+    "@earth-app/crust": "0.3.2-4b0f576",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "8.8.1",
     "@ionic/vue-router": "8.8.1",
-    "@nuxt/icon": "^2.2.1",
+    "@nuxt/icon": "^2.2.2",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.7.1",
     "@nuxtjs/google-fonts": "^3.2.0",
@@ -54,9 +55,10 @@
     "@tiptap/extension-drag-handle": "^3.22.5",
     "@types/luxon": "^3.7.1",
     "luxon": "^3.7.2",
-    "nuxt": "^4.4.2",
+    "nuxt": "^4.4.4",
     "nuxt-viewport": "^2.4.0",
-    "vue": "^3.5.33"
+    "piexifjs": "^1.0.6",
+    "vue": "^3.5.34"
   },
   "overrides": {
     "@ionic/core": "8.8.1",
@@ -69,14 +71,15 @@
     "@iconify-json/logos": "^1.2.11",
     "@ionic/cli": "^7.2.1",
     "@prettier/plugin-xml": "^3.4.2",
+    "@types/piexifjs": "^1.0.0",
     "@vue/cli-service": "5.0.9",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.4",
-    "vue-tsc": "^3.2.7",
-    "wrangler": "^4.86.0"
+    "vue-tsc": "^3.2.8",
+    "wrangler": "^4.88.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
