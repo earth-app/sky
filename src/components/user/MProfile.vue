@@ -175,7 +175,7 @@
 		</div>
 		<div
 			id="user-content"
-			class="flex flex-col items-center justify-center px-8 gap-2"
+			class="flex flex-col items-center justify-center px-4 gap-2"
 		>
 			<div
 				v-if="friends.length > 0"
@@ -240,13 +240,77 @@
 					/>
 				</MInfoCardGroup>
 			</div>
+
+			<div
+				v-if="attendingEvents.length > 0"
+				class="flex flex-col items-center mt-12 w-full"
+				id="user-signedup-events"
+			>
+				<h2 class="text-lg! my-0! mb-2">Events Calendar</h2>
+
+				<IonCard class="mt-8">
+					<div class="flex flex-col items-center mt-4 w-full">
+						<UCalendar
+							v-model="selectedDate"
+							id="calendar"
+							@update:modelValue="(date: any) => showEvents(date)"
+							class="w-80 max-w-120 mb-4"
+						>
+							<template #day="{ day }">
+								<div
+									class="relative flex items-center justify-center w-full h-full rounded-full"
+									:class="{
+										'bg-info-100 dark:bg-info-900/20 font-semibold':
+											hasEventsOnDate(day) && !isSelectedDate(day),
+										'ring-2 ring-info-500 ring-inset': hasEventsOnDate(day)
+									}"
+								>
+									<span>{{ day.day }}</span>
+									<span
+										v-if="hasEventsOnDate(day)"
+										class="absolute bottom-0.5 left-1/2 -translate-x-1/2 size-1 bg-primary-500 rounded-full"
+									></span>
+								</div>
+							</template>
+						</UCalendar>
+
+						<MInfoCardGroup
+							v-if="attendingEventsDay.length > 1"
+							:title="`Events ${props.user.username} is Attending on ${formattedCurrentDay}`"
+							icon="mdi:calendar-check-outline"
+							class="w-full"
+							show-dots
+						>
+							<LazyEventMCard
+								v-for="event in attendingEventsDay.slice(0, 25)"
+								:key="event.id"
+								:event="event"
+								hydrate-on-visible
+							/>
+						</MInfoCardGroup>
+						<LazyEventMCard
+							v-else-if="attendingEventsDay.length === 1"
+							:event="attendingEventsDay[0]!"
+							class="w-full mt-4"
+							hydrate-on-visible
+						/>
+					</div>
+				</IonCard>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { IonChip, UBadge } from '#components';
+import {
+	type CalendarDate,
+	type DateValue,
+	getLocalTimeZone,
+	today
+} from '@internationalized/date';
 import { DateTime } from 'luxon';
+import type { Event } from 'types/event';
 import type { User } from 'types/user';
 import { h } from 'vue';
 import MContentDrawer from '~/components/MContentDrawer.vue';
@@ -265,7 +329,9 @@ const {
 	fetchBadges,
 	points,
 	pointsHistory,
-	fetchPoints
+	fetchPoints,
+	attendingEvents,
+	fetchAttendingEvents
 } = useUser(props.user.id);
 const { name: displayName } = useDisplayName(props.user);
 const i18n = useI18n();
@@ -295,7 +361,7 @@ function goToActivity(id: string) {
 	navigateTo(`/tabs/activities/${id}`);
 }
 
-onMounted(() => {
+onMounted(async () => {
 	fetchUser();
 	fetchAvatar();
 	fetchBadges();
@@ -304,6 +370,11 @@ onMounted(() => {
 	fetchFriends();
 	fetchPrompts();
 	fetchArticles();
+	fetchAttendingEvents();
+
+	await fetchAttendingEvents();
+	selectedDate.value = today(getLocalTimeZone()) as DateValue;
+	showEvents(selectedDate.value as any);
 });
 
 const badgesDrawerRef = ref<InstanceType<typeof MContentDrawer>>();
@@ -315,4 +386,66 @@ const pointsDrawerRef = ref<InstanceType<typeof MContentDrawer>>();
 const openPointsDrawer = () => {
 	pointsDrawerRef.value?.open();
 };
+
+// events attending today
+
+const selectedDate: any = ref<DateValue | undefined>(undefined);
+const currentEventsDay = ref<Date>(new Date());
+const attendingEventsDay = ref<Event[]>([]);
+
+const formattedCurrentDay = computed(() => {
+	return currentEventsDay.value.toLocaleDateString('en-US', {
+		weekday: 'long',
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric'
+	});
+});
+
+function isSelectedDate(day: any): boolean {
+	if (!selectedDate.value) return false;
+	return (
+		selectedDate.value.year === day.year &&
+		selectedDate.value.month === day.month &&
+		selectedDate.value.day === day.day
+	);
+}
+
+function eventsCountOn(day: any): number {
+	if (!attendingEvents.value) return 0;
+
+	return attendingEvents.value.filter((event) => {
+		const eventStart = new Date(event.date);
+		const eventEnd = event.end_date ? new Date(event.end_date) : eventStart;
+		const checkDate = new Date(day.year, day.month - 1, day.day);
+
+		return (
+			checkDate >= new Date(eventStart.setHours(0, 0, 0, 0)) &&
+			checkDate <= new Date(eventEnd.setHours(23, 59, 59, 999))
+		);
+	}).length;
+}
+
+function hasEventsOnDate(day: any): boolean {
+	return eventsCountOn(day) > 0;
+}
+
+async function showEvents(day: CalendarDate | DateValue | undefined) {
+	if (!day) {
+		attendingEventsDay.value = [];
+		return;
+	}
+
+	currentEventsDay.value = new Date(day.year, day.month - 1, day.day);
+	attendingEventsDay.value = (attendingEvents.value || []).filter((event) => {
+		const eventStart = new Date(event.date);
+		const eventEnd = event.end_date ? new Date(event.end_date) : eventStart;
+		const selectedDateTime = new Date(day.year, day.month - 1, day.day);
+
+		return (
+			selectedDateTime >= new Date(eventStart.setHours(0, 0, 0, 0)) &&
+			selectedDateTime <= new Date(eventEnd.setHours(23, 59, 59, 999))
+		);
+	});
+}
 </script>
