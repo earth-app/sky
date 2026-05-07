@@ -1,11 +1,19 @@
 <template>
 	<IonPage>
+		<IonHeader>
+			<IonToolbar>
+				<IonButtons slot="start">
+					<IonBackButton default-href="/tabs/profile/editor" />
+				</IonButtons>
+				<IonTitle>Event Details</IonTitle>
+			</IonToolbar>
+		</IonHeader>
+
 		<IonContent :scroll-y="true">
 			<div
 				v-if="event"
-				class="flex flex-col items-center w-full h-full pt-12 sm:pt-0"
+				class="flex flex-col items-center w-full h-full"
 			>
-				<Back class="self-start" />
 				<EventMPage :event="event" />
 				<div class="flex items-center w-screen">
 					<MInfoCardGroup

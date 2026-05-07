@@ -33,6 +33,8 @@
 		<string>
 			The Earth App needs your location to verify your location when taking photos!
 		</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Allow access to choose images for event submissions</string>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>remote-notification</string>

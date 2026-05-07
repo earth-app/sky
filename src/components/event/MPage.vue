@@ -60,6 +60,20 @@
 						</IonContent>
 					</IonModal>
 				</div>
+				<div
+					id="event-submissions"
+					class="flex flex-col items-center justify-stretch my-4 gap-8"
+				>
+					<!-- only display up until 3 days after event has ended (expires in KV) -->
+					<EventSubmissionMPreview
+						v-if="(event.end_date || 0) + 1000 * 60 * 60 * 24 * 3 > Date.now()"
+						:submissions="submissions || []"
+					/>
+					<EventSubmissionMUpload
+						:event-id="event.id"
+						@submission="fetchSubmissions"
+					/>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -69,10 +83,9 @@
 	>
 		<IonContent>
 			<div class="flex flex-col items-center justify-center p-4">
-				<NuxtImg
+				<img
 					:src="thumbnail || '/cloud.png'"
 					alt="Event Thumbnail"
-					format="webp"
 					class="max-h-screen max-w-screen rounded-lg shadow-md object-contain"
 				/>
 				<h2 class="text-center font-semibold">
@@ -90,11 +103,16 @@ const props = defineProps<{
 	event: Event;
 }>();
 
+const { submissions, fetchSubmissions } = useEvent(props.event.id);
 const { thumbnail, thumbnailAuthor, fetchThumbnail } = useEventThumbnailM(props.event.id);
 
 onMounted(() => {
 	if (!thumbnail.value) {
 		fetchThumbnail();
+	}
+
+	if (!submissions.value) {
+		fetchSubmissions();
 	}
 });
 
