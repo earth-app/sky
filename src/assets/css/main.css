@@ -51,6 +51,7 @@
 @layer theme {
 	.light {
 		--ion-background-color: #f3f2f9;
+		--ui-bg: #fefefe;
 		--ion-background-color-step-50: #eceaf3;
 		--ion-background-color-step-100: #e5e4ed;
 		--ion-background-color-step-150: #dedce7;
@@ -79,6 +80,7 @@
 
 	.dark {
 		--ion-background-color: #1c1b22;
+		--ui-bg: #1b1b21;
 		--ion-background-color-step-50: #23222a;
 		--ion-background-color-step-100: #2a2932;
 		--ion-background-color-step-150: #31303a;
