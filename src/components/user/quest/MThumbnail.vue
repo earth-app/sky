@@ -9,7 +9,8 @@
 					? 'ring-2 ring-warning-300'
 					: 'ring-1 ring-neutral-300'
 		"
-		:router-link="`/tabs/quests/${quest.id}`"
+		:router-link="canOpenPremium && quest.premium ? `/tabs/quests/${quest.id}` : undefined"
+		@click="premiumOpen = !canOpenPremium && !!quest.premium"
 	>
 		<IonCardHeader>
 			<div class="flex justify-between w-full px-2">
@@ -63,6 +64,35 @@
 				>
 			</div>
 		</IonCardContent>
+
+		<IonModal
+			:is-open="premiumOpen"
+			@did-dismiss="premiumOpen = false"
+		>
+			<IonHeader>
+				<IonToolbar class="px-2">
+					<IonTitle>Upgrade to Access Premium Quests</IonTitle>
+					<IonButtons slot="end">
+						<IonButton
+							fill="clear"
+							color="danger"
+							@click="premiumOpen = false"
+						>
+							<UIcon
+								name="mdi:close"
+								class="size-5"
+							/>
+						</IonButton>
+					</IonButtons>
+				</IonToolbar>
+			</IonHeader>
+
+			<IonContent>
+				<div class="p-4">
+					<MRanks highlighted="PRO" />
+				</div>
+			</IonContent>
+		</IonModal>
 	</IonCard>
 </template>
 
@@ -76,6 +106,7 @@ const props = defineProps<{
 	completedAt?: number;
 }>();
 
+const { user } = useAuth();
 const quest = computed(() => props.quest);
 
 const fullReward = computed(() => {
@@ -114,5 +145,13 @@ const rarityColor = computed(() => {
 		case 'green':
 			return 'primary';
 	}
+});
+
+const premiumOpen = ref(false);
+const canOpenPremium = computed(() => {
+	if (!quest.value) return false;
+	if (!quest.value.premium) return true;
+
+	return user.value?.account.account_type !== 'FREE';
 });
 </script>
