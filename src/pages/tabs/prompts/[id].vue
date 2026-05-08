@@ -96,6 +96,7 @@ import { Toast } from '@capacitor/toast';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
 
 const route = useRoute();
+const { user } = useAuth();
 const { prompt, fetch } = usePrompt(route.params.id as string);
 const currentPrompt = ref<Prompt | null>(null);
 const loadedFromOffline = ref(false);
@@ -113,6 +114,11 @@ const downloadItem = computed(() => {
 		payload: currentPrompt.value
 	};
 });
+const timerMetadata = computed(() => ({
+	prompt: currentPrompt.value ?? prompt.value ?? undefined,
+	user: user.value ?? undefined
+}));
+useTimeOnPageM('prompts_read_time', timerMetadata);
 const {
 	isDownloaded,
 	isDownloading,

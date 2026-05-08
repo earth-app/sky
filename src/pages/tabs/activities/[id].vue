@@ -113,6 +113,11 @@ const downloadItem = computed(() => {
 		payload: currentActivity.value
 	};
 });
+const timerMetadata = computed(() => ({
+	activity: currentActivity.value ?? activity.value ?? undefined,
+	user: user.value ?? undefined
+}));
+useTimeOnPageM('activity_read_time', timerMetadata);
 const {
 	isDownloaded,
 	isDownloading,
