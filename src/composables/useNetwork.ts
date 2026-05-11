@@ -4,7 +4,6 @@ import type { Activity } from 'types/activity';
 import type { Article } from 'types/article';
 import type { Prompt } from 'types/prompts';
 import { validateSessionAllowOffline } from '~/composables/useOfflineAuth';
-import { useActivityCardsM } from '~/composables/useServer';
 
 export const networkOffline = ref(false);
 export const connectionType = ref<ConnectionType>('unknown');
@@ -249,7 +248,7 @@ async function urlToDataUrl(
 
 async function buildOfflineActivityCards(activity: Activity) {
 	try {
-		const { cards, loadCardsForActivity } = useActivityCardsM();
+		const { cards, loadCardsForActivity } = useActivityCards(makeMServerRequest);
 		await loadCardsForActivity(activity);
 
 		const maxSnapshotCards = isDataConstrained.value

@@ -1,13 +1,17 @@
 <template>
 	<IonCard
 		:color="color"
-		:router-link="inBrowser ? undefined : link"
+		:router-link="inBrowser || link?.startsWith('http') ? undefined : link"
 		:router-animation="slide"
 		class="my-2 pt-2 shadow-md shadow-black/30 light:shadow-black/10"
 		@click="
 			async () => {
 				if (inBrowser && link) {
 					await Browser.open({ url: link });
+				} else {
+					if (link) {
+						goTo(link);
+					}
 				}
 			}
 		"
@@ -67,6 +71,13 @@
 						<span
 							v-if="subtitle"
 							class="font-sans text-sm! opacity-80 ml-2"
+							@click="
+								() => {
+									if (subtitleLink) {
+										goTo(subtitleLink);
+									}
+								}
+							"
 							>{{ subtitle }}</span
 						>
 					</div>
@@ -95,6 +106,7 @@
 			</IonCardTitle>
 			<IonCardSubtitle
 				v-if="description"
+				:router-link="descriptionLink"
 				class="mb-2"
 			>
 				{{ description }}
@@ -108,11 +120,13 @@
 				>{{ content }}</span
 			>
 
-			<ClientOnly>
+			<LazyClientOnly
+				v-if="youtubeId"
+				hydrate-on-visible
+			>
 				<iframe
-					v-if="youtubeId"
 					:src="`https://www.youtube.com/embed/${youtubeId}?autoplay=0&mute=1&controls=1&rel=0&modestbranding=1&origin=${origin}`"
-					class="w-full h-48 object-cover rounded-lg mb-2"
+					class="w-full min-h-64 object-cover rounded-lg mb-2"
 					allow="
 						accelerometer;
 						autoplay;
@@ -125,11 +139,13 @@
 					loading="lazy"
 					referrerpolicy="strict-origin-when-cross-origin"
 				></iframe>
-			</ClientOnly>
-			<ClientOnly>
+			</LazyClientOnly>
+			<LazyClientOnly
+				v-if="video"
+				hydrate-on-visible
+			>
 				<video
-					v-if="video"
-					class="w-full h-48 object-cover rounded-lg mb-2"
+					class="w-full min-h-64 object-cover rounded-lg mb-2"
 					controls
 					loading="lazy"
 					preload="metadata"
@@ -145,7 +161,46 @@
 						type="video/webm"
 					/>
 				</video>
-			</ClientOnly>
+			</LazyClientOnly>
+			<LazyClientOnly
+				v-if="object?.url"
+				hydrate-on-visible
+			>
+				<video
+					v-if="object?.type?.startsWith('video/')"
+					:src="object.url"
+					controls
+					preload="metadata"
+					class="w-full min-h-64 object-cover rounded-lg mb-2"
+				></video>
+
+				<audio
+					v-else-if="object?.type?.startsWith('audio/')"
+					:src="object.url"
+					controls
+					preload="metadata"
+					class="w-full object-cover rounded-lg mb-2"
+				></audio>
+
+				<object
+					v-else
+					:data="object.url"
+					:type="object.type || undefined"
+					class="w-full min-h-64 object-cover rounded-lg mb-2"
+				>
+					<p class="text-center text-gray-500">
+						Unable to display content. <br />
+						<a
+							:href="object.url"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-blue-500 hover:underline"
+						>
+							View here.
+						</a>
+					</p>
+				</object>
+			</LazyClientOnly>
 
 			<div
 				v-if="badges"
@@ -230,71 +285,104 @@ import { Browser } from '@capacitor/browser';
 import { type Color } from '@ionic/core';
 import slide from '~/animations/slide';
 
+type Variant = 'outline' | 'clear' | 'fill';
+type NuxtColor = 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
+type Size = 'default' | 'small' | 'large';
+type NuxtSize = '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+
 const props = defineProps<{
 	inBrowser?: boolean;
-	title?: string;
+	variant?: Variant;
+	badges?: {
+		text: string;
+		color?: Color;
+		size?: Size;
+		icon?: string;
+		variant?: Variant;
+		link?: string;
+		trailingIcon?: string;
+		outline?: boolean;
+	}[];
+	title: string;
 	subtitle?: string;
+	subtitleLink?: string;
 	description?: string;
+	descriptionLink?: string;
 	content?: string;
-	image?: string;
+	link?: string;
+	icon?: string;
+	iconSize?: string;
 	avatar?: {
 		src?: string;
-		size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
-		chip?: {
-			color?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
-			size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
-		};
 		link?: string;
+		size?: NuxtSize;
+		chip?: {
+			color?: NuxtColor;
+			size?: NuxtSize;
+		};
 	};
 	secondaryAvatar?: {
 		src?: string;
-		size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
+		size?: NuxtSize;
 		chip?: {
-			color: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
-			size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
+			color?: NuxtColor;
+			size?: NuxtSize;
 		};
 	};
-	icon?: string;
-	link?: string;
-	footer?: string;
-	secondaryFooter?: string;
-	badges?: {
-		text: string;
-		icon?: string;
-		trailingIcon?: string;
-		color?: Color;
-		outline?: boolean;
-		link?: string;
-	}[];
-	buttons?: {
-		text: string;
-		color?: Color;
-		size?: 'small' | 'default' | 'large';
-		onClick?: () => void;
-		disabled?: boolean;
-	}[];
-	color?: Color;
-	video?: string;
+	image?: string;
+	imageLink?: string;
 	youtubeId?: string;
+	video?: string;
+	object?: {
+		url?: string;
+		type?: string;
+	};
+	footer?: string;
+	footerTooltip?: string;
+	secondaryFooter?: string;
 	additionalLinks?: {
 		text: string;
 		link: string;
-		inBrowser?: boolean;
+		external?: boolean;
+	}[];
+	buttons?: {
+		text: string;
+		icon?: string;
+		variant?: Variant;
+		color?: Color;
+		size?: Size;
+		disabled?: boolean;
+		onClick?: () => void;
 	}[];
 	avatarGroup?: {
 		avatars: {
 			src?: string;
 			alt?: string;
+			link?: string;
 			icon?: string;
 			chip?: {
 				inset?: boolean;
-				color?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral';
-				size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
+				color?: NuxtColor;
+				size?: NuxtSize;
 			};
 		}[];
-		size?: 'md' | '3xs' | '2xs' | 'xs' | 'sm' | 'lg' | 'xl' | '2xl' | '3xl';
+		size?: NuxtSize;
 		max?: number;
 	};
+	banner?: {
+		color?: NuxtColor;
+		text: string;
+		icon?: string;
+		link?: string;
+		actions?: {
+			text: string;
+			icon?: string;
+			color?: NuxtColor;
+			size?: NuxtSize;
+			onClick?: () => void;
+		}[];
+	};
+	color?: Color;
 }>();
 
 const appSettings = useAppSettingsState();
@@ -309,6 +397,6 @@ const origin = computed(() => {
 });
 
 function goTo(url: string) {
-	navigateTo(url);
+	navigateTo(url, { external: url.startsWith('http') });
 }
 </script>
