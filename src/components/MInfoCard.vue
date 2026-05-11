@@ -66,7 +66,7 @@
 						>
 						<span
 							v-if="subtitle"
-							class="font-sans text-base! ml-4"
+							class="font-sans text-sm! opacity-80 ml-2"
 							>{{ subtitle }}</span
 						>
 					</div>
