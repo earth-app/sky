@@ -77,11 +77,25 @@ export default defineNuxtConfig({
 		optimizeDeps: {
 			exclude: ['@earth-app/crust', 'stores', 'types', 'utils', 'schemas'],
 			include: [
+				'@capacitor/app',
+				'@capacitor/browser',
+				'@capacitor/core',
+				'@capacitor/filesystem',
+				'@capacitor/haptics',
+				'@capacitor/network',
+				'@capacitor/preferences',
+				'@capacitor/push-notifications',
+				'@capacitor/splash-screen',
+				'@capacitor/share',
+				'@capacitor/camera',
+				'@capacitor/dialog',
+				'@capacitor/toast',
+				'@internationalized/date',
+				'@ionic/pwa-elements/loader',
+				'@ionic/vue',
 				'@vue/devtools-core',
 				'@vue/devtools-kit',
-				'@ionic/vue',
-				'@ionic/pwa-elements/loader',
-				'@capacitor/splash-screen',
+				'luxon',
 				'piexifjs'
 			]
 		},
