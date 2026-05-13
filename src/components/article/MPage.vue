@@ -35,7 +35,7 @@
 		</div>
 		<div
 			v-if="hasWriteAccess"
-			class="mb-4"
+			class="flex gap-2 mb-4"
 		>
 			<IonButton
 				color="danger"
@@ -49,8 +49,8 @@
 				/>
 				Delete
 			</IonButton>
+
 			<IonButton
-				class="ml-2"
 				@click="
 					() => {
 						if (editor) editor.isOpen = true;
@@ -69,6 +69,34 @@
 				mode="edit"
 				ref="editor"
 			/>
+
+			<IonButton
+				v-if="quiz && quiz.length > 0 && !score"
+				id="quiz-button"
+				color="secondary"
+				size="small"
+				:router-link="`/tabs/articles/${article.id}/quiz`"
+			>
+				<UIcon
+					name="mdi:school"
+					class="size-5 mr-2"
+				/>
+				Take Quiz</IonButton
+			>
+
+			<IonButton
+				v-else-if="score"
+				id="quiz-button"
+				:color="theme"
+				size="small"
+				:router-link="`/tabs/articles/${article.id}/quiz`"
+			>
+				<UIcon
+					name="mdi:check-all"
+					class="size-5 mr-2"
+				/>
+				View Quiz</IonButton
+			>
 		</div>
 		<div class="mt-2 prose min-w-85 w-9/10 items-center">
 			<p
@@ -119,6 +147,7 @@ const props = defineProps<{
 }>();
 
 const router = useIonRouter();
+const { quiz, fetchQuiz, score, fetchQuizScore, remove } = useArticle(props.article.id);
 
 const contentParagraphs = computed(() => {
 	return props.article.content.split('\n').filter((p) => p.trim().length > 0);
@@ -129,6 +158,11 @@ const oceanBadges = computed(() => {
 			?.slice(0, 10)
 			.map((k) => ({ text: k.toLowerCase(), color: 'primary' as const })) || []
 	);
+});
+
+onMounted(() => {
+	fetchQuiz();
+	fetchQuizScore();
 });
 
 const { avatar128: userAuthorAvatar } = useUser(props.article.author_id);
@@ -159,15 +193,9 @@ const oceanTime = computed(() => {
 	return created.setLocale(i18n.locale.value).toLocaleString(DateTime.DATE_MED_WITH_WEEKDAY);
 });
 
-const oceanColor = computed(() => {
-	if (!props.article.ocean?.theme_color) return 0xffffff;
-	return parseInt(props.article.ocean.theme_color.replace('#', ''), 16);
-});
-
 // Owner Actions
 
 const { user } = useAuth();
-const { remove } = useArticle(props.article.id);
 const hasWriteAccess = computed(() => {
 	if (user.value == null) return false;
 	if (props.article.author_id === user.value.id) return true;

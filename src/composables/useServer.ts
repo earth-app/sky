@@ -4,6 +4,8 @@ import type { Article } from 'types/article';
 import type { Event, EventAutocompleteSuggestion } from 'types/event';
 import { toValue, type MaybeRefOrGetter } from 'vue';
 
+// #region Primary Request Handler
+
 function isOfflineRequestBlocked() {
 	const appSettings = useAppSettingsState();
 	if (appSettings.value.offlineMode) return true;
@@ -85,7 +87,9 @@ export async function makeMServerRequest<T>(
 	}
 }
 
-// User Journeys
+// #endregion
+
+// #region User Journeys
 
 export async function getCurrentJourneyM(identifier: string, id: string) {
 	if (!id) return { success: true, data: { count: 0 } };
@@ -119,7 +123,9 @@ export async function clearCurrentJourneyM(identifier: string) {
 	);
 }
 
-// Articles
+// #endregion
+
+// #region Articles
 
 export async function getSimilarArticlesM(article: Article, count: number = 5) {
 	const effectiveCount = isDataSaverConstrained() ? Math.max(2, count - 2) : count;
@@ -164,7 +170,59 @@ export async function getSimilarArticlesM(article: Article, count: number = 5) {
 	return res;
 }
 
-// Events
+export async function submitMArticleQuiz(
+	article: Article,
+	quiz: ArticleQuizQuestion[],
+	answers: number[]
+) {
+	if (!article) return;
+	if (!quiz || quiz.length === 0) return;
+
+	if (answers.length !== quiz.length) {
+		throw new Error(
+			`Number of answers (${answers.length}) does not match number of questions (${quiz.length})`
+		);
+	}
+
+	const authStore = useAuthStore();
+	const articleStore = useArticleStore();
+	const answers0 = answers.map((a, i) => ({
+		question: quiz[i]!.question,
+		text: quiz[i]!.options[a]!,
+		index: a
+	}));
+
+	const articleTypes = article.tags.map((t) => t.toUpperCase().replace(/\s+/g, '_'));
+
+	try {
+		const res = await makeMServerRequest<ArticleQuizScoreResult>(
+			`article-${article.id}-quiz-submit`,
+			`/api/article/quiz`,
+			authStore.sessionToken,
+			{
+				method: 'POST',
+				body: { answers: answers0, articleId: article.id, articleTypes }
+			}
+		);
+
+		if (res.success && res.data) {
+			if ('message' in res.data) {
+				return res;
+			}
+
+			articleStore.setQuizScore(article.id, res.data);
+		}
+
+		return res;
+	} catch (error) {
+		console.error('Error submitting quiz:', error);
+		throw error;
+	}
+}
+
+// #endregion
+
+// #region Events
 
 export async function getSimilarEventsM(event: Event, count: number = 5) {
 	const effectiveCount = isDataSaverConstrained() ? Math.max(2, count - 2) : count;
@@ -322,6 +380,8 @@ export function useEventThumbnailM(id: string) {
 	};
 }
 
+// #region Geocoding
+
 export function useGeocodingM() {
 	const latitude = useState<number | null>('user-latitude', () => null);
 	const longitude = useState<number | null>('user-longitude', () => null);
@@ -414,7 +474,9 @@ export function useGeocodingM() {
 	};
 }
 
-// Quest Updates
+// #endregion
+
+// #region Quest Updates
 
 export async function updateQuestM(
 	identifier: string,
@@ -467,6 +529,10 @@ export async function updateQuestM(
 
 	return res.data;
 }
+
+// #endregion
+
+// #region Time on Page Tracking
 
 export function useTimeOnPageM(
 	field: string,
@@ -689,3 +755,5 @@ export function useTimeOnPageM(
 		stopTimer
 	};
 }
+
+// #endregion
