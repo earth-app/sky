@@ -29,7 +29,7 @@ jobs:
         run: bun run generate:ios
       - name: Archive Build Artifacts
         id: archive
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sky-build-ios-${{ github.run_id }}
           path: dist/
@@ -67,7 +67,7 @@ jobs:
         run: bun run generate:android
       - name: Archive Build Artifacts
         id: archive
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sky-build-android-${{ github.run_id }}
           path: dist/
