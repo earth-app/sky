@@ -22,7 +22,7 @@
 				v-else
 				class="text-sm font-semibold text-yellow-500 light:text-yellow-600"
 			>
-				{{ count }}
+				{{ count }}{{ rank ? ` (#${rank})` : '' }}
 			</span>
 			<IonProgressBar
 				v-if="total"
@@ -51,6 +51,12 @@
 				{{ count }} out of {{ total }} activities have been found on this journey.
 			</p>
 			<p
+				v-if="rank"
+				class="text-sm text-gray-700 dark:text-gray-300"
+			>
+				This user is ranked in this journey at #{{ rank }}!
+			</p>
+			<p
 				v-else
 				class="text-sm text-gray-700 dark:text-gray-300"
 			>
@@ -63,6 +69,21 @@
 			>
 				{{ help }}
 			</p>
+
+			<IonButton
+				v-if="type"
+				color="primary"
+				size="small"
+				:router-link="`/tabs/profile/journey-leaderboard/${type}`"
+				class="mt-2"
+				@click="open = false"
+			>
+				<UIcon
+					name="mdi:trophy-variant"
+					class="size-5 mr-1"
+				/>
+				View Leaderboard
+			</IonButton>
 		</div>
 	</IonPopover>
 </template>
@@ -73,7 +94,9 @@ defineProps<{
 	title?: string;
 	help?: string;
 	count: number;
+	rank?: number;
 	total?: number;
+	type?: 'event' | 'prompt' | 'article';
 }>();
 
 const open = ref(false);

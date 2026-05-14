@@ -22,7 +22,7 @@
 						id="user-journeys"
 						class="m-2"
 					>
-						<UserMJourneys :user="user" />
+						<UserJourneyMList :user="user" />
 					</div>
 				</div>
 			</div>
