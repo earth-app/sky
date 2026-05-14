@@ -4,7 +4,7 @@
 		class="flex flex-col p-4 bg-gray-900 light:bg-gray-100 rounded-lg shadow-md border-2 border-gray-700 light:border-gray-300"
 	>
 		<div
-			class="flex items-center hover:cursor-pointer"
+			class="flex flex-wrap items-center hover:cursor-pointer"
 			@click="navigateToProfile"
 		>
 			<UChip
@@ -22,28 +22,65 @@
 			<span class="text-sm font-medium mr-2">{{ handle }}</span>
 			<span class="text-sm text-gray-500 light:text-gray-400 mr-2">@{{ user.username }}</span>
 
-			<IonChip
-				v-if="user.is_in_my_circle"
-				color="warning"
-				class="px-2 py-1 font-semibold self-center"
-			>
-				<UIcon
-					name="mdi:account-group"
-					class="inline-block mr-1 size-6"
-				/>
-				In Your Circle
-			</IonChip>
+			<div class="flex flex-wrap gap-2 my-2">
+				<IonChip
+					v-if="user.is_in_my_circle"
+					color="warning"
+					class="px-2 py-1 font-semibold self-center"
+				>
+					<UIcon
+						name="mdi:account-group"
+						class="inline-block mr-1 size-6"
+					/>
+					In Your Circle
+				</IonChip>
+				<IonChip
+					v-else-if="user.is_mutual"
+					color="success"
+					class="px-2 py-1 font-semibold self-center"
+				>
+					<UIcon
+						name="mdi:account-multiple-check"
+						class="inline-block mr-1 size-6"
+					/>
+					Mutual</IonChip
+				>
+
+				<IonChip
+					v-if="user.id === props.user.id"
+					color="primary"
+					class="px-2 py-1 font-semibold self-center"
+				>
+					<UIcon
+						name="mdi:account-check"
+						class="inline-block mr-1 size-6"
+					/>
+					You
+				</IonChip>
+
+				<IonChip
+					v-if="user.is_admin"
+					color="danger"
+					class="px-2 py-1 font-semibold self-center"
+				>
+					<UIcon
+						name="mdi:shield-crown-outline"
+						class="inline-block mr-1 size-6"
+					/>
+					Admin
+				</IonChip>
+			</div>
 		</div>
 		<div
-			v-if="user.activities && user.activities.length > 0"
+			v-if="(activities ?? true) && user.activities && user.activities.length > 0"
 			class="flex gap-2 mt-4 flex-wrap"
 		>
 			<IonChip
-				v-for="activity in user.activities"
+				v-for="(activity, i) in user.activities"
 				:key="activity.id"
 				:router-link="`/tabs/activities/${activity.id}`"
 				:label="activity.name"
-				color="primary"
+				:color="i < 2 ? 'warning' : 'primary'"
 				class="flex items-center justify-center px-2 hover:cursor-pointer transition-all duration-500"
 			>
 				<UIcon
@@ -63,6 +100,7 @@ const router = useIonRouter();
 
 const props = defineProps<{
 	user: User;
+	activities?: boolean;
 }>();
 
 const { avatar128, fetchAvatar, user: userState, chipColor, fetchUser } = useUser(props.user.id);
