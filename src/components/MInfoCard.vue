@@ -303,7 +303,7 @@ const props = defineProps<{
 		trailingIcon?: string;
 		outline?: boolean;
 	}[];
-	title: string;
+	title?: string;
 	subtitle?: string;
 	subtitleLink?: string;
 	description?: string;
