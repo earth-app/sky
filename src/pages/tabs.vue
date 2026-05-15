@@ -29,17 +29,8 @@
 						/>
 					</div>
 				</IonTabButton>
-				<IonTabButton
-					tab="create"
-					href="/tabs/create"
-				>
-					<div class="flex items-center justify p-1 size-9 rounded-full">
-						<UIcon
-							name="mdi:plus-circle"
-							class="size-full"
-						/>
-					</div>
-				</IonTabButton>
+				<!-- spacing placeholder for create button -->
+				<IonTabButton disabled />
 				<IonTabButton
 					tab="discover"
 					href="/tabs/discover"
@@ -67,6 +58,54 @@
 				</IonTabButton>
 			</IonTabBar>
 		</IonTabs>
+
+		<IonFab
+			slot="fixed"
+			vertical="bottom"
+			class="bottom-2 left-1/2 translate-x-[-50%]"
+		>
+			<IonFabButton class="size-10">
+				<UIcon
+					name="mdi:plus-circle"
+					class="size-7"
+				/>
+			</IonFabButton>
+
+			<IonFabList
+				side="top"
+				class="gap-2 mb-14 *:size-10 min-w-11!"
+			>
+				<IonFabButton
+					color="secondary"
+					router-link="/tabs/prompts/new"
+				>
+					<UIcon
+						name="mdi:comment-plus-outline"
+						class="min-w-6/10 min-h-6/10"
+					/>
+				</IonFabButton>
+
+				<IonFabButton
+					color="secondary"
+					router-link="/tabs/articles/new"
+				>
+					<UIcon
+						name="mdi:pencil-plus-outline"
+						class="min-w-6/10 min-h-6/10"
+					/>
+				</IonFabButton>
+
+				<IonFabButton
+					color="secondary"
+					router-link="/tabs/events/new"
+				>
+					<UIcon
+						name="mdi:calendar-plus-outline"
+						class="min-w-6/10 min-h-6/10"
+					/>
+				</IonFabButton>
+			</IonFabList>
+		</IonFab>
 	</IonPage>
 </template>
 
