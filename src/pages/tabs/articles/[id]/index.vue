@@ -115,7 +115,7 @@
 import { Toast } from '@capacitor/toast';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
 
-const { user } = useAuth();
+const { user, fetchCurrentJourney, tapCurrentJourney } = useAuth(makeMServerRequest);
 const route = useRoute();
 
 const relatedLoaded = ref(false);
@@ -232,11 +232,11 @@ onMounted(async () => {
 	if (isOffline.value || loadedFromOffline.value) return;
 
 	if (!user.value) return;
-	const count = await getCurrentJourneyM('article', user.value.id);
+	const count = await fetchCurrentJourney('article', user.value.id);
 	if (!count.success || !count.data) return; // silently ignore errors
 	if ('message' in count.data) return;
 
-	const res = await tapCurrentJourneyM('article');
+	const res = await tapCurrentJourney('article');
 	if (!res.success || !res.data) return; // silently ignore errors
 	if ('message' in res.data) return;
 

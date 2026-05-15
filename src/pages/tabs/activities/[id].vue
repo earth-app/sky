@@ -197,7 +197,7 @@ watch(activity, (newActivity) => {
 
 // User Journey
 
-const { user } = useAuth();
+const { user, fetchCurrentJourney, tapCurrentJourney } = useAuth(makeMServerRequest);
 const { count: totalActivities, refresh: refreshCount } = useActivitiesCount();
 watch(currentActivity, (newActivity) => {
 	if (newActivity && !loadedFromOffline.value) {
@@ -214,11 +214,11 @@ onMounted(async () => {
 		await refreshCount();
 	}
 
-	const count = await getCurrentJourneyM('activity', user.value.id);
+	const count = await fetchCurrentJourney('activity', user.value.id);
 	if (!count.success || !count.data) return; // silently ignore errors
 	if ('message' in count.data) return;
 
-	const res = await tapCurrentJourneyM('activity', route.params.id as string);
+	const res = await tapCurrentJourney('activity', route.params.id as string);
 	if (!res.success || !res.data) return; // silently ignore errors
 	if ('message' in res.data) return;
 

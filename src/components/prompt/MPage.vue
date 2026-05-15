@@ -90,7 +90,7 @@
 import { Toast } from '@capacitor/toast';
 import { type Prompt } from 'types/prompts';
 
-const { user, avatar128 } = useAuth();
+const { user, avatar128, tapCurrentJourney } = useAuth(makeMServerRequest);
 
 const page = ref(1);
 const isLoading = ref(false);
@@ -164,7 +164,7 @@ async function postResponse() {
 		newResponse.value = '';
 
 		// Tap Prompts Journey
-		const journeyRes = await tapCurrentJourneyM('prompt');
+		const journeyRes = await tapCurrentJourney('prompt');
 		if (journeyRes.success && journeyRes.data) {
 			await Toast.show({
 				text: `Your prompts streak is now at ${journeyRes.data.count} prompts on your journey!`,
