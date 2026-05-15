@@ -33,10 +33,10 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.3.4",
     "@capacitor/keyboard": "^8.0.3",
-    "@capacitor/local-notifications": "^8.1.0",
+    "@capacitor/local-notifications": "^8.2.0",
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
-    "@capacitor/push-notifications": "^8.0.4",
+    "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
@@ -79,7 +79,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.4",
     "vue-tsc": "^3.2.9",
-    "wrangler": "^4.90.1"
+    "wrangler": "^4.92.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
