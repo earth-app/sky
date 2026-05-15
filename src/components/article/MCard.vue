@@ -26,9 +26,7 @@
 			article.tags.map((tag) => ({
 				text: tag,
 				color: 'warning',
-				icon: 'mdi:tag-outline',
-				variant: 'subtle',
-				size: 'md'
+				icon: 'mdi:tag-outline'
 			}))
 		"
 		class="p-4"
