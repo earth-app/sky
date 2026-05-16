@@ -47,7 +47,7 @@
 				>
 
 				<IonChip
-					v-if="user.id === props.user.id"
+					v-if="props.user.id === userState?.id"
 					color="primary"
 					class="px-2 py-1 font-semibold self-center"
 				>
