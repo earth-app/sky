@@ -5,6 +5,7 @@
 			<IonTabBar
 				id="navbar"
 				slot="bottom"
+				class="pb-4"
 			>
 				<IonTabButton
 					tab="dashboard"
@@ -62,7 +63,7 @@
 		<IonFab
 			slot="fixed"
 			vertical="bottom"
-			class="bottom-2 left-1/2 translate-x-[-50%]"
+			class="bottom-4! left-1/2 translate-x-[-50%]"
 		>
 			<IonFabButton class="size-10">
 				<UIcon
