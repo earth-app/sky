@@ -16,14 +16,8 @@ function hasSessionIndicator() {
 
 async function ensureAuthDir() {
 	try {
-		await Filesystem.readdir({ path: AUTH_DIR, directory: Directory.Data });
-	} catch (e) {
-		try {
-			await Filesystem.mkdir({ path: AUTH_DIR, directory: Directory.Data });
-		} catch (e2) {
-			// ignore
-		}
-	}
+		await Filesystem.mkdir({ path: AUTH_DIR, directory: Directory.Data, recursive: true });
+	} catch {}
 }
 
 export async function saveCachedUser(user: any) {

@@ -298,13 +298,14 @@ async function ensureInitialized() {
 
 	_initPromise = (async () => {
 		try {
-			// Ensure downloads directory exists
+			// Ensure downloads directory exists (create first to avoid readdir native error)
+			try {
+				await Filesystem.mkdir({ path: 'downloads', directory: Directory.Data, recursive: true });
+			} catch {}
 			try {
 				await Filesystem.readdir({ path: 'downloads', directory: Directory.Data });
 			} catch (e) {
-				try {
-					await Filesystem.mkdir({ path: 'downloads', directory: Directory.Data });
-				} catch {}
+				// ignore
 			}
 
 			// Populate initial downloaded map from filesystem
