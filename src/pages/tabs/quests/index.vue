@@ -25,11 +25,12 @@
 
 				<div class="flex flex-col items-center gap-6">
 					<h2>All Quests</h2>
-					<UserQuestMThumbnail
+					<LazyUserQuestMThumbnail
 						v-for="quest in quests"
 						:key="quest.id"
 						:quest="quest"
 						:progress="questHistory.get(quest.id)?.progress"
+						hydrate-on-visible
 					/>
 				</div>
 			</div>

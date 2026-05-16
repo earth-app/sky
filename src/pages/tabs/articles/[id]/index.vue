@@ -79,11 +79,12 @@
 							v-for="n in 3"
 							:key="n"
 						/>
-						<ArticleMCard
+						<LazyArticleMCard
 							v-else
 							v-for="article in relatedArticles"
 							:key="article.id"
 							:article="article"
+							hydrate-on-visible
 						/>
 					</MInfoCardGroup>
 				</div>

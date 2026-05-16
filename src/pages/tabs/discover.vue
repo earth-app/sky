@@ -63,32 +63,32 @@
 						:key="`${result.data_type}-${result.id}`"
 						class="flex flex-col gap-2"
 					>
-						<EventMCard
+						<LazyEventMCard
 							v-if="result.data_type === 'event'"
 							:event="result"
+							hydrate-on-visible
 						/>
-						<ActivityMCard
+						<LazyActivityMCard
 							v-else-if="result.data_type === 'activity'"
 							:activity="result"
+							hydrate-on-visible
 						/>
-						<ArticleMCard
+						<LazyArticleMCard
 							v-else-if="result.data_type === 'article'"
 							:article="result"
+							hydrate-on-visible
 						/>
-						<PromptMCard
+						<LazyPromptMCard
 							v-else-if="result.data_type === 'prompt'"
 							:prompt="result"
+							hydrate-on-visible
 						/>
-						<UserMCard
+						<LazyUserMCard
 							v-else-if="result.data_type === 'user'"
 							:user="result"
+							hydrate-on-visible
+							class="text-center text-sm opacity-70 py-6"
 						/>
-					</div>
-
-					<div
-						v-if="!isLoading && displayedResults.length === 0"
-						class="text-center text-sm opacity-70 py-6"
-					>
 						{{ emptyStateText }}
 					</div>
 

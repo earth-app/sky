@@ -130,17 +130,21 @@
 								show-dots
 								class="w-11/12"
 							>
-								<ActivityMCard
+								<LazyActivityMCard
 									v-for="activity in item.data"
 									:key="activity.id"
 									:activity="activity"
+									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<div
 								v-else-if="item.type === 'activity' && !item.isGroup && item.data[0]"
 								class="w-11/12"
 							>
-								<ActivityMCard :activity="item.data[0]" />
+								<LazyActivityMCard
+									:activity="item.data[0]"
+									hydrate-on-visible
+								/>
 							</div>
 							<MInfoCardGroup
 								v-else-if="item.type === 'prompt' && item.isGroup"
@@ -150,17 +154,21 @@
 								show-dots
 								class="w-11/12"
 							>
-								<PromptMCard
+								<LazyPromptMCard
 									v-for="prompt in item.data"
 									:key="prompt.id"
 									:prompt="prompt"
+									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<div
 								v-else-if="item.type === 'prompt' && !item.isGroup && item.data[0]"
 								class="w-11/12"
 							>
-								<PromptMCard :prompt="item.data[0]" />
+								<LazyPromptMCard
+									:prompt="item.data[0]"
+									hydrate-on-visible
+								/>
 							</div>
 							<MInfoCardGroup
 								v-else-if="item.type === 'article' && item.isGroup"
@@ -170,17 +178,21 @@
 								show-dots
 								class="w-11/12"
 							>
-								<ArticleMCard
+								<LazyArticleMCard
 									v-for="article in item.data"
 									:key="article.id"
 									:article="article"
+									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<div
 								v-else-if="item.type === 'article' && !item.isGroup && item.data[0]"
 								class="w-11/12"
 							>
-								<ArticleMCard :article="item.data[0]" />
+								<LazyArticleMCard
+									:article="item.data[0]"
+									hydrate-on-visible
+								/>
 							</div>
 							<MInfoCardGroup
 								v-else-if="item.type === 'event' && item.isGroup"
@@ -190,17 +202,21 @@
 								show-dots
 								class="w-11/12"
 							>
-								<EventMCard
+								<LazyEventMCard
 									v-for="event in item.data"
 									:key="event.id"
 									:event="event"
+									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<div
 								v-else-if="item.type === 'event' && !item.isGroup && item.data[0]"
 								class="w-11/12"
 							>
-								<EventMCard :event="item.data[0]" />
+								<LazyEventMCard
+									:event="item.data[0]"
+									hydrate-on-visible
+								/>
 							</div>
 							<MInfoCardGroup
 								v-else-if="item.type === 'user' && item.isGroup"
@@ -210,10 +226,11 @@
 								show-dots
 								class="w-11/12"
 							>
-								<UserMCard
+								<LazyUserMCard
 									v-for="user in item.data"
 									:key="user.id"
 									:user="user"
+									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 						</template>

@@ -45,17 +45,20 @@
 							class="download-row flex items-center gap-2 w-full"
 						>
 							<div class="flex-1 min-w-0">
-								<ActivityMCard
+								<LazyActivityMCard
 									v-if="item.type === 'activity'"
 									:activity="asActivity(item)"
+									hydrate-on-visible
 								/>
-								<PromptMCard
+								<LazyPromptMCard
 									v-else-if="item.type === 'prompt'"
 									:prompt="asPrompt(item)"
+									hydrate-on-visible
 								/>
-								<ArticleMCard
+								<LazyArticleMCard
 									v-else
 									:article="asArticle(item)"
+									hydrate-on-visible
 								/>
 							</div>
 
