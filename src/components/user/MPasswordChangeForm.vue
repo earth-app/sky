@@ -139,7 +139,7 @@ async function handlePasswordChange() {
 		if (res.success) {
 			clearForm();
 			emit('changed');
-			await notifySuccess();
+			notifySuccess();
 
 			await Toast.show({
 				text: res.data?.message || 'Password changed successfully.',
@@ -147,7 +147,7 @@ async function handlePasswordChange() {
 			});
 		} else {
 			error.value = res.message || 'Failed to change password.';
-			await notifyError();
+			notifyError();
 			await Toast.show({
 				text: error.value,
 				duration: 'long'
@@ -155,7 +155,7 @@ async function handlePasswordChange() {
 		}
 	} catch (changeError: any) {
 		error.value = changeError?.message || 'Failed to change password.';
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: error.value,
 			duration: 'long'

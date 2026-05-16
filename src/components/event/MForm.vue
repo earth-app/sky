@@ -257,6 +257,7 @@ const { thumbnail, updateEvent, uploadThumbnail, deleteThumbnail } = useEvent(
 	props.event?.id || ''
 );
 const { user } = useAuth();
+const { notifyError, notifySuccess } = useAppHaptics();
 
 const loading = ref(false);
 const error = ref('');
@@ -426,6 +427,7 @@ async function handleSubmit(event: FormSubmitEvent<EventData>) {
 
 	// Validate before submitting
 	if (eventLinkValid.value === false) {
+		notifyError();
 		error.value = 'Please enter a valid URL for the event link';
 		loading.value = false;
 		await Toast.show({
@@ -436,6 +438,7 @@ async function handleSubmit(event: FormSubmitEvent<EventData>) {
 	}
 
 	if (maxInPersonValid.value === false || maxOnlineValid.value === false) {
+		notifyError();
 		error.value = 'Attendee limits cannot exceed your account maximum';
 		loading.value = false;
 		await Toast.show({
@@ -464,6 +467,7 @@ async function handleSubmit(event: FormSubmitEvent<EventData>) {
 			}
 		}
 
+		notifySuccess();
 		await Toast.show({
 			text: `${event.data.name} has been ${props.mode === 'create' ? 'created' : 'saved'} successfully.`,
 			duration: 'long'
@@ -471,6 +475,7 @@ async function handleSubmit(event: FormSubmitEvent<EventData>) {
 
 		emit('submitted');
 	} catch (err: any) {
+		notifyError();
 		error.value = err.message || 'An error occurred while saving settings';
 
 		await Toast.show({

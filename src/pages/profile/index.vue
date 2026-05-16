@@ -54,25 +54,25 @@ async function showQueryToast() {
 	if (success) {
 		switch (success) {
 			case 'oauth_signup':
-				await notifySuccess();
+				notifySuccess();
 				await Toast.show({
 					text: 'Welcome! Your account was created via OAuth.',
 					duration: 'long'
 				});
 				return;
 			case 'oauth_linked':
-				await notifySuccess();
+				notifySuccess();
 				await Toast.show({ text: 'OAuth provider connected successfully.', duration: 'short' });
 				return;
 			case 'oauth_unlinked':
-				await notifySuccess();
+				notifySuccess();
 				await Toast.show({ text: 'OAuth provider disconnected successfully.', duration: 'short' });
 				return;
 		}
 	}
 
 	if (error) {
-		await notifyError();
+		notifyError();
 		switch (error) {
 			case 'provider_error':
 				await Toast.show({

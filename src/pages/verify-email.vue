@@ -57,6 +57,7 @@
 import { Toast } from '@capacitor/toast';
 
 const { user, fetchUser } = useAuth();
+const { notifySuccess } = useAppHaptics();
 
 onMounted(() => {
 	fetchUser();
@@ -80,6 +81,7 @@ async function onEmailVerified() {
 		user.value.account.email_verified = true;
 	}
 
+	notifySuccess();
 	await Toast.show({
 		text: 'Your email has been successfully verified.',
 		duration: 'short'

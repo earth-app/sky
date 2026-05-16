@@ -100,6 +100,7 @@ const emit = defineEmits<{
 }>();
 
 const { user, fetchUser } = useAuth();
+const { notifyError, notifySuccess } = useAppHaptics();
 const total = ref(0);
 const premiumOpen = ref(false);
 
@@ -178,17 +179,9 @@ async function newPrompt() {
 			description: text,
 			visibility: visibility.value
 		});
-		if (res.success && res.data) {
-			if ('message' in res.data) {
-				await Toast.show({
-					text: res.data.message || 'Failed to create prompt.',
-					duration: 'long'
-				});
-				return;
-			}
 
-			loading.value = false;
-
+		if (valid(res)) {
+			notifySuccess();
 			await Toast.show({
 				text: 'Prompt created successfully!',
 				duration: 'long'
@@ -196,12 +189,16 @@ async function newPrompt() {
 
 			emit('prompt-created', res.data);
 		} else {
+			notifyError();
 			await Toast.show({
 				text: res.message || 'Failed to create prompt.',
 				duration: 'long'
 			});
 		}
+
+		loading.value = false;
 	} catch (error) {
+		notifyError();
 		await Toast.show({
 			text: 'An error occurred while creating the prompt.',
 			duration: 'long'

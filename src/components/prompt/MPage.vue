@@ -149,23 +149,13 @@ async function postResponse() {
 	posting.value = true;
 
 	const res = await createResponse(newResponse.value);
-	if (res.success && res.data) {
-		if ('message' in res.data) {
-			await Toast.show({
-				text: res.data.message || 'An unknown error occurred.',
-				duration: 'long'
-			});
-
-			posting.value = false;
-			return;
-		}
-
+	if (valid(res)) {
 		await loadResponses();
 		newResponse.value = '';
 
 		// Tap Prompts Journey
 		const journeyRes = await tapCurrentJourney('prompt');
-		if (journeyRes.success && journeyRes.data) {
+		if (valid(journeyRes)) {
 			await Toast.show({
 				text: `Your prompts streak is now at ${journeyRes.data.count} prompts on your journey!`,
 				duration: 'long'

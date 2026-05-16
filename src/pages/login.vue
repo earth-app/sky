@@ -90,7 +90,7 @@ async function showLoginError(errorType: string) {
 		text: description,
 		duration: 'long'
 	});
-	await notifyError();
+	notifyError();
 }
 
 function handleLoginSuccess() {

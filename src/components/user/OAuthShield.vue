@@ -84,7 +84,7 @@ async function startOauth() {
 		const authUrl = authLink(props.provider);
 		await beginFlow(authUrl, props.context);
 	} catch (error: any) {
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: error?.message || 'Failed to start OAuth sign-in.',
 			duration: 'long'

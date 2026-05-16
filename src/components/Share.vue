@@ -22,8 +22,11 @@ const props = defineProps<{
 	payload: ShareOptions;
 }>();
 
+const { notifySuccess, notifyError } = useAppHaptics();
+
 async function share() {
 	if (!(await Share.canShare())) {
+		notifyError();
 		await Toast.show({
 			text: 'Sharing is not supported on this device.',
 			duration: 'short'
@@ -34,7 +37,9 @@ async function share() {
 
 	try {
 		await Share.share({ ...props.payload });
+		notifySuccess();
 	} catch (error) {
+		notifyError();
 		await Toast.show({
 			text: `${error instanceof Error ? error.message : String(error)}`,
 			duration: 'short'

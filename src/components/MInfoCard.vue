@@ -6,6 +6,7 @@
 		class="my-2 pt-2 shadow-md shadow-black/30 light:shadow-black/10"
 		@click="
 			async () => {
+				selection();
 				if (inBrowser && link) {
 					await Browser.open({ url: link });
 				} else {
@@ -217,6 +218,7 @@
 							if (badge.link) {
 								goTo(badge.link);
 							}
+							selection();
 						}
 					"
 				>
@@ -242,7 +244,12 @@
 					:key="index"
 					:color="button.color"
 					:size="button.size || 'default'"
-					@click="button.onClick"
+					@click="
+						() => {
+							selection();
+							if (button.onClick) button.onClick();
+						}
+					"
 					:disabled="button.disabled"
 				>
 					{{ button.text }}
@@ -386,6 +393,7 @@ const props = defineProps<{
 }>();
 
 const appSettings = useAppSettingsState();
+const { selection } = useAppHaptics();
 const showCardImage = computed(() => Boolean(props.image && appSettings.value.cardThumbnails));
 
 const origin = computed(() => {

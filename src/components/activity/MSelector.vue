@@ -109,6 +109,7 @@ const emit = defineEmits<{
 	'update:modelValue': [value: string[]];
 }>();
 
+const { selection } = useAppHaptics();
 const wrapperClass = computed(() => props.class || 'w-full');
 const buttonText = computed(() => props.buttonText || 'Select activities');
 const maxActivities = computed(() => props.maxActivities || 10);
@@ -330,5 +331,6 @@ async function handleCheckboxChange(event: CustomEvent<{ checked: boolean; value
 	}
 
 	workingSelection.value = [...nextSelection];
+	selection();
 }
 </script>

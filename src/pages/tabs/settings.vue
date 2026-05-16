@@ -219,6 +219,7 @@ type SettingSection = {
 };
 
 const { settings: appSettings, init: initSettings, setValue, resetToDefaults } = useAppSettings();
+const { selection, notifySuccess, notifyError } = useAppHaptics();
 const downloads = useDownloads();
 const actionLoading = reactive<Record<string, boolean>>({});
 
@@ -230,6 +231,7 @@ async function clearCacheAction() {
 		);
 	}
 
+	notifySuccess();
 	await Toast.show({
 		text: 'Cache cleared.',
 		duration: 'short'
@@ -243,6 +245,7 @@ async function deleteAllDownloadsAction() {
 		await downloads.remove(item.type, item.id);
 	}
 
+	notifySuccess();
 	await Toast.show({
 		text: 'All downloads deleted.',
 		duration: 'short'
@@ -252,6 +255,7 @@ async function deleteAllDownloadsAction() {
 async function restoreDefaultsAction() {
 	await resetToDefaults();
 
+	notifySuccess();
 	await Toast.show({
 		text: 'Settings restored to defaults.',
 		duration: 'short'
@@ -477,11 +481,13 @@ const settingSections = computed<SettingSection[]>(() => [
 
 async function onSelectChange(key: AppSettingKey, event: CustomEvent) {
 	await setValue(key, String(event.detail?.value ?? appSettings.value[key]) as any);
+	selection();
 }
 
 async function onToggleChange(key: AppSettingKey, event: CustomEvent) {
 	const checked = Boolean(event.detail?.checked);
 	await setValue(key, checked as any);
+	selection();
 
 	if (key === 'pushNotifications') {
 		await Toast.show({
@@ -496,6 +502,13 @@ async function runAction(item: ActionSettingItem) {
 
 	try {
 		await item.action();
+		notifySuccess();
+	} catch (error) {
+		notifyError();
+		await Toast.show({
+			text: `${error instanceof Error ? error.message : 'An error occurred while performing this action.'}`,
+			duration: 'short'
+		});
 	} finally {
 		actionLoading[item.title] = false;
 	}

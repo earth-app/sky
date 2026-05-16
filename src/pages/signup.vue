@@ -83,7 +83,7 @@ async function showSignupError(errorType: string) {
 		text: description,
 		duration: 'long'
 	});
-	await notifyError();
+	notifyError();
 }
 
 async function handleSignupSuccess(_: User, hasEmail: boolean) {

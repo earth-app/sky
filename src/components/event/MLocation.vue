@@ -64,6 +64,8 @@
 </template>
 
 <script setup lang="ts">
+import { Toast } from '@capacitor/toast';
+
 const props = defineProps<{
 	modelValue: {
 		latitude: number;
@@ -83,7 +85,7 @@ const {
 	reverseGeocode: reverseGeocodeFromComposable,
 	retrieveLocation
 } = useGeocodingM();
-const toast = useToast();
+const { selection: hapticSelection, notifyError } = useAppHaptics();
 
 type LocationItem = {
 	label: string;
@@ -260,12 +262,9 @@ async function performSearch(term: string) {
 		}
 	} catch (error) {
 		console.error('Autocomplete error:', error);
-		toast.add({
-			title: 'Error',
-			icon: 'mdi:alert-circle',
-			description: 'Failed to fetch location suggestions',
-			color: 'error',
-			duration: 3000
+		await Toast.show({
+			text: 'An error occurred while searching for locations.',
+			duration: 'long'
 		});
 		results.value = [];
 	} finally {
@@ -279,8 +278,9 @@ watch(selection, async (newSelection) => {
 
 	// Geocode the selected location
 	const res = await geocode(newSelection.full_name);
+	if (valid(res)) {
+		hapticSelection();
 
-	if (res.success && 'data' in res && res.data) {
 		// Update coordinates
 		emit('update:modelValue', {
 			latitude: res.data.latitude,
@@ -300,13 +300,14 @@ watch(selection, async (newSelection) => {
 		searchTerm.value = '';
 		results.value = [];
 	} else {
+		notifyError();
+
 		console.error('Geocoding error:', res.message);
-		toast.add({
-			title: 'Error',
-			description: res.message || 'Failed to geocode selected location',
-			color: 'error',
-			duration: 3000
+		await Toast.show({
+			text: res.message || 'Failed to geocode selected location',
+			duration: 'long'
 		});
+
 		// Reset selection on error
 		selection.value = undefined;
 		// Clear search results on error

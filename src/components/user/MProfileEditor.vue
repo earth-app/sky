@@ -874,7 +874,7 @@ onBeforeUnmount(() => {
 async function regenerateProfilePhoto() {
 	const yes = await Dialog.confirm({ message: 'Are you sure? You cannot revert this action.' });
 	if (!yes.value) {
-		await notifyWarning();
+		notifyWarning();
 		return;
 	}
 
@@ -892,7 +892,7 @@ async function regenerateProfilePhoto() {
 		fetchUser();
 
 		avatarLoading.value = false;
-		await notifySuccess();
+		notifySuccess();
 		await Toast.show({
 			text: 'Your profile photo has been successfully regenerated.',
 			duration: 'long'
@@ -900,7 +900,7 @@ async function regenerateProfilePhoto() {
 	} else {
 		avatarLoading.value = false;
 		console.error(res.message || 'Failed to regenerate profile photo.');
-		await notifyError();
+		notifyError();
 
 		await Toast.show({
 			text: res.message || 'Failed to regenerate profile photo.',
@@ -923,7 +923,7 @@ async function saveProfile() {
 		});
 
 		if (!confirmed.value) {
-			await notifyWarning();
+			notifyWarning();
 			return;
 		}
 
@@ -943,14 +943,14 @@ async function saveProfile() {
 		});
 		initialProfileState.value = normalizedCurrent;
 		await fetchUser(true);
-		await notifySuccess();
+		notifySuccess();
 
 		await Toast.show({
 			text: 'Profile updated successfully.',
 			duration: 'short'
 		});
 	} else {
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: res.data?.message || res.message || 'Failed to update profile.',
 			duration: 'long'
@@ -962,7 +962,7 @@ async function requestEmailVerification() {
 	if (requestingVerification.value) return;
 
 	if (!props.user.account.email) {
-		await notifyWarning();
+		notifyWarning();
 		await Toast.show({
 			text: 'Please add an email address before requesting verification.',
 			duration: 'long'
@@ -980,7 +980,7 @@ async function requestEmailVerification() {
 	}
 
 	if (props.user.email_change_pending) {
-		await notifyWarning();
+		notifyWarning();
 		await Toast.show({
 			text: 'You have a pending email change. Please verify your new email address.',
 			duration: 'long'
@@ -994,13 +994,13 @@ async function requestEmailVerification() {
 
 	if (res.success) {
 		verificationModalOpen.value = true;
-		await notifySuccess();
+		notifySuccess();
 		await Toast.show({
 			text: res.data?.message || 'A verification email has been sent.',
 			duration: 'short'
 		});
 	} else {
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: res.message || 'Failed to send verification email.',
 			duration: 'long'
@@ -1036,7 +1036,7 @@ async function handleFieldPrivacyChange(key: FieldPrivacyKey, event: Event) {
 		await selection();
 	} else {
 		fieldPrivacyState[key] = previousValue;
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: res.message || 'Failed to update field privacy.',
 			duration: 'long'
@@ -1067,7 +1067,7 @@ async function handleSubscriptionToggle(event: Event) {
 		});
 	} else {
 		subscribed.value = previous;
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: res.message || 'Failed to update email notifications.',
 			duration: 'long'
@@ -1084,7 +1084,7 @@ async function handleOAuthProvider(provider: OAuthProvider) {
 		if (isProviderLinked(provider)) {
 			const linkedProvidersCount = props.user.account.linked_providers?.length || 0;
 			if (!props.user.account.has_password && linkedProvidersCount <= 1) {
-				await notifyWarning();
+				notifyWarning();
 				await Toast.show({
 					text: 'You cannot unlink your only authentication method.',
 					duration: 'long'
@@ -1097,7 +1097,7 @@ async function handleOAuthProvider(provider: OAuthProvider) {
 				message: 'Are you sure you want to disconnect this provider?'
 			});
 			if (!confirmed.value) {
-				await notifyWarning();
+				notifyWarning();
 				return;
 			}
 
@@ -1114,7 +1114,7 @@ async function handleOAuthProvider(provider: OAuthProvider) {
 		const authUrl = authLink(provider);
 		await beginFlow(authUrl, 'link');
 	} catch (error: any) {
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: error?.message || 'Failed to start OAuth flow.',
 			duration: 'long'
@@ -1135,7 +1135,7 @@ async function handleDeleteAccount() {
 		message: 'This action is irreversible. Do you want to continue?'
 	});
 	if (!firstConfirm.value) {
-		await notifyWarning();
+		notifyWarning();
 		return;
 	}
 
@@ -1144,7 +1144,7 @@ async function handleDeleteAccount() {
 		message: `Permanently delete @${props.user.username}?`
 	});
 	if (!secondConfirm.value) {
-		await notifyWarning();
+		notifyWarning();
 		return;
 	}
 
@@ -1154,12 +1154,12 @@ async function handleDeleteAccount() {
 	const res = await deleteAccount(deletePassword.value);
 	deleteLoading.value = false;
 
-	if (res.success) {
+	if (valid(res)) {
 		useCurrentSessionToken(null);
 		const sessionCookie = useCookie('session_token');
 		sessionCookie.value = null;
 
-		await notifySuccess();
+		notifySuccess();
 		await Toast.show({
 			text: 'Your account has been deleted.',
 			duration: 'long'
@@ -1168,21 +1168,14 @@ async function handleDeleteAccount() {
 		await refreshNuxtData();
 		await navigateTo('/');
 		return;
+	} else {
+		let message = res.message || 'Failed to delete account.';
+		notifyError();
+		await Toast.show({
+			text: message,
+			duration: 'long'
+		});
 	}
-
-	let message = res.message || 'Failed to delete account.';
-	if (res.data && typeof res.data === 'object' && 'message' in res.data) {
-		const apiMessage = res.data.message;
-		if (typeof apiMessage === 'string' && apiMessage.trim().length > 0) {
-			message = apiMessage;
-		}
-	}
-
-	await notifyError();
-	await Toast.show({
-		text: message,
-		duration: 'long'
-	});
 }
 
 function closeCosmeticModal() {
@@ -1235,7 +1228,7 @@ async function resetCosmetic() {
 			}
 
 			await Promise.all([fetchUser(true), fetchAvatar(), fetchPoints()]);
-			await notifySuccess();
+			notifySuccess();
 			await Toast.show({
 				text: 'Cosmetic reset successfully.',
 				duration: 'short'
@@ -1243,13 +1236,13 @@ async function resetCosmetic() {
 			return;
 		}
 
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: res.message || 'Failed to reset cosmetic.',
 			duration: 'long'
 		});
 	} catch (error: any) {
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: error?.message || 'Failed to reset cosmetic.',
 			duration: 'long'
@@ -1269,7 +1262,7 @@ async function handlePurchaseClick(cosmeticKey: AvatarCosmetic['key']) {
 
 		if (res.success) {
 			await Promise.all([fetchPoints(), avatarStore.fetchCosmeticsForUser(props.user.id)]);
-			await notifySuccess();
+			notifySuccess();
 			await Toast.show({
 				text: `${capitalizeFully(cosmeticKey.replaceAll('_', ' '))} purchased successfully.`,
 				duration: 'short'
@@ -1278,13 +1271,13 @@ async function handlePurchaseClick(cosmeticKey: AvatarCosmetic['key']) {
 			return;
 		}
 
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: res.message || 'Failed to purchase cosmetic.',
 			duration: 'long'
 		});
 	} catch (error: any) {
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: error?.message || 'Failed to purchase cosmetic.',
 			duration: 'long'
@@ -1311,7 +1304,7 @@ async function handleSelectClick(cosmeticKey: AvatarCosmetic['key']) {
 			}
 
 			await Promise.all([fetchUser(true), fetchAvatar(), fetchPoints()]);
-			await notifySuccess();
+			notifySuccess();
 			await Toast.show({
 				text: 'Profile cosmetic updated.',
 				duration: 'short'
@@ -1320,13 +1313,13 @@ async function handleSelectClick(cosmeticKey: AvatarCosmetic['key']) {
 			return;
 		}
 
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: res.message || 'Failed to select cosmetic.',
 			duration: 'long'
 		});
 	} catch (error: any) {
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: error?.message || 'Failed to select cosmetic.',
 			duration: 'long'
@@ -1503,7 +1496,7 @@ async function confirmActivityChanges() {
 		activitiesModal.value?.$el?.dismiss();
 	} else {
 		console.error(res.data?.message || res.message || 'Failed to update activities.');
-		await notifyError();
+		notifyError();
 
 		await Toast.show({
 			text: res.data?.message || res.message || 'Failed to update activities.',

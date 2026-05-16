@@ -78,6 +78,7 @@ const props = defineProps<{
 
 const { user } = useAuth();
 const { addFriend, removeFriend, addToCircle, removeFromCircle } = useFriends();
+const { notifyError } = useAppHaptics();
 
 const friendsLoading = ref(false);
 const circleLoading = ref(false);
@@ -104,17 +105,7 @@ async function addCurrentFriend() {
 
 	friendsLoading.value = true;
 	const res = await addFriend(props.user.id);
-	if (res.success && res.data) {
-		if ('message' in res.data) {
-			await Toast.show({
-				text: res.data.message || 'An error occurred while adding friend.',
-				duration: 'long'
-			});
-
-			friendsLoading.value = false;
-			return;
-		}
-
+	if (valid(res)) {
 		props.user.is_friend = true;
 		props.user.added_count = (props.user.added_count || 0) + 1;
 
@@ -124,6 +115,13 @@ async function addCurrentFriend() {
 			text: `You have added @${props.user.username} as a friend. Tell them to add you back!`,
 			duration: 'long'
 		});
+	} else {
+		notifyError();
+		await Toast.show({
+			text: res.message || `An error occurred while adding @${props.user.username} as a friend.`,
+			duration: 'long'
+		});
+		console.error('Error adding friend:', res);
 	}
 
 	friendsLoading.value = false;
@@ -142,17 +140,7 @@ async function removeCurrentFriend() {
 
 	friendsLoading.value = true;
 	const res = await removeFriend(props.user.id);
-	if (res.success && res.data) {
-		if ('message' in res.data) {
-			await Toast.show({
-				text: res.data.message || 'An error occurred while removing friend.',
-				duration: 'long'
-			});
-
-			friendsLoading.value = false;
-			return;
-		}
-
+	if (valid(res)) {
 		props.user.is_friend = false;
 		props.user.added_count = Math.max((props.user.added_count || 1) - 1, 0);
 
@@ -170,6 +158,15 @@ async function removeCurrentFriend() {
 			text: `You have removed @${props.user.username} from your friends.`,
 			duration: 'long'
 		});
+	} else {
+		notifyError();
+		await Toast.show({
+			text:
+				res.message ||
+				`An error occurred while removing @${props.user.username} from your friends.`,
+			duration: 'long'
+		});
+		console.error('Error removing friend:', res);
 	}
 
 	friendsLoading.value = false;
@@ -204,16 +201,7 @@ async function addCurrentToCircle() {
 
 	circleLoading.value = true;
 	const res = await addToCircle(props.user.id);
-	if (res.success && res.data) {
-		if ('message' in res.data) {
-			await Toast.show({
-				text: res.data.message || 'An error occurred while adding friend.',
-				duration: 'long'
-			});
-			circleLoading.value = false;
-			return;
-		}
-
+	if (valid(res)) {
 		props.user.is_in_my_circle = true;
 		props.user.circle_count = (props.user.circle_count || 0) + 1;
 
@@ -221,6 +209,13 @@ async function addCurrentToCircle() {
 			text: `You have added ${props.user.username} to your private circle.`,
 			duration: 'long'
 		});
+	} else {
+		notifyError();
+		await Toast.show({
+			text: res.message || `An error occurred while adding @${props.user.username} to your circle.`,
+			duration: 'long'
+		});
+		console.error('Error adding to circle:', res);
 	}
 
 	circleLoading.value = false;
@@ -239,17 +234,7 @@ async function removeCurrentFromCircle() {
 
 	circleLoading.value = true;
 	const res = await removeFromCircle(props.user.id);
-	if (res.success && res.data) {
-		if ('message' in res.data) {
-			await Toast.show({
-				text: res.data.message || 'An error occurred while removing friend.',
-				duration: 'long'
-			});
-
-			circleLoading.value = false;
-			return;
-		}
-
+	if (valid(res)) {
 		props.user.is_in_my_circle = false;
 		props.user.circle_count = Math.max((props.user.circle_count || 1) - 1, 0);
 
@@ -257,6 +242,14 @@ async function removeCurrentFromCircle() {
 			text: `You have removed ${props.user.username} from your private circle. You need to remove them as a friend to fully disconnect.`,
 			duration: 'long'
 		});
+	} else {
+		notifyError();
+		await Toast.show({
+			text:
+				res.message || `An error occurred while removing @${props.user.username} from your circle.`,
+			duration: 'long'
+		});
+		console.error('Error removing from circle:', res);
 	}
 
 	circleLoading.value = false;

@@ -94,18 +94,13 @@ export async function makeMServerRequest<T>(
 export async function getSimilarArticlesM(article: Article, count: number = 5) {
 	const effectiveCount = isDataSaverConstrained() ? Math.max(2, count - 2) : count;
 	const { fetchRandom } = useArticles();
-	const pool = await fetchRandom(Math.min(effectiveCount * 3, 15)).then((res) =>
-		res.success ? res.data : res.message
-	);
+	const randomRes = await fetchRandom(Math.min(effectiveCount * 3, 15));
 
-	if (!pool || typeof pool === 'string') {
-		throw new Error(`Failed to fetch random articles: ${pool}`);
+	if (!valid(randomRes)) {
+		throw new Error(`Failed to fetch random articles: ${randomRes}`);
 	}
 
-	if ('message' in pool) {
-		throw new Error(`Failed to fetch random articles: ${pool.code} ${pool.message}`);
-	}
-
+	const pool = randomRes.data;
 	if (!pool || pool.length === 0) {
 		return { success: true, data: [] };
 	}
@@ -120,11 +115,7 @@ export async function getSimilarArticlesM(article: Article, count: number = 5) {
 		}
 	);
 
-	if (res.success && res.data) {
-		if ('message' in res.data) {
-			return res;
-		}
-
+	if (valid(res)) {
 		// load similar articles into state
 		for (const similarArticle of res.data) {
 			useState<Article | null>(`article-${similarArticle.id}`, () => similarArticle);
@@ -169,11 +160,7 @@ export async function submitMArticleQuiz(
 			}
 		);
 
-		if (res.success && res.data) {
-			if ('message' in res.data) {
-				return res;
-			}
-
+		if (valid(res)) {
 			articleStore.setQuizScore(article.id, res.data);
 		}
 
@@ -191,18 +178,13 @@ export async function submitMArticleQuiz(
 export async function getSimilarEventsM(event: Event, count: number = 5) {
 	const effectiveCount = isDataSaverConstrained() ? Math.max(2, count - 2) : count;
 	const { fetchRandom } = useEvents();
-	const pool = await fetchRandom(Math.min(effectiveCount * 3, 15)).then((res) =>
-		res.success ? res.data : res.message
-	);
+	const randomRes = await fetchRandom(Math.min(effectiveCount * 3, 15));
 
-	if (!pool || typeof pool === 'string') {
-		throw new Error(`Failed to fetch random events: ${pool}`);
+	if (!valid(randomRes)) {
+		throw new Error(`Failed to fetch random events: ${randomRes}`);
 	}
 
-	if ('message' in pool) {
-		throw new Error(`Failed to fetch random events: ${pool.code} ${pool.message}`);
-	}
-
+	const pool = randomRes.data;
 	if (!pool || pool.length === 0) {
 		return { success: true, data: [] };
 	}
@@ -217,11 +199,7 @@ export async function getSimilarEventsM(event: Event, count: number = 5) {
 		}
 	);
 
-	if (res.success && res.data) {
-		if ('message' in res.data) {
-			return res;
-		}
-
+	if (valid(res)) {
 		// load similar events into state
 		for (const similarEvent of res.data) {
 			useState<Event | null>(`event-${similarEvent.id}`, () => similarEvent);
@@ -381,13 +359,7 @@ export function useGeocodingM() {
 			useCurrentSessionToken()
 		);
 
-		if (res.success && res.data) {
-			if ('message' in res.data) {
-				return res;
-			}
-
-			return res;
-		}
+		if (valid(res)) return res;
 
 		return { success: false, message: 'Failed to fetch autocomplete suggestions.' };
 	};
@@ -399,14 +371,7 @@ export function useGeocodingM() {
 			useCurrentSessionToken()
 		);
 
-		if (res.success && res.data) {
-			if ('message' in res.data) {
-				return res;
-			}
-
-			return res;
-		}
-
+		if (valid(res)) return res;
 		return { success: false, message: 'Failed to geocode address.' };
 	};
 
@@ -417,14 +382,7 @@ export function useGeocodingM() {
 			useCurrentSessionToken()
 		);
 
-		if (res.success && res.data) {
-			if ('message' in res.data) {
-				return res;
-			}
-
-			return res;
-		}
-
+		if (valid(res)) return res;
 		return { success: false, message: 'Failed to reverse geocode coordinates.' };
 	};
 

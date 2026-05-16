@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { DateTime } from 'luxon';
+import { Toast } from '@capacitor/toast';
 
 const { user } = useAuth();
 const { markNotificationRead } = useNotifications();
@@ -82,6 +82,7 @@ const route = useRoute();
 const { setTitleSuffix } = useTitleSuffix();
 
 const { notification, fetch } = useNotification(route.params.id as string);
+const { notifyError, selection } = useAppHaptics();
 
 // Fetch notification data on mount
 onMounted(() => {
@@ -98,25 +99,6 @@ watch(
 		setTitleSuffix(notification ? notification.title : 'Notification');
 	}
 );
-
-const i18n = useI18n();
-const time = computed(() => {
-	if (!notification.value) return '';
-	const time = DateTime.fromMillis(notification.value.created_at * 1000).setLocale(
-		i18n.locale.value
-	);
-
-	return time.toLocaleString(DateTime.DATETIME_FULL_WITH_SECONDS);
-});
-
-const relativeTime = computed(() => {
-	if (!notification.value) return '';
-	const time = DateTime.fromMillis(notification.value.created_at * 1000).setLocale(
-		i18n.locale.value
-	);
-
-	return time.toRelative() || time.toLocaleString(DateTime.DATETIME_SHORT);
-});
 
 const mobileLink = computed(() => {
 	const link = notification?.value?.link;
@@ -148,17 +130,15 @@ async function markAsRead() {
 	if (notification.value && !notification.value.read) {
 		const res = await markNotificationRead(notification.value.id);
 		if (res.success) {
+			selection();
 			notification.value.read = true;
 		} else {
+			notifyError();
 			console.error('Failed to mark notification as read:', res.message);
 
-			const toast = useToast();
-			toast.add({
-				title: 'Error',
-				description: res.message || 'Failed to mark notification as read.',
-				icon: 'mdi:alert-circle',
-				color: 'error',
-				duration: 5000
+			await Toast.show({
+				text: res.message || 'Failed to mark notification as read.',
+				duration: 'short'
 			});
 		}
 	}

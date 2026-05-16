@@ -102,14 +102,14 @@ async function resendVerification() {
 	try {
 		const res = await sendVerificationEmail();
 		if (res.success) {
-			await notifySuccess();
+			notifySuccess();
 			await Toast.show({
 				text: 'Verification email sent.',
 				duration: 'short'
 			});
 		} else {
 			errorMessage.value = res.message || 'Failed to resend verification email.';
-			await notifyError();
+			notifyError();
 			await Toast.show({
 				text: errorMessage.value,
 				duration: 'long'
@@ -117,7 +117,7 @@ async function resendVerification() {
 		}
 	} catch (error: any) {
 		errorMessage.value = error?.message || 'Failed to resend verification email.';
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: errorMessage.value,
 			duration: 'long'
@@ -133,7 +133,7 @@ async function submitCode() {
 	const code = codeInput.value.trim();
 	if (!/^\d{8}$/.test(code)) {
 		errorMessage.value = 'The verification code must be exactly 8 digits.';
-		await notifyWarning();
+		notifyWarning();
 		await Toast.show({
 			text: errorMessage.value,
 			duration: 'long'
@@ -151,7 +151,7 @@ async function submitCode() {
 			codeInput.value = '';
 			errorMessage.value = '';
 			emit('verified');
-			await notifySuccess();
+			notifySuccess();
 
 			await Toast.show({
 				text: 'Email verified successfully.',
@@ -159,7 +159,7 @@ async function submitCode() {
 			});
 		} else {
 			errorMessage.value = res.message || 'The verification code is incorrect.';
-			await notifyError();
+			notifyError();
 			await Toast.show({
 				text: errorMessage.value,
 				duration: 'long'
@@ -167,7 +167,7 @@ async function submitCode() {
 		}
 	} catch (error: any) {
 		errorMessage.value = error?.message || 'An unexpected error occurred while verifying email.';
-		await notifyError();
+		notifyError();
 		await Toast.show({
 			text: errorMessage.value,
 			duration: 'long'

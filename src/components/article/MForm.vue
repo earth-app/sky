@@ -145,6 +145,7 @@ const props = defineProps<{
 }>();
 
 const { create } = useArticles();
+const { notifyError, notifySuccess } = useAppHaptics();
 const router = useIonRouter();
 const loading = ref(false);
 
@@ -189,16 +190,7 @@ async function handleSubmit() {
 			content: state.content
 		});
 
-		if (res.success && res.data) {
-			if ('message' in res.data) {
-				await Toast.show({
-					text: res.data.message,
-					duration: 'long'
-				});
-				loading.value = false;
-				return;
-			}
-
+		if (valid(res)) {
 			await Toast.show({
 				text: 'Your article has been created successfully.',
 				duration: 'long'
@@ -220,16 +212,8 @@ async function handleSubmit() {
 			content: state.content
 		});
 
-		if (res.success && res.data) {
-			if ('message' in res.data) {
-				await Toast.show({
-					text: res.data.message,
-					duration: 'long'
-				});
-				loading.value = false;
-				return;
-			}
-
+		if (valid(res)) {
+			notifySuccess();
 			await Toast.show({
 				text: 'Your article has been updated successfully.',
 				duration: 'long'
@@ -237,6 +221,7 @@ async function handleSubmit() {
 
 			router.push(`/tabs/articles/${res.data.id}`);
 		} else {
+			notifyError();
 			await Toast.show({
 				text: res.message || 'Failed to update article.',
 				duration: 'long'

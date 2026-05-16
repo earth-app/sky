@@ -329,8 +329,8 @@ onMounted(async () => {
 			const wasOffline = isOffline.value;
 			applyNetworkStatus(s);
 
-			if (!wasOffline && isOffline.value) await notifyWarning();
-			if (wasOffline && !isOffline.value) await notifySuccess();
+			if (!wasOffline && isOffline.value) notifyWarning();
+			if (wasOffline && !isOffline.value) notifySuccess();
 		};
 
 		await updateFromStatus(await Network.getStatus());
@@ -362,8 +362,8 @@ onMounted(async () => {
 			connectionType: navigator.onLine ? 'unknown' : 'none'
 		});
 
-		if (!wasOffline && isOffline.value) await notifyWarning();
-		if (wasOffline && !isOffline.value) await notifySuccess();
+		if (!wasOffline && isOffline.value) notifyWarning();
+		if (wasOffline && !isOffline.value) notifySuccess();
 	};
 
 	updateFromNavigator();

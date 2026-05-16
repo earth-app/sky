@@ -100,12 +100,9 @@ async function markAsRead() {
 		if (!res.success) {
 			console.error('Failed to mark notification as read:', res.message);
 
-			const toast = useToast();
-			toast.add({
-				title: 'Error',
-				description: res.message || 'Failed to mark notification as read.',
-				icon: 'mdi:alert-circle',
-				color: 'error'
+			await Toast.show({
+				text: res.message || 'Failed to mark notification as read.',
+				duration: 'short'
 			});
 		}
 	}

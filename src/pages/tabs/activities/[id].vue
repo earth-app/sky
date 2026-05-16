@@ -215,12 +215,10 @@ onMounted(async () => {
 	}
 
 	const count = await fetchCurrentJourney('activity', user.value.id);
-	if (!count.success || !count.data) return; // silently ignore errors
-	if ('message' in count.data) return;
+	if (!valid(count)) return; // silently ignore errors
 
 	const res = await tapCurrentJourney('activity', route.params.id as string);
-	if (!res.success || !res.data) return; // silently ignore errors
-	if ('message' in res.data) return;
+	if (!valid(res)) return; // silently ignore errors
 
 	if (count.data.count === res.data.count) return; // no change
 
