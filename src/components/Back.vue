@@ -14,15 +14,9 @@
 </template>
 
 <script setup lang="ts">
-import slide from '~/animations/slide';
-
 const router = useIonRouter();
 
 defineProps<{
 	text?: boolean;
 }>();
-
-useBackButton(10, () => {
-	router.back(slide);
-});
 </script>

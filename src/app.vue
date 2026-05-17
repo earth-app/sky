@@ -52,6 +52,7 @@ const { resolveDeepLink } = useDeepLinkRouting();
 const { closeBrowser, clearFlow, refreshFlowState } = useMobileOAuth();
 const { notifySuccess, notifyWarning } = useAppHaptics();
 const { settings: appSettings, init: initSettings } = useAppSettings();
+const router = useIonRouter();
 const isNative = Capacitor.isNativePlatform();
 
 const profilePath = computed(() =>
@@ -398,5 +399,9 @@ onBeforeUnmount(() => {
 
 	appUrlListener = null;
 	browserFinishedListener = null;
+});
+
+useBackButton(10, () => {
+	router.back(slide);
 });
 </script>
