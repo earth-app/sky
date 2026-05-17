@@ -7,14 +7,11 @@
 				</IonButtons>
 
 				<div class="flex flex-col py-1">
-					<IonTitle>Notifications - @{{ user?.username }}</IonTitle>
-					<span class="text-xs! opacity-90"
-						>{{ notifications.length }} Notifications • {{ unreadCount }} Unread</span
-					>
+					<IonTitle>Notifications - @{{ user?.username }} ({{ notifications.length }})</IonTitle>
 				</div>
 			</IonToolbar>
 		</IonHeader>
-		<IonContent>
+		<IonContent :scroll-y="true">
 			<UserNotificationMList :additional="true" />
 		</IonContent>
 	</IonPage>
@@ -22,7 +19,7 @@
 
 <script setup lang="ts">
 const { user } = useAuth();
-const { notifications, unreadCount, fetchNotifications } = useNotifications();
+const { notifications, fetchNotifications } = useNotifications();
 
 onMounted(() => {
 	fetchNotifications();
