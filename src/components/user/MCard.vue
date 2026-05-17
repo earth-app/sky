@@ -47,7 +47,7 @@
 				>
 
 				<IonChip
-					v-if="props.user.id === userState?.id"
+					v-if="props.user.id === currentUser?.id"
 					color="primary"
 					class="px-2 py-1 font-semibold self-center"
 				>
@@ -103,6 +103,7 @@ const props = defineProps<{
 	activities?: boolean;
 }>();
 
+const { user: currentUser } = useAuth();
 const { avatar128, fetchAvatar, user: userState, chipColor, fetchUser } = useUser(props.user.id);
 const { handle } = useDisplayName(props.user);
 
