@@ -149,6 +149,29 @@ function fsFilenameForKey(key: string, compressed = false) {
 	return `downloads/${key}.json${compressed ? '.gz' : ''}`;
 }
 
+async function ensureDataDirectoryExists(path: string) {
+	try {
+		await Filesystem.stat({ path, directory: Directory.Data });
+		return;
+	} catch {}
+
+	try {
+		await Filesystem.mkdir({ path, directory: Directory.Data, recursive: true });
+	} catch {}
+}
+
+async function deleteFileIfExists(path: string) {
+	try {
+		await Filesystem.stat({ path, directory: Directory.Data });
+	} catch {
+		return;
+	}
+
+	try {
+		await Filesystem.deleteFile({ path, directory: Directory.Data });
+	} catch {}
+}
+
 function markDownloaded(key: string) {
 	if (_downloaded.value[key]) return;
 	_downloaded.value[key] = true;
@@ -298,15 +321,8 @@ async function ensureInitialized() {
 
 	_initPromise = (async () => {
 		try {
-			// Ensure downloads directory exists (create first to avoid readdir native error)
-			try {
-				await Filesystem.mkdir({ path: 'downloads', directory: Directory.Data, recursive: true });
-			} catch {}
-			try {
-				await Filesystem.readdir({ path: 'downloads', directory: Directory.Data });
-			} catch (e) {
-				// ignore
-			}
+			// Ensure downloads directory exists without triggering native overwrite errors.
+			await ensureDataDirectoryExists('downloads');
 
 			// Populate initial downloaded map from filesystem
 			const files = await Filesystem.readdir({ path: 'downloads', directory: Directory.Data });
@@ -597,16 +613,10 @@ export function useDownloads() {
 		try {
 			// Clear stale on-disk variants so get() cannot read old data after an update.
 			try {
-				await Filesystem.deleteFile({
-					path: fsFilenameForKey(key, false),
-					directory: Directory.Data
-				});
+				await deleteFileIfExists(fsFilenameForKey(key, false));
 			} catch {}
 			try {
-				await Filesystem.deleteFile({
-					path: fsFilenameForKey(key, true),
-					directory: Directory.Data
-				});
+				await deleteFileIfExists(fsFilenameForKey(key, true));
 			} catch {}
 
 			const sanitized = await sanitizePayload(item);
@@ -673,15 +683,12 @@ export function useDownloads() {
 		}
 
 		try {
-			await Filesystem.deleteFile({
-				path: fsFilenameForKey(key, false),
-				directory: Directory.Data
-			});
+			await deleteFileIfExists(fsFilenameForKey(key, false));
 		} catch (e) {
 			// ignore
 		}
 		try {
-			await Filesystem.deleteFile({ path: fsFilenameForKey(key, true), directory: Directory.Data });
+			await deleteFileIfExists(fsFilenameForKey(key, true));
 		} catch (e) {
 			// ignore
 		}

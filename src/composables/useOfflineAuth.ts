@@ -16,6 +16,11 @@ function hasSessionIndicator() {
 
 async function ensureAuthDir() {
 	try {
+		await Filesystem.stat({ path: AUTH_DIR, directory: Directory.Data });
+		return;
+	} catch {}
+
+	try {
 		await Filesystem.mkdir({ path: AUTH_DIR, directory: Directory.Data, recursive: true });
 	} catch {}
 }
