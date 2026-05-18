@@ -2,7 +2,7 @@
 	<IonApp>
 		<div
 			v-if="isOffline"
-			class="fixed top-4 left-1/2 -translate-x-1/2 z-1000 pointer-events-none"
+			class="fixed top-12 left-1/2 -translate-x-1/2 z-1000 pointer-events-none"
 		>
 			<div
 				class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-600 text-white shadow-lg shadow-black/40"
@@ -116,19 +116,33 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		footer: 'Customize it to match your vibe.'
 	},
 	{
+		id: 'notifications',
+		title: 'Notifications',
+		description:
+			'Control how the app alerts you so you can stay informed without being overwhelmed.',
+		footer: 'Choose the notification experience that works best for you.'
+	},
+	{
 		url: '/tabs/settings',
-		id: 'settings',
+		id: 'settings-link',
 		title: 'Your Settings',
 		description:
 			'In settings, you can tune appearance, performance, and account behavior to match your device and preferences.',
 		footer: 'Review settings any time to tailor your experience.'
 	},
 	{
-		id: 'notifications',
-		title: 'Notifications',
+		url: '/tabs/profile/editor',
+		title: 'Profile Editor',
 		description:
-			'Control how the app alerts you so you can stay informed without being overwhelmed.',
-		footer: 'Choose the notification experience that works best for you.'
+			'The profile editor is where you can update your info, interests, and avatar. A complete profile helps you connect with the right people and content.',
+		footer: 'Keep your profile fresh to get the best recommendations.'
+	},
+	{
+		url: '/tabs/profile/quests',
+		title: 'Quests!',
+		description: 'Complete quests to explore new interests and earn rewards.',
+		footer:
+			'Quests are a fun way to discover new content and engage with the community. Give them a try!'
 	},
 	{
 		url: profilePath.value,
@@ -138,12 +152,6 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 			'Badges are a fun way to show your achievements and interests as you engage with content and activities.',
 		footer: 'Open your badges to see what you have earned.'
 	},
-	// Quests are not currently exposed in the mobile tab shell.
-	// {
-	// 	id: 'quests',
-	// 	title: 'Quests',
-	// 	description: 'Complete quests to explore new interests and earn rewards.'
-	// },
 	{
 		id: 'points-history',
 		title: 'Points History',
