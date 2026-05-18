@@ -84,7 +84,7 @@ const {
 	geocode,
 	reverseGeocode: reverseGeocodeFromComposable,
 	retrieveLocation
-} = useGeocodingM();
+} = useGeocoding(makeMServerRequest);
 const { selection: hapticSelection, notifyError } = useAppHaptics();
 
 type LocationItem = {

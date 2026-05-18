@@ -883,7 +883,7 @@ async function regenerateProfilePhoto() {
 	avatarLoading.value = true;
 
 	const res = await regenerateAvatar();
-	if (res.success && res.data && res.data instanceof Blob) {
+	if (valid(res) && res.data instanceof Blob) {
 		if (avatarOverride.value && avatarOverride.value.startsWith('blob:')) {
 			URL.revokeObjectURL(avatarOverride.value);
 		}
@@ -1475,7 +1475,7 @@ async function confirmActivityChanges() {
 
 	const res = await setUserActivities(workingSelectedActivities.value);
 
-	if (res.success && res.data && 'activities' in res.data) {
+	if (valid(res) && 'activities' in res.data) {
 		const activities = (res.data.activities || []) as Activity[];
 		props.user.activities = activities;
 

@@ -255,7 +255,7 @@ async function submitUpload() {
 	submitting.value = true;
 	for (const file of value.value) {
 		const res = await submitImage(file);
-		if (res.success && res.data) {
+		if (valid(res)) {
 			if ('code' in res.data) {
 				console.error('Submission error:', res.data.message, 'Code:', res.data.code);
 				await Toast.show({
