@@ -7,6 +7,22 @@
 				</IonButtons>
 
 				<IonTitle id="settings">Settings</IonTitle>
+
+				<IonButtons
+					slot="end"
+					class="mr-2"
+				>
+					<IonButton
+						color="primary"
+						router-link="/tabs/profile/editor"
+						class="size-8"
+					>
+						<UIcon
+							name="mdi:account-edit"
+							class="min-h-6 min-w-6"
+						/>
+					</IonButton>
+				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent :scroll-y="true">

@@ -12,9 +12,10 @@
 				<IonButtons
 					v-if="user?.id === currentUser?.id"
 					slot="end"
-					class="mr-2 gap-1"
+					class="mr-2 gap-2"
 				>
 					<IonButton
+						id="notifications"
 						color="medium"
 						router-link="/tabs/profile/notifications"
 						class="size-8 flex items-center"
@@ -36,17 +37,6 @@
 					</IonButton>
 
 					<IonButton
-						color="primary"
-						router-link="/tabs/profile/editor"
-						class="size-6"
-					>
-						<UIcon
-							name="mdi:pencil-outline"
-							class="min-h-6 min-w-6"
-						/>
-					</IonButton>
-
-					<IonButton
 						id="settings-link"
 						color="tertiary"
 						router-link="/tabs/settings"
@@ -62,11 +52,11 @@
 		</IonHeader>
 		<IonContent :scroll-y="true">
 			<UserMProfile
-				v-if="user"
-				:user="user"
+				v-if="profileUser"
+				:user="profileUser"
 			/>
 			<div
-				v-else-if="user === null"
+				v-else-if="hasResolvedUser && !profileUser"
 				class="flex items-center justify-center h-screen"
 			>
 				<IonText>User not found: {{ route.params.id }}</IonText>
@@ -88,9 +78,19 @@ const route = useRoute();
 const { user, fetchUser } = useUser(route.params.id as string);
 const { hasErrors, hasWarnings, unreadCount, fetchNotifications } = useNotifications();
 const { user: currentUser } = useAuth();
+const hasResolvedUser = ref(false);
+const profileUser = computed(() => {
+	const currentUserValue = user.value;
+	if (!currentUserValue) return null;
+	if (!currentUserValue.account || !currentUserValue.username) return null;
+
+	return currentUserValue;
+});
 
 onMounted(() => {
-	fetchUser();
+	fetchUser().finally(() => {
+		hasResolvedUser.value = true;
+	});
 	fetchNotifications();
 });
 </script>
