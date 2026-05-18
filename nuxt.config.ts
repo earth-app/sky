@@ -90,6 +90,7 @@ export default defineNuxtConfig({
 				'@capacitor/camera',
 				'@capacitor/dialog',
 				'@capacitor/toast',
+				'@capacitor/geolocation',
 				'@earth-app/ocean',
 				'@internationalized/date',
 				'@ionic/pwa-elements/loader',
