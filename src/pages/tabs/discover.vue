@@ -1,23 +1,24 @@
 <template>
 	<IonPage>
+		<IonHeader class="bg-black/10 dark:bg-gray-900/20">
+			<IonSearchbar
+				id="discover-search"
+				v-model="search"
+				placeholder="Explore..."
+				:color="theme"
+				class="w-full max-w-2xl mt-12 border-b-2 border-black/15 dark:border-white/30"
+			/>
+		</IonHeader>
 		<IonContent
 			ref="contentRef"
 			:scroll-y="true"
 		>
-			<div class="flex flex-col items-center mb-8 px-4">
-				<IonSearchbar
-					id="discover-search"
-					v-model="search"
-					placeholder="Explore..."
-					:color="theme"
-					class="w-full max-w-2xl my-4"
-				/>
-
+			<div class="flex flex-col items-center my-8 px-4">
 				<IonSegment
 					v-if="showSegmentSelector"
 					v-model="selectedSegment"
 					color="primary"
-					class="flex items-center w-full max-w-2xl mb-4 *:flex *:items-center *:min-w-12! *:max-w-1/6 *:text-secondary"
+					class="flex items-center py-1 w-full max-w-2xl mb-4 *:flex *:items-center *:min-w-12! *:max-w-1/6 *:text-secondary"
 				>
 					<IonSegmentButton value="user">
 						<UIcon
@@ -61,7 +62,7 @@
 					<div
 						v-for="result in displayedResults"
 						:key="`${result.data_type}-${result.id}`"
-						class="flex flex-col gap-2"
+						class="flex flex-col gap-2 w-full"
 					>
 						<LazyEventMCard
 							v-if="result.data_type === 'event'"
@@ -89,7 +90,6 @@
 							hydrate-on-visible
 							class="text-center text-sm opacity-70 py-6"
 						/>
-						{{ emptyStateText }}
 					</div>
 
 					<div class="flex justify-center py-4">
@@ -175,12 +175,12 @@ const {
 	fetchRecommended: getRecommendedArticles,
 	fetchRandom: getRandomArticles,
 	fetch: getArticles
-} = useArticles();
+} = useArticles(1, 25, '', 'desc', makeMServerRequest);
 const {
 	fetchRecommended: getRecommendedEvents,
 	fetchRandom: getRandomEvents,
 	fetch: getEvents
-} = useEvents();
+} = useEvents(makeMServerRequest);
 const { fetch: getUsers } = useUsers();
 
 const hasMoreActivities = ref(true);
@@ -259,18 +259,6 @@ const displayedResults = computed(() => {
 	}
 
 	return source.filter((result) => result.data_type === activeSegment.value);
-});
-
-const emptyStateText = computed(() => {
-	if (!isSearchMode.value && !isSegmentPinnedByRoute.value) {
-		return 'No discover content available right now.';
-	}
-
-	if (!isSearchMode.value) {
-		return `No ${SEGMENT_LABELS[activeSegment.value]} available right now.`;
-	}
-
-	return `No ${SEGMENT_LABELS[activeSegment.value]} found for "${activeSearch.value}".`;
 });
 
 const page = ref(1);
