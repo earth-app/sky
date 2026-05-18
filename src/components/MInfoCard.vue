@@ -71,7 +71,8 @@
 						>
 						<span
 							v-if="subtitle"
-							class="font-sans text-sm! opacity-80 ml-2"
+							class="ml-2"
+							:class="title ? 'opacity-80 font-sans text-sm!' : 'text-base!'"
 							@click="
 								() => {
 									if (subtitleLink) {
