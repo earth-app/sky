@@ -12,7 +12,7 @@
 				<IonRefresherContent />
 			</IonRefresher>
 			<div class="flex flex-col size-full items-center">
-				<div class="flex flex-col m-8 items-center">
+				<div class="flex flex-col m-8 mt-16 w-full items-center justify-center">
 					<IonImg
 						src="/earth-app.png"
 						alt="The Earth App"
@@ -25,7 +25,7 @@
 						The Earth App
 					</h2>
 					<ClientOnly>
-						<div class="flex">
+						<div class="flex justify-center">
 							<h4 class="text-lg! m-0!">
 								Welcome, {{ user?.username ? `@${user.username}!` : '' }}
 							</h4>
@@ -35,7 +35,7 @@
 								fill="outline"
 								size="small"
 								@click="startWelcomeTour"
-								class="ml-2 size-5"
+								class="ml-2"
 							>
 								<UIcon
 									name="mdi:account-arrow-right"
@@ -87,7 +87,7 @@
 
 					<div
 						v-if="user?.activities"
-						class="w-full max-w-full mt-4 px-4"
+						class="w-full max-w-full my-4 px-4"
 					>
 						<h2 class="text-base! mt-0! mb-1! font-bold!">Your Activities</h2>
 						<div
@@ -98,7 +98,7 @@
 							@mouseup="stopDrag"
 							@mouseleave="stopDrag"
 						>
-							<div class="flex w-max items-center justify-start gap-2 pr-4">
+							<div class="flex w-max items-center justify-start gap-2 mb-4 pr-4">
 								<LazyActivityCircle
 									v-for="activity in user.activities"
 									:key="activity.id"
@@ -264,6 +264,7 @@ const { user, fetchUser, fetchRecommendedActivities } = useAuth();
 const { motd, fetchMotd } = useMotd();
 const { settings: appSettings, init: initSettings } = useAppSettings();
 const { startTour } = useSiteTour();
+const { fetchNotifications } = useNotifications();
 
 const motdColor = computed(() => {
 	if (!motd.value) return 'primary';
@@ -383,29 +384,23 @@ async function fetchContent(
 		if (type === 'activity') {
 			if (useRecommended && user.value) {
 				const res = await fetchRecommendedActivities(count * 3);
-				if (res.success && res.data && Array.isArray(res.data)) {
+				if (valid(res)) {
 					return res.data.slice(0, count);
 				}
 			}
 
 			const { fetchRandom } = useActivities();
 			const res = await fetchRandom(count);
-			if (res.success && res.data && Array.isArray(res.data)) {
-				return res.data;
-			}
+			if (valid(res)) return res.data;
 		} else if (type === 'prompt') {
 			const { fetchRandom } = usePrompts();
 			const res = await fetchRandom(count);
-			if (res.success && res.data && Array.isArray(res.data)) {
-				return res.data;
-			}
+			if (valid(res)) return res.data;
 		} else if (type === 'article') {
 			const { fetchRecommended, fetchRandom, fetchRecent } = useArticles();
 			if (useRecommended && user.value) {
 				const res = await fetchRecommended(count);
-				if (res.success && res.data && Array.isArray(res.data)) {
-					return res.data;
-				}
+				if (valid(res)) return res.data;
 			}
 
 			const split = Math.random() * 0.4 + 0.3; // between 30% and 70%
@@ -416,12 +411,12 @@ async function fetchContent(
 			]);
 			const articles: Article[] = [];
 
-			if (res1.success && res1.data && Array.isArray(res1.data)) {
+			if (valid(res1)) {
 				articles.push(...res1.data);
 			}
 
-			if (res2.success && res2.data && Array.isArray(res2.data)) {
-				articles.push(...res2.data);
+			if (valid(res2)) {
+				articles.push(...res2.data.items);
 			}
 
 			// Deduplicate articles by ID
@@ -442,22 +437,12 @@ async function fetchContent(
 			]);
 
 			const events: Event[] = [];
-			if (
-				res1.status === 'fulfilled' &&
-				res1.value.success &&
-				res1.value.data &&
-				Array.isArray(res1.value.data)
-			) {
+			if (res1.status === 'fulfilled' && valid(res1.value)) {
 				events.push(...res1.value.data);
 			}
 
-			if (
-				res2.status === 'fulfilled' &&
-				res2.value.success &&
-				res2.value.data &&
-				Array.isArray(res2.value.data)
-			) {
-				events.push(...res2.value.data);
+			if (res2.status === 'fulfilled' && valid(res2.value)) {
+				events.push(...res2.value.data.items);
 			}
 
 			// Deduplicate events by ID
@@ -716,6 +701,7 @@ watch(
 );
 
 onMounted(async () => {
+	void fetchNotifications();
 	try {
 		await initSettings();
 	} catch (error) {
