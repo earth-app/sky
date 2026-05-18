@@ -33,6 +33,8 @@
 		--ion-color-tertiary-tint: #5175f9;
 
 		--ion-card-color: var(--ion-text-color);
+
+		--ion-safe-area-top: 48px;
 	}
 
 	button:disabled,
