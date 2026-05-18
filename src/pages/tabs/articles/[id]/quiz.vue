@@ -2,9 +2,15 @@
 	<IonPage>
 		<IonHeader>
 			<IonToolbar>
-				<div class="flex items-center justify-between w-full">
-					<Back />
-					<IonTitle>Article Quiz</IonTitle>
+				<IonTitle>Article Quiz</IonTitle>
+				<IonButtons slot="start">
+					<IonBackButton default-href="/tabs/dashboard" />
+				</IonButtons>
+
+				<IonButtons
+					slot="end"
+					class="mx-2"
+				>
 					<Share
 						v-if="article"
 						:payload="{
@@ -14,7 +20,7 @@
 							url: `https://app.earth-app.com/articles/${article.id}`
 						}"
 					/>
-				</div>
+				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent :scroll-y="true">

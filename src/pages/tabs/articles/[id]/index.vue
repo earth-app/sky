@@ -2,60 +2,64 @@
 	<IonPage>
 		<IonHeader>
 			<IonToolbar>
-				<div class="flex items-center justify-between w-full">
-					<Back />
-					<div class="mr-4 flex items-center gap-2">
-						<Share
-							v-if="currentArticle"
-							:payload="{
-								dialogTitle: 'Share Article',
-								title: `Read about ${currentArticle.title} by @${currentArticle.author.username}`,
-								text: currentArticle.description,
-								url: `https://app.earth-app.com/articles/${currentArticle.id}`
-							}"
-						/>
+				<IonButtons slot="start">
+					<IonBackButton default-href="/tabs/dashboard" />
+				</IonButtons>
 
-						<div class="relative size-8 flex items-center justify-center">
-							<Transition
-								name="download-icon-fade"
-								mode="out-in"
-							>
-								<UIcon
-									v-if="isDownloading"
-									key="downloading"
-									name="line-md:downloading-loop"
-									class="text-primary size-8"
-								/>
-								<UIcon
-									v-else-if="isDownloaded"
-									key="delete"
-									name="material-symbols:delete-outline"
-									:class="
-										canDeleteDownload
-											? 'text-error size-8 cursor-pointer'
-											: 'text-gray-400 size-8 opacity-60 cursor-not-allowed'
-									"
-									@click.stop="deleteDownload"
-								/>
-								<UIcon
-									v-else
-									key="download"
-									name="material-symbols:download-for-offline-outline"
-									class="text-primary size-8 cursor-pointer"
-									@click.stop="startDownload"
-								/>
-							</Transition>
-						</div>
+				<IonButtons
+					slot="end"
+					class="gap-2 mx-2"
+				>
+					<Share
+						v-if="currentArticle"
+						:payload="{
+							dialogTitle: 'Share Article',
+							title: `Read about ${currentArticle.title} by @${currentArticle.author.username}`,
+							text: currentArticle.description,
+							url: `https://app.earth-app.com/articles/${currentArticle.id}`
+						}"
+					/>
 
-						<Transition name="download-icon-pop">
+					<div class="relative size-8 flex items-center justify-center">
+						<Transition
+							name="download-icon-fade"
+							mode="out-in"
+						>
 							<UIcon
-								v-if="isDownloaded"
-								name="mdi:check-circle"
-								class="text-success size-6"
+								v-if="isDownloading"
+								key="downloading"
+								name="line-md:downloading-loop"
+								class="text-primary size-8"
+							/>
+							<UIcon
+								v-else-if="isDownloaded"
+								key="delete"
+								name="material-symbols:delete-outline"
+								:class="
+									canDeleteDownload
+										? 'text-error size-8 cursor-pointer'
+										: 'text-gray-400 size-8 opacity-60 cursor-not-allowed'
+								"
+								@click.stop="deleteDownload"
+							/>
+							<UIcon
+								v-else
+								key="download"
+								name="material-symbols:download-for-offline-outline"
+								class="text-primary size-8 cursor-pointer"
+								@click.stop="startDownload"
 							/>
 						</Transition>
 					</div>
-				</div>
+
+					<Transition name="download-icon-pop">
+						<UIcon
+							v-if="isDownloaded"
+							name="mdi:check-circle"
+							class="text-success size-6"
+						/>
+					</Transition>
+				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent :scroll-y="true">
@@ -125,7 +129,7 @@ const currentArticle = ref<Article | null>(null);
 const loadedFromOffline = ref(false);
 const unavailableOffline = ref(false);
 
-const { article, fetch } = useArticle(route.params.id as string);
+const { article, fetch, fetchSimilar } = useArticle(route.params.id as string, makeMServerRequest);
 
 const downloads = useDownloads();
 const routeId = computed(() => route.params.id as string);
@@ -257,8 +261,8 @@ async function loadSimilar(article?: Article) {
 
 	relatedLoaded.value = false;
 
-	const res = await getSimilarArticlesM(article);
-	if (res.success && res.data) {
+	const res = await fetchSimilar();
+	if (valid(res)) {
 		relatedArticles.value = res.data;
 		relatedLoaded.value = true;
 	} else {

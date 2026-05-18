@@ -2,60 +2,64 @@
 	<IonPage>
 		<IonHeader>
 			<IonToolbar>
-				<div class="flex items-center justify-between w-full">
-					<Back />
-					<div class="mr-4 flex items-center gap-2">
-						<Share
-							v-if="currentActivity"
-							:payload="{
-								dialogTitle: 'Share Activity',
-								title: `Learn about ${currentActivity.name}`,
-								text: currentActivity.description,
-								url: `https://app.earth-app.com/activities/${currentActivity.id}`
-							}"
-						/>
+				<IonButtons slot="start">
+					<IonBackButton default-href="/tabs/dashboard" />
+				</IonButtons>
 
-						<div class="relative size-8 flex items-center justify-center">
-							<Transition
-								name="download-icon-fade"
-								mode="out-in"
-							>
-								<UIcon
-									v-if="isDownloading"
-									key="downloading"
-									name="line-md:downloading-loop"
-									class="text-primary size-8"
-								/>
-								<UIcon
-									v-else-if="isDownloaded"
-									name="material-symbols:download-for-offline"
-									class="text-success size-8"
-								/>
-								<UIcon
-									v-else
-									key="download"
-									name="material-symbols:download-for-offline-outline"
-									class="text-primary size-8 cursor-pointer"
-									@click.stop="startDownload"
-								/>
-							</Transition>
-						</div>
+				<IonButtons
+					slot="end"
+					class="gap-2 mx-2"
+				>
+					<Share
+						v-if="currentActivity"
+						:payload="{
+							dialogTitle: 'Share Activity',
+							title: `Learn about ${currentActivity.name}`,
+							text: currentActivity.description,
+							url: `https://app.earth-app.com/activities/${currentActivity.id}`
+						}"
+					/>
 
-						<Transition name="download-icon-pop">
+					<div class="relative size-8 flex items-center justify-center">
+						<Transition
+							name="download-icon-fade"
+							mode="out-in"
+						>
 							<UIcon
-								v-if="isDownloaded"
-								key="delete"
-								name="material-symbols:delete-outline"
-								:class="
-									canDeleteDownload
-										? 'text-error size-8 cursor-pointer'
-										: 'text-gray-400 size-8 opacity-60 cursor-not-allowed'
-								"
-								@click.stop="deleteDownload"
+								v-if="isDownloading"
+								key="downloading"
+								name="line-md:downloading-loop"
+								class="text-primary size-8"
+							/>
+							<UIcon
+								v-else-if="isDownloaded"
+								name="material-symbols:download-for-offline"
+								class="text-success size-8"
+							/>
+							<UIcon
+								v-else
+								key="download"
+								name="material-symbols:download-for-offline-outline"
+								class="text-primary size-8 cursor-pointer"
+								@click.stop="startDownload"
 							/>
 						</Transition>
 					</div>
-				</div>
+
+					<Transition name="download-icon-pop">
+						<UIcon
+							v-if="isDownloaded"
+							key="delete"
+							name="material-symbols:delete-outline"
+							:class="
+								canDeleteDownload
+									? 'text-error size-8 cursor-pointer'
+									: 'text-gray-400 size-8 opacity-60 cursor-not-allowed'
+							"
+							@click.stop="deleteDownload"
+						/>
+					</Transition>
+				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent

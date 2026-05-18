@@ -2,60 +2,64 @@
 	<IonPage>
 		<IonHeader>
 			<IonToolbar>
-				<div class="flex items-center justify-between w-full">
-					<Back />
-					<div class="mr-4 flex items-center gap-2">
-						<Share
-							v-if="currentPrompt"
-							:payload="{
-								dialogTitle: 'Share Prompt',
-								title: currentPrompt.prompt,
-								text: `Check out this prompt by @${currentPrompt.owner.username} on Earth App!`,
-								url: `https://app.earth-app.com/prompts/${currentPrompt.id}`
-							}"
-						/>
+				<IonButtons slot="start">
+					<IonBackButton default-href="/tabs/dashboard" />
+				</IonButtons>
 
-						<div class="relative size-8 flex items-center justify-center">
-							<Transition
-								name="download-icon-fade"
-								mode="out-in"
-							>
-								<UIcon
-									v-if="isDownloading"
-									key="downloading"
-									name="line-md:downloading-loop"
-									class="text-primary size-8"
-								/>
-								<UIcon
-									v-else-if="isDownloaded"
-									key="delete"
-									name="material-symbols:delete-outline"
-									:class="
-										canDeleteDownload
-											? 'text-error size-8 cursor-pointer'
-											: 'text-gray-400 size-8 opacity-60 cursor-not-allowed'
-									"
-									@click.stop="deleteDownload"
-								/>
-								<UIcon
-									v-else
-									key="download"
-									name="material-symbols:download-for-offline-outline"
-									class="text-primary size-8 cursor-pointer"
-									@click.stop="startDownload"
-								/>
-							</Transition>
-						</div>
+				<IonButtons
+					slot="end"
+					class="gap-2 mx-2"
+				>
+					<Share
+						v-if="currentPrompt"
+						:payload="{
+							dialogTitle: 'Share Prompt',
+							title: currentPrompt.prompt,
+							text: `Check out this prompt by @${currentPrompt.owner.username} on Earth App!`,
+							url: `https://app.earth-app.com/prompts/${currentPrompt.id}`
+						}"
+					/>
 
-						<Transition name="download-icon-pop">
+					<div class="relative size-8 flex items-center justify-center">
+						<Transition
+							name="download-icon-fade"
+							mode="out-in"
+						>
 							<UIcon
-								v-if="isDownloaded"
-								name="mdi:check-circle"
-								class="text-success size-6"
+								v-if="isDownloading"
+								key="downloading"
+								name="line-md:downloading-loop"
+								class="text-primary size-8"
+							/>
+							<UIcon
+								v-else-if="isDownloaded"
+								key="delete"
+								name="material-symbols:delete-outline"
+								:class="
+									canDeleteDownload
+										? 'text-error size-8 cursor-pointer'
+										: 'text-gray-400 size-8 opacity-60 cursor-not-allowed'
+								"
+								@click.stop="deleteDownload"
+							/>
+							<UIcon
+								v-else
+								key="download"
+								name="material-symbols:download-for-offline-outline"
+								class="text-primary size-8 cursor-pointer"
+								@click.stop="startDownload"
 							/>
 						</Transition>
 					</div>
-				</div>
+
+					<Transition name="download-icon-pop">
+						<UIcon
+							v-if="isDownloaded"
+							name="mdi:check-circle"
+							class="text-success size-6"
+						/>
+					</Transition>
+				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent
@@ -71,7 +75,6 @@
 			v-else-if="unavailableOffline"
 			class="h-screen flex flex-col"
 		>
-			<Back class="self-start" />
 			<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
 				<h2 class="text-xl font-semibold">Prompt unavailable offline</h2>
 				<p class="text-gray-500 text-sm">
@@ -83,7 +86,6 @@
 			v-else
 			class="h-screen"
 		>
-			<Back class="self-start" />
 			<div class="flex items-center justify-center h-full pb-8">
 				<IonSpinner name="crescent" />
 			</div>
