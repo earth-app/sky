@@ -7,7 +7,7 @@
 				</IonButtons>
 
 				<div class="flex flex-col py-1">
-					<IonTitle>Notifications - @{{ user?.username }} ({{ notifications.length }})</IonTitle>
+					<IonTitle>Notifications - @{{ user?.username }}</IonTitle>
 				</div>
 			</IonToolbar>
 		</IonHeader>
@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 const { user } = useAuth();
-const { notifications, fetchNotifications } = useNotifications();
+const { fetchNotifications } = useNotifications();
 
 onMounted(() => {
 	fetchNotifications();

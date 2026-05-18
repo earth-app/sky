@@ -6,8 +6,28 @@
 		>
 			No notifications
 		</div>
-		<div v-else>
-			<div class="flex justify-between mb-2">
+		<div
+			v-else
+			class="flex flex-col"
+		>
+			<div class="flex items-center mb-2">
+				<span class="text-sm! font-medium mr-2">
+					{{ notifications.length }} Notification{{ notifications.length > 1 ? 's' : '' }}
+				</span>
+				<span
+					v-if="unreadCount > 0"
+					class="text-xs! text-blue-500 dark:text-white bg-blue-100 dark:bg-blue-600 rounded-full px-2 py-0.5 border-2 border-blue-400/10 dark:border-white/30"
+				>
+					{{ unreadCount }} Unread
+				</span>
+				<span
+					v-else
+					class="text-xs! text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 rounded-full px-2 py-0.5 border-2 border-gray-300/10 dark:border-gray-600/30"
+				>
+					All Read
+				</span>
+			</div>
+			<div class="flex justify-start gap-2 my-2">
 				<IonButton
 					class="text-xs!"
 					size="small"
@@ -21,7 +41,7 @@
 					size="small"
 					fill="outline"
 					color="tertiary"
-					@click="notifications.splice(0, notifications.length)"
+					@click="clearAll"
 				>
 					Clear All
 				</IonButton>
@@ -42,7 +62,7 @@ const props = defineProps<{
 	additional?: boolean;
 }>();
 
-const { notifications, markAllNotificationsRead } = useNotifications();
+const { notifications, unreadCount, markAllNotificationsRead } = useNotifications();
 
 async function markAllRead() {
 	await markAllNotificationsRead();
@@ -52,10 +72,17 @@ const displayed = computed(() => {
 	return props.additional ? notifications.value : notifications.value.slice(0, 4);
 });
 
-function handleDelete(notification: UserNotification) {
+async function handleDelete(notification: UserNotification) {
 	const index = notifications.value.findIndex((n) => n.id === notification.id);
 	if (index !== -1) {
 		notifications.value.splice(index, 1);
 	}
+
+	await deleteNotification(notification.id);
+}
+
+async function clearAll() {
+	await Promise.all(notifications.value.map((n) => deleteNotification(n.id)));
+	notifications.value.splice(0, notifications.value.length);
 }
 </script>
