@@ -169,7 +169,10 @@ const props = defineProps<{
 	article: Article;
 }>();
 
-const { quiz, fetchQuiz, quizSummary, score, fetchQuizScore } = useArticle(props.article.id);
+const { quiz, fetchQuiz, quizSummary, score, fetchQuizScore, submitQuiz } = useArticle(
+	props.article.id,
+	makeMServerRequest
+);
 
 onMounted(() => {
 	fetchQuiz();
@@ -220,9 +223,7 @@ const handleSubmit = async () => {
 
 	submitting.value = true;
 	try {
-		await submitMArticleQuiz(
-			props.article,
-			quiz.value,
+		await submitQuiz(
 			userAnswers.value.map((answer) => {
 				if (typeof answer !== 'number' || Number.isNaN(answer)) {
 					throw new Error('Cannot submit an incomplete quiz.');
@@ -258,6 +259,7 @@ const quizCompleted = computed(() => {
 
 const currentResult = computed(() => {
 	if (!score.value || !currentQuestion.value) return null;
+	if (!score.value.results) return null;
 
 	return score.value.results[index.value] || null;
 });

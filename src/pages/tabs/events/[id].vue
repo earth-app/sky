@@ -5,7 +5,6 @@
 				<IonButtons slot="start">
 					<IonBackButton default-href="/tabs/profile/editor" />
 				</IonButtons>
-				<IonTitle>Event Details</IonTitle>
 			</IonToolbar>
 		</IonHeader>
 
@@ -41,7 +40,6 @@
 				v-else-if="unavailableOffline"
 				class="h-screen flex flex-col"
 			>
-				<Back class="self-start" />
 				<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
 					<h2 class="text-xl font-semibold">Event unavailable offline</h2>
 					<p class="text-gray-500 text-sm">Connect once to browse this event while online.</p>
@@ -51,7 +49,6 @@
 				v-else
 				class="h-screen"
 			>
-				<Back class="self-start" />
 				<div class="flex items-center justify-center h-full pb-8">
 					<IonSpinner name="crescent" />
 				</div>
@@ -72,7 +69,7 @@ const relatedLoaded = ref(false);
 const relatedEvents = ref<Event[]>([]);
 const unavailableOffline = ref(false);
 
-const { event, fetch } = useEvent(route.params.id as string);
+const { event, fetch, fetchSimilar } = useEvent(route.params.id as string, makeMServerRequest);
 onMounted(() => {
 	if (isOffline.value) {
 		unavailableOffline.value = true;
@@ -94,17 +91,16 @@ watch(isOffline, (offline) => {
 
 watch(event, async (newEvent) => {
 	if (newEvent) {
-		await loadSimilar(newEvent);
+		await loadSimilar();
 	}
 });
 
-async function loadSimilar(event?: Event) {
-	if (!event) return;
+async function loadSimilar() {
 	if (!user.value) return;
 	relatedLoaded.value = false;
 
-	const res = await getSimilarEventsM(event);
-	if (res.success && res.data) {
+	const res = await fetchSimilar();
+	if (valid(res)) {
 		relatedEvents.value = res.data;
 		relatedLoaded.value = true;
 	} else {

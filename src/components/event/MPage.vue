@@ -103,8 +103,10 @@ const props = defineProps<{
 	event: Event;
 }>();
 
-const { submissions, fetchSubmissions } = useEvent(props.event.id);
-const { thumbnail, thumbnailAuthor, fetchThumbnail } = useEventThumbnailM(props.event.id);
+const { submissions, fetchSubmissions, thumbnail, thumbnailAuthor, fetchThumbnail } = useEvent(
+	props.event.id,
+	makeMServerRequest
+);
 
 onMounted(() => {
 	if (!thumbnail.value) {

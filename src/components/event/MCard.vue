@@ -61,9 +61,12 @@ const {
 	fetchAttendees,
 	signUpForEvent,
 	leaveEvent,
-	deleteEvent
-} = useEvent(props.event.id || '');
-const { thumbnail, fetchThumbnail, unloadThumbnail } = useEventThumbnailM(props.event.id || '');
+	deleteEvent,
+	thumbnail,
+	fetchThumbnail,
+	unloadThumbnail
+} = useEvent(props.event.id || '', makeMServerRequest);
+
 onMounted(() => {
 	if (!isDataConstrained.value && !isOffline.value) {
 		fetchThumbnail();
