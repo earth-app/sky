@@ -9,7 +9,7 @@
 					? 'ring-2 ring-warning-300'
 					: 'ring-1 ring-neutral-300'
 		"
-		:router-link="canOpenPremium && quest.premium ? `/tabs/quests/${quest.id}` : undefined"
+		:router-link="canOpenPremium || !quest?.premium ? `/tabs/quests/${quest.id}` : undefined"
 		@click="premiumOpen = !canOpenPremium && !!quest.premium"
 	>
 		<IonCardHeader>
