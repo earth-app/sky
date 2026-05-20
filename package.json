@@ -43,7 +43,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capacitor/toast": "^8.0.1",
-    "@earth-app/crust": "0.3.3-5b8be1e",
+    "@earth-app/crust": "0.3.3-e769a5a",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "8.8.1",
@@ -54,10 +54,10 @@
     "@nuxtjs/google-fonts": "^3.2.0",
     "@nuxtjs/i18n": "^10.3.0",
     "@nuxtjs/ionic": "^1.0.2",
-    "@tiptap/extension-drag-handle": "^3.23.4",
+    "@tiptap/extension-drag-handle": "^3.23.5",
     "@types/luxon": "^3.7.1",
     "luxon": "^3.7.2",
-    "nuxt": "^4.4.5",
+    "nuxt": "^4.4.6",
     "nuxt-viewport": "^2.4.0",
     "piexifjs": "^1.0.6",
     "vue": "^3.5.34"
@@ -80,8 +80,8 @@
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.4",
-    "vue-tsc": "^3.2.9",
-    "wrangler": "^4.92.0"
+    "vue-tsc": "^3.3.1",
+    "wrangler": "^4.93.0"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
