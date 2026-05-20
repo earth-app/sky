@@ -191,6 +191,7 @@
 				<UserQuestStepMatcher
 					:step="step"
 					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:server-request="makeMServerRequest"
 					@submitted="emit('submitted')"
 				/>
 			</template>
@@ -199,6 +200,7 @@
 				<UserQuestStepOrderer
 					:step="step"
 					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:server-request="makeMServerRequest"
 					@submitted="emit('submitted')"
 				/>
 			</template>
