@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="relative min-h-96 min-w-1/4 aspect-3/4 overflow-hidden bg-neutral-950 border-8 border-neutral-900/40 rounded-2xl! p-8!"
+		class="relative min-h-96 min-w-1/4 aspect-3/4 overflow-hidden bg-neutral-950 border-8 border-neutral-900/40 rounded-2xl! p-8! max-h-[80vh]"
 	>
 		<div
 			v-if="stage === 'permission'"

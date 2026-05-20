@@ -65,6 +65,18 @@
 								context="login"
 							/>
 						</div>
+						<IonButton
+							expand="block"
+							fill="solid"
+							:color="theme"
+							@click="onboarding"
+						>
+							<UIcon
+								name="mdi:restart"
+								class="mr-2 size-5"
+							/>
+							Onboarding
+						</IonButton>
 					</div>
 					<div v-else>
 						<UIcon
@@ -75,10 +87,32 @@
 				</div>
 			</div>
 		</IonContent>
+
+		<IonModal
+			:is-open="onboardingOpen"
+			@didDismiss="onboardingOpen = false"
+			style="--max-height: 80%; --width: 80%; --min-width: 350px"
+		>
+			<IonContent
+				id="onboarding-modal-content"
+				class="border-2"
+				:scroll-y="true"
+			>
+				<OnboardingQuest
+					@done="
+						() => {
+							onboardingOpen = false;
+							goToSignup();
+						}
+					"
+				/>
+			</IonContent>
+		</IonModal>
 	</IonPage>
 </template>
 
 <script setup lang="ts">
+import { Preferences } from '@capacitor/preferences';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { OAUTH_PROVIDERS } from 'types/user';
 import slide from '~/animations/slide';
@@ -146,8 +180,19 @@ watch(
 			}
 
 			await navigateTo(destination);
+		} else {
+			const hasOpened = await Preferences.get({ key: 'hasOpened' });
+			if (!hasOpened.value) {
+				await Preferences.set({ key: 'hasOpened', value: 'true' });
+				onboarding();
+			}
 		}
 	},
 	{ immediate: true }
 );
+
+const onboardingOpen = ref(false);
+function onboarding() {
+	onboardingOpen.value = true;
+}
 </script>
