@@ -29,6 +29,10 @@
 		<string>
 			The Earth App needs your camera so you can take photos of the outside world!
 		</string>
+		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+		<string>
+			The Earth App needs your location to verify your location when taking photos!
+		</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>
 			The Earth App needs your location to verify your location when taking photos!
