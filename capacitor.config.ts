@@ -9,6 +9,10 @@ const config: CapacitorConfig = {
 	loggingBehavior: 'debug',
 	appendUserAgent: 'The Earth App/Sky',
 	backgroundColor: '#174f96',
+	server: {
+		androidScheme: 'https',
+		iosScheme: 'https'
+	},
 	plugins: {
 		CapacitorCookies: {
 			enabled: true
