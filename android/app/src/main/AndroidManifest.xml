@@ -21,6 +21,29 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Custom URL scheme for OAuth deep-link fallback when universal links are unavailable. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.earthapp.sky" />
+            </intent-filter>
+
+            <!-- App Link for the OAuth callback completion path on the Earth App domain.
+                 Requires assetlinks.json hosted at https://app.earth-app.com/.well-known/assetlinks.json
+                 to enable automatic verification. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="app.earth-app.com" />
+                <data android:pathPrefix="/oauth/complete" />
+                <data android:pathPrefix="/oauth-complete" />
+                <data android:pathPrefix="/auth/complete" />
+                <data android:pathPrefix="/auth/callback-mobile" />
+            </intent-filter>
         </activity>
 
         <provider
