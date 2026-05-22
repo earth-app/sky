@@ -249,7 +249,9 @@ const emit = defineEmits<{
 	submitted: [];
 }>();
 
-const { user } = useAuth();
+// Pipe auth/user lookups through the mobile request layer so this screen uses the same
+// offline-aware, data-saver-respecting transport as the rest of the mobile shell.
+const { user } = useAuth(makeMServerRequest);
 const { lat, lng, fetchLocation } = useGeolocation();
 const isNative = computed(() => Capacitor.isNativePlatform());
 const userId = computed(() => user.value?.id || '');
@@ -330,12 +332,17 @@ async function submitPhoto(file: File) {
 			succeeded.value = true;
 			await new Promise((r) => setTimeout(r, 900));
 			emit('submitted');
-		} else {
-			submitError.value = res.message || 'Validation failed. Please retake the photo.';
+			return;
 		}
-	} catch (e: any) {
-		submitError.value =
-			e?.data?.message || e?.statusMessage || e?.message || 'Submission failed. Please try again.';
+
+		submitError.value = formatApiError(
+			res.message,
+			'We could not validate that submission. Please try again.'
+		);
+		await showErrorToast(submitError.value, { duration: 'long' });
+	} catch (e: unknown) {
+		submitError.value = formatApiError(e, 'Submission failed. Please try again.');
+		await showErrorToast(submitError.value, { duration: 'long' });
 	} finally {
 		submitting.value = false;
 	}
@@ -393,7 +400,7 @@ watch(
 			return;
 		}
 
-		const { article, fetch } = useArticle(articleId);
+		const { article, fetch } = useArticle(articleId, makeMServerRequest);
 		await fetch();
 		stepArticle.value = article.value;
 	},

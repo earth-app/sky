@@ -176,16 +176,19 @@ async function handleSignup() {
 		return;
 	}
 
-	if (result.message.includes('409')) {
-		error.value = 'Username already exists. Please choose another.';
-	} else if (result.message.includes('400')) {
-		error.value = 'Invalid sign up data. Please check your inputs.';
-	} else if (result.message.includes('429')) {
-		error.value = 'Too many sign up attempts. Please try again later.';
-	} else if (result.message.includes('500')) {
-		error.value = 'Server error. Please try again later.';
+	const statusMatch = result.message?.match(/^(\d{3})\s*[:\-]\s*/);
+	const status = statusMatch ? Number(statusMatch[1]) : null;
+
+	if (status === 409) {
+		error.value = 'That username is already taken. Please choose another.';
+	} else if (status === 400 || status === 422) {
+		error.value = 'Some of the sign up details look invalid. Please review them and try again.';
+	} else if (status === 429) {
+		error.value = 'Too many sign up attempts. Please wait a moment and try again.';
+	} else if (status && status >= 500) {
+		error.value = 'The server is having trouble right now. Please try again shortly.';
 	} else {
-		error.value = result.message || 'Sign up failed. Please try again.';
+		error.value = formatApiError(result.message, 'Sign up failed. Please try again.');
 	}
 
 	await Toast.show({

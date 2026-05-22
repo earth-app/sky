@@ -99,22 +99,29 @@ const emit = defineEmits<{
 }>();
 
 function setLoginError(message?: string) {
-	if (message?.includes('401')) {
-		error.value = 'Invalid username/password.';
+	// crust's useLogin prefixes the status code (e.g. "401: Invalid credentials").
+	const statusMatch = message?.match(/^(\d{3})\s*[:\-]\s*/);
+	const status = statusMatch ? Number(statusMatch[1]) : null;
+
+	if (status === 401) {
+		error.value = 'Invalid username or password.';
 		return;
 	}
 
-	if (message?.includes('409')) {
-		error.value = 'Rate limited, try again later.';
+	if (status === 403) {
+		error.value = 'This account is disabled.';
 		return;
 	}
 
-	if (message?.includes('403')) {
-		error.value = 'Account disabled.';
+	if (status === 409 || status === 429) {
+		error.value = 'You are signing in too often. Please wait a moment and try again.';
 		return;
 	}
 
-	error.value = message || 'An error occurred during login. Please try again.';
+	error.value = formatApiError(
+		message,
+		'Login failed. Please check your credentials and try again.'
+	);
 }
 
 async function handleLogin() {
