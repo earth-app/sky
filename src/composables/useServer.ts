@@ -38,12 +38,16 @@ async function maybeDataSaverDelay() {
 	await new Promise((resolve) => setTimeout(resolve, 180));
 }
 
+export type ServerRequestResult<T> =
+	| { success: true; data: T }
+	| { success: false; message: string };
+
 export async function makeMServerRequest<T>(
 	key: string | null,
 	suburl: string,
 	token: string | null | undefined = null,
 	options: any = {}
-) {
+): Promise<ServerRequestResult<T>> {
 	if (isOfflineRequestBlocked()) {
 		return {
 			success: false,
@@ -54,33 +58,40 @@ export async function makeMServerRequest<T>(
 	try {
 		await maybeDataSaverDelay();
 
-		const headers: Record<string, string> = {
+		const baseHeaders: Record<string, string> = {
 			Accept: 'application/json',
 			'User-Agent': `Earth-App Sky/1.0`
 		};
 
 		if (token) {
-			headers['Authorization'] = `Bearer ${token}`;
+			baseHeaders['Authorization'] = `Bearer ${token}`;
 		}
 
 		if (options.body && (options.method === 'POST' || options.method === 'PATCH')) {
-			headers['Content-Type'] = 'application/json';
+			baseHeaders['Content-Type'] = 'application/json';
 		}
 
-		const data = await $fetch<T>(`https://app.earth-app.com${suburl}`, {
-			headers,
-			...options
+		// crustBaseUrl is used so dev environments can point at a local crust instance.
+		const config = useRuntimeConfig();
+		const baseUrl =
+			(config.public.crustBaseUrl as string | undefined) || 'https://app.earth-app.com';
+
+		const { headers: extraHeaders, ...restOptions } = options ?? {};
+
+		const data = await $fetch<T>(`${baseUrl}${suburl}`, {
+			...restOptions,
+			headers: { ...baseHeaders, ...(extraHeaders as Record<string, string> | undefined) }
 		});
 
 		return {
 			success: true,
 			data
 		};
-	} catch (error: any) {
-		console.error(`Failed to fetch ${key}:`, error);
+	} catch (error: unknown) {
+		console.error(`Failed to fetch ${key ?? suburl}:`, error);
 		return {
 			success: false,
-			message: error.message || 'An error occurred while fetching server data.'
+			message: formatApiError(error, 'An error occurred while fetching server data.')
 		};
 	}
 }
@@ -119,16 +130,15 @@ export async function updateQuestM(
 	}>(null, '/api/user/updateQuest', authStore.sessionToken, {
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${authStore.sessionToken}`,
 			'X-Latitude': String(lat ?? 0),
 			'X-Longitude': String(lng ?? 0)
 		},
 		body: stepResponse
 	});
 
-	if (!res.success || !res.data) {
+	if (!res.success) {
 		return {
-			message: res.data?.message || res.message || 'Failed to update quest',
+			message: formatApiError(res.message, 'Failed to update quest. Please try again.'),
 			completed: false,
 			validated: false
 		};
@@ -237,7 +247,7 @@ export function useTimeOnPageM(
 					}
 				);
 
-				if (!res.success || !res.data) {
+				if (!res.success) {
 					console.error('Failed to stop timer:', res.message);
 					return;
 				}
@@ -322,13 +332,29 @@ export function useTimeOnPageM(
 			window.removeEventListener('pagehide', handlePageHide);
 		};
 
+		// Track whether the component unmounted before the listener finished registering, so we
+		// can immediately remove a late-arriving handle and avoid a dangling listener.
+		let didUnmountBeforeListener = false;
+
 		void App.addListener('appStateChange', ({ isActive }) => {
 			isAppActive.value = isActive;
 			recomputeLifecycleState();
 			void syncTimer();
 		}).then((listener) => {
+			if (didUnmountBeforeListener) {
+				void listener.remove();
+				return;
+			}
 			appListener = listener;
 		});
+
+		// Expose the flag to the existing onUnmounted hook via a teardown callback so a late
+		// listener resolution still gets cleaned up.
+		const previousRemoveDocumentListeners = removeDocumentListeners;
+		removeDocumentListeners = () => {
+			didUnmountBeforeListener = true;
+			previousRemoveDocumentListeners?.();
+		};
 
 		recomputeLifecycleState();
 		void syncTimer();
