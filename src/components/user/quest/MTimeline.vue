@@ -212,12 +212,36 @@ const { getStepIcon } = useQuests();
 
 const loading = ref(false);
 const now = ref(Date.now());
-let _nowTimer: ReturnType<typeof setInterval>;
+let _nowTimer: ReturnType<typeof setInterval> | null = null;
+let _visibilityHandler: (() => void) | null = null;
 
-onMounted(() => {
+function startNowTimer() {
+	if (_nowTimer) return;
 	_nowTimer = setInterval(() => {
 		now.value = Date.now();
 	}, 10_000);
+}
+
+function stopNowTimer() {
+	if (_nowTimer) {
+		clearInterval(_nowTimer);
+		_nowTimer = null;
+	}
+}
+
+onMounted(() => {
+	startNowTimer();
+	if (typeof document !== 'undefined') {
+		_visibilityHandler = () => {
+			if (document.visibilityState === 'hidden') {
+				stopNowTimer();
+			} else {
+				now.value = Date.now();
+				startNowTimer();
+			}
+		};
+		document.addEventListener('visibilitychange', _visibilityHandler);
+	}
 });
 
 watch(
@@ -230,7 +254,11 @@ watch(
 );
 
 onUnmounted(() => {
-	clearInterval(_nowTimer);
+	stopNowTimer();
+	if (_visibilityHandler && typeof document !== 'undefined') {
+		document.removeEventListener('visibilitychange', _visibilityHandler);
+		_visibilityHandler = null;
+	}
 });
 
 const completed = computed(() => {
