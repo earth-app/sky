@@ -237,6 +237,7 @@ type SettingSection = {
 const { settings: appSettings, init: initSettings, setValue, resetToDefaults } = useAppSettings();
 const { selection, notifySuccess, notifyError } = useAppHaptics();
 const downloads = useDownloads();
+const router = useIonRouter();
 const actionLoading = reactive<Record<string, boolean>>({});
 
 async function clearCacheAction() {
@@ -485,6 +486,14 @@ const settingSections = computed<SettingSection[]>(() => [
 			},
 			{
 				kind: 'action',
+				title: 'Log Out',
+				description: 'Sign out of your account',
+				placeholder: 'Log Out',
+				color: 'danger',
+				action: logout
+			},
+			{
+				kind: 'action',
 				title: 'Restore Defaults',
 				description: 'Reset all settings to their default values',
 				placeholder: 'Restore',
@@ -528,6 +537,12 @@ async function runAction(item: ActionSettingItem) {
 	} finally {
 		actionLoading[item.title] = false;
 	}
+}
+
+async function logout() {
+	const authStore = useAuthStore();
+	authStore.logout();
+	router.navigate('/login', 'root', 'replace');
 }
 
 onMounted(async () => {

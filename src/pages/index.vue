@@ -179,6 +179,7 @@ watch(
 				await preloadRouteComponents(destination);
 			}
 
+			await Preferences.set({ key: 'hasOpened', value: 'true' });
 			await navigateTo(destination);
 		} else {
 			const hasOpened = await Preferences.get({ key: 'hasOpened' });

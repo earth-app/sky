@@ -3,7 +3,7 @@
 		color="danger"
 		:class="text ? 'my-4' : ''"
 		:fill="text ? 'solid' : 'clear'"
-		@click="router.back()"
+		@click="back"
 	>
 		<UIcon
 			name="mdi:arrow-left"
@@ -19,4 +19,16 @@ const router = useIonRouter();
 defineProps<{
 	text?: boolean;
 }>();
+
+const { user } = useAuth();
+
+function back() {
+	if (!user.value) router.push('/');
+
+	if (router.canGoBack()) {
+		router.back();
+	} else {
+		router.push('/');
+	}
+}
 </script>
