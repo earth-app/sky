@@ -34,7 +34,6 @@ ios/App/App/capacitor.plugins.json
 ios/DerivedData/
 *.xcuserstate
 *.xcworkspace/xcuserdata/
-ios/App/App/GoogleService-Info.plist
 
 # Android (Capacitor)
 android/.idea/
