@@ -109,7 +109,7 @@
 					</div>
 
 					<div
-						v-if="!hasInitialized || isRefreshing"
+						v-if="feedItems.length === 0 && (isRefreshing || isLoadingMore || !hasInitialized)"
 						class="flex items-center justify-center w-full py-8"
 					>
 						<IonSpinner name="crescent" />
@@ -576,11 +576,16 @@ async function loadMoreItems(count: number = 3) {
 		}
 
 		const promises = Array.from({ length: count }, (_, index) =>
-			withFeedItemTimeout(generateFeedItem(), `Feed item ${index + 1}`)
+			withFeedItemTimeout(generateFeedItem(), `Feed item ${index + 1}`).then((item) => {
+				if (item !== null) {
+					feedItems.value.push(item);
+					if (!hasInitialized.value) {
+						hasInitialized.value = true;
+					}
+				}
+			})
 		);
-		const items = await Promise.all(promises);
-		const validItems = items.filter((item): item is FeedItem => item !== null);
-		feedItems.value.push(...validItems);
+		await Promise.all(promises);
 	} catch (error) {
 		console.error('Error loading more items:', error);
 		await Toast.show({
