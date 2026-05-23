@@ -1,5 +1,5 @@
 import { Browser } from '@capacitor/browser';
-import type { PluginListenerHandle } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 
 type PushTeardown = () => Promise<void>;
@@ -31,10 +31,15 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 				return;
 			}
 
+			const platform = Capacitor.getPlatform();
+			if (platform !== 'ios' && platform !== 'android') {
+				return;
+			}
+
 			try {
 				await $fetch(`${config.public.apiBaseUrl}/v2/users/current/notifications/push`, {
 					method: 'POST',
-					body: { token: token.value },
+					body: { token: token.value, platform },
 					headers: {
 						Authorization: `Bearer ${sessionToken}`
 					}
