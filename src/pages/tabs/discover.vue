@@ -543,116 +543,108 @@ async function loadSearchResults(generation: number) {
 	const currentPage = page.value;
 	const currentSearch = activeSearch.value;
 
-	const [activitiesResult, promptsResult, articlesResult, eventsResult, usersResult] =
-		await Promise.allSettled([
-			withRequestTimeout(getActivities(currentPage, SEARCH_LIMIT, currentSearch)),
-			withRequestTimeout(getPrompts(currentPage, SEARCH_LIMIT, currentSearch)),
-			withRequestTimeout(getArticles(currentPage, SEARCH_LIMIT, currentSearch)),
-			withRequestTimeout(getEvents(currentPage, SEARCH_LIMIT, currentSearch)),
-			withRequestTimeout(getUsers(currentPage, SEARCH_LIMIT, currentSearch))
-		]);
+	let anyReceived = false;
 
-	if (generation !== queryGeneration.value) {
-		return;
-	}
+	const streamBatch = (items: DiscoverResult[]) => {
+		if (generation !== queryGeneration.value || items.length === 0) return;
+		anyReceived = true;
+		addUniqueResults(items);
+	};
 
-	const nextBatch: DiscoverResult[] = [];
+	await Promise.allSettled([
+		withRequestTimeout(getActivities(currentPage, SEARCH_LIMIT, currentSearch))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				const data = extractItemsFromResponse<Activity>(res);
+				hasMoreActivities.value =
+					data.total !== null
+						? data.total > currentPage * SEARCH_LIMIT
+						: data.items.length === SEARCH_LIMIT;
+				if (!res.success) {
+					hasMoreActivities.value = false;
+					await showLoadError('activity', res.message || 'Unknown error', generation);
+				}
+				streamBatch(toDiscoverItems(data.items, 'activity'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreActivities.value = false;
+				await showLoadError('activity', getErrorMessage(err), generation);
+			}),
+		withRequestTimeout(getPrompts(currentPage, SEARCH_LIMIT, currentSearch))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				const data = extractItemsFromResponse<Prompt>(res);
+				hasMorePrompts.value =
+					data.total !== null
+						? data.total > currentPage * SEARCH_LIMIT
+						: data.items.length === SEARCH_LIMIT;
+				if (!res.success) {
+					hasMorePrompts.value = false;
+					await showLoadError('prompt', res.message || 'Unknown error', generation);
+				}
+				streamBatch(toDiscoverItems(data.items, 'prompt'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMorePrompts.value = false;
+				await showLoadError('prompt', getErrorMessage(err), generation);
+			}),
+		withRequestTimeout(getArticles(currentPage, SEARCH_LIMIT, currentSearch))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				const data = extractItemsFromResponse<Article>(res);
+				hasMoreArticles.value =
+					data.total !== null
+						? data.total > currentPage * SEARCH_LIMIT
+						: data.items.length === SEARCH_LIMIT;
+				if (!res.success) {
+					hasMoreArticles.value = false;
+					await showLoadError('article', res.message || 'Unknown error', generation);
+				}
+				streamBatch(toDiscoverItems(data.items, 'article'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreArticles.value = false;
+				await showLoadError('article', getErrorMessage(err), generation);
+			}),
+		withRequestTimeout(getEvents(currentPage, SEARCH_LIMIT, currentSearch))
+			.then((res) => {
+				if (generation !== queryGeneration.value) return;
+				const items = Array.isArray(res.items) ? res.items : [];
+				hasMoreEvents.value = res.total > currentPage * SEARCH_LIMIT;
+				streamBatch(toDiscoverItems(items, 'event'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreEvents.value = false;
+				await showLoadError('event', getErrorMessage(err), generation);
+			}),
+		withRequestTimeout(getUsers(currentPage, SEARCH_LIMIT, currentSearch))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				const data = extractItemsFromResponse<User>(res);
+				hasMoreUsers.value =
+					data.total !== null
+						? data.total > currentPage * SEARCH_LIMIT
+						: data.items.length === SEARCH_LIMIT;
+				if (!res.success) {
+					hasMoreUsers.value = false;
+					await showLoadError('user', res.message || 'Unknown error', generation);
+				}
+				streamBatch(toDiscoverItems(data.items, 'user'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreUsers.value = false;
+				await showLoadError('user', getErrorMessage(err), generation);
+			})
+	]);
 
-	if (activitiesResult.status === 'fulfilled') {
-		const activityData = extractItemsFromResponse<Activity>(activitiesResult.value);
-		nextBatch.push(...toDiscoverItems(activityData.items, 'activity'));
+	if (generation !== queryGeneration.value) return;
 
-		if (activityData.total !== null) {
-			hasMoreActivities.value = activityData.total > currentPage * SEARCH_LIMIT;
-		} else {
-			hasMoreActivities.value = activityData.items.length === SEARCH_LIMIT;
-		}
-
-		if (!activitiesResult.value.success) {
-			hasMoreActivities.value = false;
-			await showLoadError(
-				'activity',
-				activitiesResult.value.message || 'Unknown error',
-				generation
-			);
-		}
-	} else {
-		hasMoreActivities.value = false;
-		await showLoadError('activity', getErrorMessage(activitiesResult.reason), generation);
-	}
-
-	if (promptsResult.status === 'fulfilled') {
-		const promptData = extractItemsFromResponse<Prompt>(promptsResult.value);
-		nextBatch.push(...toDiscoverItems(promptData.items, 'prompt'));
-
-		if (promptData.total !== null) {
-			hasMorePrompts.value = promptData.total > currentPage * SEARCH_LIMIT;
-		} else {
-			hasMorePrompts.value = promptData.items.length === SEARCH_LIMIT;
-		}
-
-		if (!promptsResult.value.success) {
-			hasMorePrompts.value = false;
-			await showLoadError('prompt', promptsResult.value.message || 'Unknown error', generation);
-		}
-	} else {
-		hasMorePrompts.value = false;
-		await showLoadError('prompt', getErrorMessage(promptsResult.reason), generation);
-	}
-
-	if (articlesResult.status === 'fulfilled') {
-		const articleData = extractItemsFromResponse<Article>(articlesResult.value);
-		nextBatch.push(...toDiscoverItems(articleData.items, 'article'));
-
-		if (articleData.total !== null) {
-			hasMoreArticles.value = articleData.total > currentPage * SEARCH_LIMIT;
-		} else {
-			hasMoreArticles.value = articleData.items.length === SEARCH_LIMIT;
-		}
-
-		if (!articlesResult.value.success) {
-			hasMoreArticles.value = false;
-			await showLoadError('article', articlesResult.value.message || 'Unknown error', generation);
-		}
-	} else {
-		hasMoreArticles.value = false;
-		await showLoadError('article', getErrorMessage(articlesResult.reason), generation);
-	}
-
-	if (eventsResult.status === 'fulfilled') {
-		const eventItems = Array.isArray(eventsResult.value.items) ? eventsResult.value.items : [];
-		nextBatch.push(...toDiscoverItems(eventItems, 'event'));
-		hasMoreEvents.value = eventsResult.value.total > currentPage * SEARCH_LIMIT;
-	} else {
-		hasMoreEvents.value = false;
-		await showLoadError('event', getErrorMessage(eventsResult.reason), generation);
-	}
-
-	if (usersResult.status === 'fulfilled') {
-		const userData = extractItemsFromResponse<User>(usersResult.value);
-		nextBatch.push(...toDiscoverItems(userData.items, 'user'));
-
-		if (userData.total !== null) {
-			hasMoreUsers.value = userData.total > currentPage * SEARCH_LIMIT;
-		} else {
-			hasMoreUsers.value = userData.items.length === SEARCH_LIMIT;
-		}
-
-		if (!usersResult.value.success) {
-			hasMoreUsers.value = false;
-			await showLoadError('user', usersResult.value.message || 'Unknown error', generation);
-		}
-	} else {
-		hasMoreUsers.value = false;
-		await showLoadError('user', getErrorMessage(usersResult.reason), generation);
-	}
-
-	const addedCount = addUniqueResults(nextBatch);
-	if (addedCount === 0 && nextBatch.length > 0) {
-		results.value.push(...nextBatch);
-	}
-
-	if (addedCount > 0 || nextBatch.length > 0 || hasMore.value) {
+	if (anyReceived || hasMore.value) {
 		page.value = currentPage + 1;
 	}
 }
@@ -713,100 +705,105 @@ async function loadRandomResults(generation: number) {
 	const currentPage = page.value;
 	const randomCount = RANDOM_FETCH_BASE + ((currentPage - 1) % 3);
 
-	const [activitiesResult, promptsResult, articlesResult, eventsResult, usersResult] =
-		await Promise.allSettled([
-			withRequestTimeout(getRandomActivities(randomCount)),
-			withRequestTimeout(getRandomPrompts(randomCount)),
-			withRequestTimeout(fetchRecommendedArticlesOrRandom(randomCount)),
-			withRequestTimeout(fetchRecommendedEventsOrRandom(randomCount)),
-			withRequestTimeout(getUsers(currentPage, randomCount, '', 'rand'))
-		]);
+	let anyReceived = false;
+	let addedSoFar = 0;
 
-	if (generation !== queryGeneration.value) {
-		return;
-	}
+	const streamBatch = (items: DiscoverResult[]) => {
+		if (generation !== queryGeneration.value || items.length === 0) return;
+		anyReceived = true;
 
-	const randomPool: DiscoverResult[] = [];
+		const remaining = Math.max(0, RANDOM_LIMIT - addedSoFar);
+		if (remaining === 0) return;
 
-	if (activitiesResult.status === 'fulfilled') {
-		const activityData = extractItemsFromResponse<Activity>(activitiesResult.value);
-		randomPool.push(...toDiscoverItems(activityData.items, 'activity'));
-		hasMoreActivities.value = activityData.items.length > 0;
+		const shuffled = shuffleResults(items).slice(0, remaining);
+		const added = addUniqueResults(shuffled);
+		addedSoFar += added;
+	};
 
-		if (!activitiesResult.value.success) {
-			hasMoreActivities.value = false;
-			await showLoadError(
-				'activity',
-				activitiesResult.value.message || 'Unknown error',
-				generation
-			);
-		}
-	} else {
-		hasMoreActivities.value = false;
-		await showLoadError('activity', getErrorMessage(activitiesResult.reason), generation);
-	}
+	await Promise.allSettled([
+		withRequestTimeout(getRandomActivities(randomCount))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				const data = extractItemsFromResponse<Activity>(res);
+				hasMoreActivities.value = data.items.length > 0;
+				if (!res.success) {
+					hasMoreActivities.value = false;
+					await showLoadError('activity', res.message || 'Unknown error', generation);
+				}
+				streamBatch(toDiscoverItems(data.items, 'activity'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreActivities.value = false;
+				await showLoadError('activity', getErrorMessage(err), generation);
+			}),
+		withRequestTimeout(getRandomPrompts(randomCount))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				const data = extractItemsFromResponse<Prompt>(res);
+				hasMorePrompts.value = data.items.length > 0;
+				if (!res.success) {
+					hasMorePrompts.value = false;
+					await showLoadError('prompt', res.message || 'Unknown error', generation);
+				}
+				streamBatch(toDiscoverItems(data.items, 'prompt'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMorePrompts.value = false;
+				await showLoadError('prompt', getErrorMessage(err), generation);
+			}),
+		withRequestTimeout(fetchRecommendedArticlesOrRandom(randomCount))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreArticles.value = res.items.length > 0;
+				if (res.error) {
+					hasMoreArticles.value = false;
+					await showLoadError('article', res.error, generation);
+				}
+				streamBatch(toDiscoverItems(res.items, 'article'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreArticles.value = false;
+				await showLoadError('article', getErrorMessage(err), generation);
+			}),
+		withRequestTimeout(fetchRecommendedEventsOrRandom(randomCount))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreEvents.value = res.items.length > 0;
+				if (res.error) {
+					hasMoreEvents.value = false;
+					await showLoadError('event', res.error, generation);
+				}
+				streamBatch(toDiscoverItems(res.items, 'event'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreEvents.value = false;
+				await showLoadError('event', getErrorMessage(err), generation);
+			}),
+		withRequestTimeout(getUsers(currentPage, randomCount, '', 'rand'))
+			.then(async (res) => {
+				if (generation !== queryGeneration.value) return;
+				const data = extractItemsFromResponse<User>(res);
+				hasMoreUsers.value = data.items.length > 0;
+				if (!res.success) {
+					hasMoreUsers.value = false;
+					await showLoadError('user', res.message || 'Unknown error', generation);
+				}
+				streamBatch(toDiscoverItems(data.items, 'user'));
+			})
+			.catch(async (err) => {
+				if (generation !== queryGeneration.value) return;
+				hasMoreUsers.value = false;
+				await showLoadError('user', getErrorMessage(err), generation);
+			})
+	]);
 
-	if (promptsResult.status === 'fulfilled') {
-		const promptData = extractItemsFromResponse<Prompt>(promptsResult.value);
-		randomPool.push(...toDiscoverItems(promptData.items, 'prompt'));
-		hasMorePrompts.value = promptData.items.length > 0;
+	if (generation !== queryGeneration.value) return;
 
-		if (!promptsResult.value.success) {
-			hasMorePrompts.value = false;
-			await showLoadError('prompt', promptsResult.value.message || 'Unknown error', generation);
-		}
-	} else {
-		hasMorePrompts.value = false;
-		await showLoadError('prompt', getErrorMessage(promptsResult.reason), generation);
-	}
-
-	if (articlesResult.status === 'fulfilled') {
-		randomPool.push(...toDiscoverItems(articlesResult.value.items, 'article'));
-		hasMoreArticles.value = articlesResult.value.items.length > 0;
-
-		if (articlesResult.value.error) {
-			hasMoreArticles.value = false;
-			await showLoadError('article', articlesResult.value.error, generation);
-		}
-	} else {
-		hasMoreArticles.value = false;
-		await showLoadError('article', getErrorMessage(articlesResult.reason), generation);
-	}
-
-	if (eventsResult.status === 'fulfilled') {
-		randomPool.push(...toDiscoverItems(eventsResult.value.items, 'event'));
-		hasMoreEvents.value = eventsResult.value.items.length > 0;
-
-		if (eventsResult.value.error) {
-			hasMoreEvents.value = false;
-			await showLoadError('event', eventsResult.value.error, generation);
-		}
-	} else {
-		hasMoreEvents.value = false;
-		await showLoadError('event', getErrorMessage(eventsResult.reason), generation);
-	}
-
-	if (usersResult.status === 'fulfilled') {
-		const userData = extractItemsFromResponse<User>(usersResult.value);
-		randomPool.push(...toDiscoverItems(userData.items, 'user'));
-		hasMoreUsers.value = userData.items.length > 0;
-
-		if (!usersResult.value.success) {
-			hasMoreUsers.value = false;
-			await showLoadError('user', usersResult.value.message || 'Unknown error', generation);
-		}
-	} else {
-		hasMoreUsers.value = false;
-		await showLoadError('user', getErrorMessage(usersResult.reason), generation);
-	}
-
-	const limitedBatch = shuffleResults(randomPool).slice(0, RANDOM_LIMIT);
-	const addedCount = addUniqueResults(limitedBatch);
-	if (addedCount === 0 && limitedBatch.length > 0) {
-		results.value.push(...limitedBatch);
-	}
-
-	if (addedCount > 0 || limitedBatch.length > 0 || hasMore.value) {
+	if (anyReceived || hasMore.value) {
 		page.value = currentPage + 1;
 	}
 }
