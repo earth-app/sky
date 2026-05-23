@@ -1,7 +1,14 @@
-type DeepLinkResult = {
-	type: 'internal' | 'external' | 'ignore';
-	target: string;
-};
+type DeepLinkResult =
+	| { type: 'internal'; target: string }
+	| { type: 'external'; target: string }
+	| { type: 'ignore'; target: string }
+	| {
+			type: 'oauth-complete';
+			target: string;
+			sessionToken: string;
+			provider: string;
+			context: string;
+	  };
 
 const EXTERNAL_ONLY_PATHS = new Set([
 	'/about',
@@ -12,6 +19,13 @@ const EXTERNAL_ONLY_PATHS = new Set([
 ]);
 
 const TABS_PREFIX_PATHS = ['/activities/', '/articles/', '/events/', '/prompts/'];
+
+const OAUTH_COMPLETE_PATHS = new Set([
+	'/oauth/complete',
+	'/oauth-complete',
+	'/auth/complete',
+	'/auth/callback-mobile'
+]);
 
 function normalizePath(pathname: string) {
 	if (!pathname) return '/';
@@ -69,14 +83,59 @@ export function useDeepLinkRouting() {
 			return { type: 'ignore', target: '' };
 		}
 
+		const isCustomScheme = parsed.protocol === 'com.earthapp.sky:';
 		const host = parsed.host.toLowerCase();
-		if (!allowedHosts.value.has(host)) {
+		if (!isCustomScheme && !allowedHosts.value.has(host)) {
 			return { type: 'ignore', target: '' };
 		}
 
 		const pathname = normalizePath(parsed.pathname);
 		const query = parsed.search || '';
 		const hash = parsed.hash || '';
+
+		// OAuth callback completion (universal/app link from the crust callback) — extract token and
+		// hand back to the caller so it can populate the auth store and route the user in-app.
+		if (
+			isCustomScheme ||
+			OAUTH_COMPLETE_PATHS.has(pathname) ||
+			pathname.startsWith('/oauth/complete/')
+		) {
+			const sessionToken =
+				parsed.searchParams.get('session_token') ||
+				parsed.searchParams.get('sessionToken') ||
+				parsed.searchParams.get('token') ||
+				new URLSearchParams(parsed.hash.replace(/^#/, '')).get('session_token') ||
+				'';
+			const provider = parsed.searchParams.get('provider') || '';
+			// Crust returns the resolved context directly in the `context` query param.
+			// Older flows may still send the raw `state` value (e.g. "github:mobile:signup");
+			// take the trailing segment in that case.
+			const rawContext =
+				parsed.searchParams.get('context') || parsed.searchParams.get('state') || '';
+			const context = rawContext.includes(':')
+				? rawContext.split(':').filter(Boolean).pop() || ''
+				: rawContext;
+
+			if (sessionToken) {
+				return {
+					type: 'oauth-complete',
+					target: '/tabs/dashboard',
+					sessionToken,
+					provider,
+					context
+				};
+			}
+
+			// No token — treat as a sign-in error. Route back to the form that started the flow so
+			// the existing error toast pipeline can surface a contextual message.
+			const errorCode = parsed.searchParams.get('error') || 'auth_failed';
+			const errorTarget =
+				context === 'signup' ? '/signup' : context === 'link' ? '/tabs/profile/editor' : '/login';
+			return {
+				type: 'internal',
+				target: `${errorTarget}?error=${encodeURIComponent(errorCode)}`
+			};
+		}
 
 		if (EXTERNAL_ONLY_PATHS.has(pathname)) {
 			return { type: 'external', target: parsed.toString() };

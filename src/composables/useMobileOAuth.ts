@@ -6,16 +6,20 @@ type OAuthFlowContext = 'login' | 'signup' | 'link' | 'unlink' | 'unknown';
 type OAuthFlowState = {
 	active: boolean;
 	context: OAuthFlowContext;
+	provider: string;
 	startedAt: number;
 };
 
 const OAUTH_FLOW_STORAGE_KEY = 'mobile_oauth_flow_state';
 const OAUTH_FLOW_MAX_AGE_MS = 15 * 60 * 1000;
 
+const REQUIRED_QUERY_PARAMS = ['client_id'] as const;
+
 function getDefaultState(): OAuthFlowState {
 	return {
 		active: false,
 		context: 'unknown',
+		provider: '',
 		startedAt: 0
 	};
 }
@@ -31,6 +35,7 @@ function readState(): OAuthFlowState {
 		const nextState: OAuthFlowState = {
 			active: Boolean(parsed.active),
 			context: (parsed.context as OAuthFlowContext) || 'unknown',
+			provider: typeof parsed.provider === 'string' ? parsed.provider : '',
 			startedAt: Number(parsed.startedAt || 0)
 		};
 
@@ -54,16 +59,94 @@ function writeState(nextState: OAuthFlowState) {
 	}
 }
 
+export type OAuthValidationResult =
+	| { ok: true }
+	| {
+			ok: false;
+			reason: 'invalid-url' | 'missing-client-id' | 'unsupported-provider';
+			detail?: string;
+	  };
+
+export function validateOAuthUrl(url: string): OAuthValidationResult {
+	if (!url || typeof url !== 'string') {
+		return { ok: false, reason: 'invalid-url' };
+	}
+
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return { ok: false, reason: 'invalid-url' };
+	}
+
+	for (const param of REQUIRED_QUERY_PARAMS) {
+		const value = parsed.searchParams.get(param);
+		if (!value) {
+			return { ok: false, reason: 'missing-client-id', detail: param };
+		}
+	}
+
+	return { ok: true };
+}
+
+// Crust's mobile contract: the OAuth `state` parameter must be `<provider>:mobile[:context]`.
+// The server reads `:mobile` and routes the callback through the mobile-aware /oauth/complete path
+// (universal/app-link target) instead of the web profile page. Context defaults are server-inferred
+// when omitted, so we leave the third segment off for the 'unknown' context.
+const MOBILE_STATE_CONTEXTS: ReadonlySet<OAuthFlowContext> = new Set(['login', 'signup', 'link']);
+
+export function applyMobileOAuthState(url: string, context: OAuthFlowContext): string {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return url;
+	}
+
+	const currentState = parsed.searchParams.get('state');
+	if (!currentState || currentState.includes(':mobile')) {
+		return url;
+	}
+
+	const suffix = MOBILE_STATE_CONTEXTS.has(context) ? `:mobile:${context}` : ':mobile';
+	parsed.searchParams.set('state', `${currentState}${suffix}`);
+	return parsed.toString();
+}
+
 export function useMobileOAuth() {
 	const isNative = Capacitor.isNativePlatform();
 
 	const state = ref<OAuthFlowState>(readState());
 
-	const beginFlow = async (url: string, context: OAuthFlowContext = 'unknown') => {
+	const beginFlow = async (
+		url: string,
+		context: OAuthFlowContext = 'unknown',
+		provider: string = ''
+	) => {
+		const validation = validateOAuthUrl(url);
+		if (!validation.ok) {
+			const messages: Record<OAuthValidationResult['ok'] extends false ? string : never, string> = {
+				'invalid-url': 'The sign-in URL is malformed. Please try another method.',
+				'missing-client-id':
+					'OAuth is not fully configured for this build. Please contact support.',
+				'unsupported-provider': 'That sign-in provider is not supported on mobile.'
+			} as Record<string, string>;
+
+			const message =
+				(messages as Record<string, string>)[validation.reason] || 'Unable to start sign-in.';
+			throw new Error(message);
+		}
+
+		// Rewrite the `state` query param to follow crust's mobile contract so the server-side
+		// callback redirects to /oauth/complete (universal/app-link target) instead of the web
+		// profile page.
+		const targetUrl = applyMobileOAuthState(url, context);
+
 		const previousState = state.value;
 		const nextState: OAuthFlowState = {
 			active: true,
 			context,
+			provider,
 			startedAt: Date.now()
 		};
 
@@ -73,13 +156,13 @@ export function useMobileOAuth() {
 		try {
 			if (isNative) {
 				await Browser.open({
-					url,
+					url: targetUrl,
 					presentationStyle: 'fullscreen'
 				});
 				return;
 			}
 
-			await navigateTo(url, { external: true });
+			await navigateTo(targetUrl, { external: true });
 		} catch (error) {
 			state.value = previousState;
 			writeState(previousState);

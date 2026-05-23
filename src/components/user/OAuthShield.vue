@@ -20,7 +20,6 @@
 </template>
 
 <script setup lang="ts">
-import { Toast } from '@capacitor/toast';
 import type { OAuthProvider } from 'types/user';
 import { capitalizeFully } from 'utils';
 
@@ -82,12 +81,11 @@ async function startOauth() {
 	try {
 		await impactLight();
 		const authUrl = authLink(props.provider);
-		await beginFlow(authUrl, props.context);
-	} catch (error: any) {
+		await beginFlow(authUrl, props.context, props.provider);
+	} catch (error: unknown) {
 		notifyError();
-		await Toast.show({
-			text: error?.message || 'Failed to start OAuth sign-in.',
-			duration: 'long'
+		await showErrorToast(error, {
+			fallback: `Failed to start sign-in with ${capitalizeFully(props.provider)}.`
 		});
 	}
 }

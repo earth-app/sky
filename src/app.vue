@@ -194,8 +194,10 @@ let navHandler: (() => void) | null = null;
 let stopUserCacheWatch: (() => void) | null = null;
 let stopOfflineSettingWatch: (() => void) | null = null;
 let stopDataSaverSettingWatch: (() => void) | null = null;
+let pushTeardown: (() => Promise<void>) | null = null;
 
 const handledDeepLinkTimestamps = new Map<string, number>();
+const MAX_DEEP_LINK_HISTORY = 64;
 
 let appUrlListener: PluginListenerHandle | null = null;
 let browserFinishedListener: PluginListenerHandle | null = null;
@@ -245,6 +247,14 @@ function shouldIgnoreDuplicateDeepLink(url: string) {
 		}
 	}
 
+	// Guard against an unbounded set of unique URLs in a long session.
+	if (handledDeepLinkTimestamps.size > MAX_DEEP_LINK_HISTORY) {
+		const oldestKey = handledDeepLinkTimestamps.keys().next().value;
+		if (oldestKey !== undefined) {
+			handledDeepLinkTimestamps.delete(oldestKey);
+		}
+	}
+
 	return now - last < 1_500;
 }
 
@@ -255,6 +265,28 @@ async function handleIncomingDeepLink(url: string) {
 	if (resolved.type === 'ignore') return;
 
 	const flowState = refreshFlowState();
+
+	if (resolved.type === 'oauth-complete') {
+		await closeBrowser();
+		clearFlow();
+
+		authStore.setSessionToken(resolved.sessionToken);
+
+		if (!isOffline.value) {
+			await hydrateUser();
+		}
+
+		const effectiveContext = resolved.context || flowState.context;
+		const destination =
+			effectiveContext === 'signup' && user.value && !user.value.account?.email_verified
+				? '/verify-email'
+				: resolved.target;
+
+		await navigateTo(destination, { replace: true });
+		notifySuccess();
+		return;
+	}
+
 	if (flowState.active) {
 		await closeBrowser();
 		clearFlow();
@@ -360,6 +392,12 @@ onMounted(async () => {
 		if (launchUrl?.url) {
 			await handleIncomingDeepLink(launchUrl.url);
 		}
+
+		try {
+			pushTeardown = await initPushNotifications();
+		} catch (error) {
+			console.warn('Push notification setup failed:', error);
+		}
 		return;
 	}
 
@@ -379,11 +417,6 @@ onMounted(async () => {
 	window.addEventListener('online', updateFromNavigator);
 	window.addEventListener('offline', updateFromNavigator);
 	navHandler = updateFromNavigator;
-
-	// register push notifications
-	if (isNative) {
-		await initPushNotifications();
-	}
 });
 
 onBeforeUnmount(() => {
@@ -407,6 +440,12 @@ onBeforeUnmount(() => {
 
 	appUrlListener = null;
 	browserFinishedListener = null;
+
+	if (pushTeardown) {
+		const teardown = pushTeardown;
+		pushTeardown = null;
+		void teardown().catch((error) => console.warn('Push teardown failed:', error));
+	}
 });
 
 useBackButton(10, () => {
