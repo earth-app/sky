@@ -136,6 +136,7 @@ export default defineNuxtConfig({
 		'@nuxtjs/i18n',
 		'nuxt-viewport',
 		'@pinia/nuxt',
+		'@vueuse/nuxt',
 		[
 			'@nuxtjs/google-fonts',
 			{
