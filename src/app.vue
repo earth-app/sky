@@ -222,13 +222,13 @@ if (import.meta.client) {
 	);
 }
 
+const appName = config.name;
+const appThemeColor = config.themeColor;
+
 useSeoMeta({
 	charset: 'utf-8',
-	title: config.name,
-	themeColor: {
-		content: config.themeColor,
-		media: '(prefers-color-scheme: dark)'
-	},
+	title: appName,
+	themeColor: appThemeColor,
 	mobileWebAppCapable: 'yes',
 	appleMobileWebAppCapable: 'yes',
 	appleMobileWebAppStatusBarStyle: 'black'
