@@ -155,8 +155,18 @@
 
 <script setup lang="ts">
 import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
+import { Dialog } from '@capacitor/dialog';
 import { Geolocation } from '@capacitor/geolocation';
+import { PushNotifications } from '@capacitor/push-notifications';
 import { Toast } from '@capacitor/toast';
+import type { OAuthProvider } from 'types/user';
+import { capitalizeFully } from 'utils';
+import {
+	isAppleNativeAvailable,
+	isAppleNativeUnavailableError,
+	startAppleNativeAuth
+} from '~/composables/useAppleNativeAuth';
 import type { AppSettingKey } from '~/composables/useSettings';
 
 declare const __APP_VERSION__: string;
@@ -235,10 +245,113 @@ type SettingSection = {
 };
 
 const { settings: appSettings, init: initSettings, setValue, resetToDefaults } = useAppSettings();
-const { selection, notifySuccess, notifyError } = useAppHaptics();
+const { selection, impactLight, impactMedium, notifySuccess, notifyWarning, notifyError } =
+	useAppHaptics();
+const { user: authUser, fetchUser } = useAuth();
+const { isNative, beginFlow } = useMobileOAuth();
+const authStore = useAuthStore();
+const config = useRuntimeConfig();
 const downloads = useDownloads();
 const router = useIonRouter();
 const actionLoading = reactive<Record<string, boolean>>({});
+
+function isProviderLinked(provider: OAuthProvider): boolean {
+	return Boolean(authUser.value?.account?.linked_providers?.includes(provider));
+}
+
+async function connectProvider(provider: OAuthProvider) {
+	try {
+		await impactLight();
+
+		if (provider === 'apple' && isAppleNativeAvailable()) {
+			try {
+				await startAppleNativeAuth('link');
+				await fetchUser(true);
+				notifySuccess();
+				await Toast.show({
+					text: 'Apple account connected.',
+					duration: 'short'
+				});
+				return;
+			} catch (error) {
+				// Plugin JS shim is present but native side isn't linked yet — fall
+				// through to the browser flow so the user can still connect Apple.
+				if (!isAppleNativeUnavailableError(error)) {
+					throw error;
+				}
+				console.warn(
+					'Native Apple Sign In is not available in this build; falling back to browser flow.'
+				);
+			}
+		}
+
+		// Pass source='mobile' so crust's callback parses the state's second
+		// segment as 'mobile' (not 'web') and honors the 4th-segment session
+		// token that applyMobileOAuthState appends for native link flows.
+		const authUrl = authLink(provider, 'link', 'mobile');
+		await beginFlow(authUrl, 'link', provider);
+	} catch (error) {
+		notifyError();
+		await showErrorToast(error, {
+			fallback: `Failed to connect ${capitalizeFully(provider)}.`
+		});
+	}
+}
+
+async function disconnectProvider(provider: OAuthProvider) {
+	const linkedCount = authUser.value?.account?.linked_providers?.length || 0;
+	if (!authUser.value?.account?.has_password && linkedCount <= 1) {
+		notifyWarning();
+		await Toast.show({
+			text: 'You cannot disconnect your only authentication method. Set a password first.',
+			duration: 'long'
+		});
+		return;
+	}
+
+	const confirmed = await Dialog.confirm({
+		title: `Disconnect ${capitalizeFully(provider)}`,
+		message: `Are you sure you want to disconnect your ${capitalizeFully(provider)} account?`
+	});
+	if (!confirmed.value) {
+		notifyWarning();
+		return;
+	}
+
+	try {
+		await impactMedium();
+		const unlinkUrl = new URL('/api/auth/unlink-callback', config.public.baseUrl);
+		unlinkUrl.searchParams.set('provider', provider);
+		// The SafariViewController cookie jar doesn't share with the app's
+		// localStorage-based auth, so on native we surface the session token in
+		// the URL so crust's unlink-callback can authenticate the request.
+		if (isNative && authStore.sessionToken) {
+			unlinkUrl.searchParams.set('session_token', authStore.sessionToken);
+		}
+		await beginFlow(unlinkUrl.toString(), 'unlink', provider);
+	} catch (error) {
+		notifyError();
+		await showErrorToast(error, {
+			fallback: `Failed to disconnect ${capitalizeFully(provider)}.`
+		});
+	}
+}
+
+const oauth2Items = computed<SettingSection['items']>(() =>
+	OAUTH_PROVIDERS.map((provider) => {
+		const linked = isProviderLinked(provider);
+		return {
+			kind: 'action' as const,
+			title: `${capitalizeFully(provider)}${linked ? ' (Connected)' : ''}`,
+			description: linked
+				? `Disconnect your ${capitalizeFully(provider)} account from this app`
+				: `Connect your ${capitalizeFully(provider)} account to this app`,
+			placeholder: linked ? 'Disconnect' : 'Connect',
+			color: linked ? 'danger' : 'tertiary',
+			action: () => (linked ? disconnectProvider(provider) : connectProvider(provider))
+		};
+	})
+);
 
 async function clearCacheAction() {
 	if (import.meta.client && typeof caches !== 'undefined') {
@@ -416,6 +529,10 @@ const settingSections = computed<SettingSection[]>(() => [
 		]
 	},
 	{
+		section: 'OAuth Connections',
+		items: oauth2Items.value
+	},
+	{
 		section: 'Other',
 		items: [
 			{
@@ -511,15 +628,25 @@ async function onSelectChange(key: AppSettingKey, event: CustomEvent) {
 
 async function onToggleChange(key: AppSettingKey, event: CustomEvent) {
 	const checked = Boolean(event.detail?.checked);
+	if (key === 'pushNotifications' && checked) {
+		const status = await PushNotifications.checkPermissions();
+		if (status.receive === 'denied') {
+			await setValue(key, false);
+			await Toast.show({
+				text: 'Permission was denied for Push Notifications.',
+				duration: 'long'
+			});
+			return;
+		} else {
+			await Toast.show({
+				text: 'Push Notifications enabled!',
+				duration: 'short'
+			});
+		}
+	}
+
 	await setValue(key, checked as any);
 	selection();
-
-	if (key === 'pushNotifications') {
-		await Toast.show({
-			text: 'Push notification delivery is not implemented yet. Preference saved.',
-			duration: 'short'
-		});
-	}
 }
 
 async function runAction(item: ActionSettingItem) {
@@ -540,8 +667,8 @@ async function runAction(item: ActionSettingItem) {
 }
 
 async function logout() {
-	const authStore = useAuthStore();
-	authStore.logout();
+	const logout = useLogout();
+	logout(Capacitor.getPlatform());
 	router.navigate('/login', 'root', 'replace');
 }
 
