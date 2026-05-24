@@ -6,9 +6,7 @@
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
 
-				<div class="flex flex-col py-1">
-					<IonTitle>Notifications - @{{ user?.username }}</IonTitle>
-				</div>
+				<IonTitle>Notifications</IonTitle>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent :scroll-y="true">
@@ -18,7 +16,6 @@
 </template>
 
 <script setup lang="ts">
-const { user } = useAuth();
 const { fetchNotifications } = useNotifications();
 
 onMounted(() => {

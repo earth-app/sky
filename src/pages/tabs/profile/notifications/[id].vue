@@ -6,7 +6,7 @@
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
 
-				<IonTitle>Notification - {{ trimString(notification?.title, 32) }}</IonTitle>
+				<IonTitle>{{ trimString(notification?.title, 32) }}</IonTitle>
 			</IonToolbar>
 		</IonHeader>
 

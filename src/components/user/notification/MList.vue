@@ -51,7 +51,6 @@
 				:key="notification.id"
 				:notification="notification"
 				:additional="additional"
-				@deleted="handleDelete"
 			/>
 		</div>
 	</div>
@@ -62,27 +61,28 @@ const props = defineProps<{
 	additional?: boolean;
 }>();
 
-const { notifications, unreadCount, markAllNotificationsRead } = useNotifications();
+const { notifications, unreadCount, markAllNotificationsRead, clearAllNotifications } =
+	useNotifications();
 
 async function markAllRead() {
-	await markAllNotificationsRead();
+	const res = await markAllNotificationsRead();
+	if (!res.success) {
+		await showErrorToast(res.message, {
+			fallback: 'Failed to mark all notifications as read.'
+		});
+	}
 }
 
 const displayed = computed(() => {
 	return props.additional ? notifications.value : notifications.value.slice(0, 4);
 });
 
-async function handleDelete(notification: UserNotification) {
-	const index = notifications.value.findIndex((n) => n.id === notification.id);
-	if (index !== -1) {
-		notifications.value.splice(index, 1);
-	}
-
-	await deleteNotification(notification.id);
-}
-
 async function clearAll() {
-	await Promise.all(notifications.value.map((n) => deleteNotification(n.id)));
-	notifications.value.splice(0, notifications.value.length);
+	const res = await clearAllNotifications();
+	if (!res.success) {
+		await showErrorToast(res.message, {
+			fallback: 'Failed to clear notifications.'
+		});
+	}
 }
 </script>
