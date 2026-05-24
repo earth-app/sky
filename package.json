@@ -23,6 +23,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
     "@capacitor/android": "^8.3.4",
     "@capacitor/app": "^8.1.0",
     "@capacitor/assets": "^3.0.5",
@@ -43,7 +44,8 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@capacitor/toast": "^8.0.1",
-    "@earth-app/crust": "0.4.0-e354cbf",
+    "@codecov/nuxt-plugin": "^2.0.1",
+    "@earth-app/crust": "0.4.0-eca4634",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "8.8.1",
@@ -68,6 +70,9 @@
     "@ionic/core": "8.8.1",
     "@ionic/vue": "8.8.1",
     "@ionic/vue-router": "8.8.1"
+  },
+  "patchedDependencies": {
+    "@capacitor-community/apple-sign-in@7.1.0": "patches/@capacitor-community%2Fapple-sign-in@7.1.0.patch"
   },
   "devDependencies": {
     "@capacitor/cli": "8.1.0",

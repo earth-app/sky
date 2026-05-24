@@ -5,6 +5,8 @@
 	<dict>
 		<key>CAPACITOR_DEBUG</key>
 		<string>$(CAPACITOR_DEBUG)</string>
+		<key>FirebaseAppDelegateProxyEnabled</key>
+		<false />
 		<key>CFBundleDevelopmentRegion</key>
 		<string>en</string>
 		<key>CFBundleDisplayName</key>

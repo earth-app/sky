@@ -89,13 +89,29 @@ export function validateOAuthUrl(url: string): OAuthValidationResult {
 	return { ok: true };
 }
 
-// Crust's mobile contract: the OAuth `state` parameter must be `<provider>:mobile[:context]`.
+// Crust's mobile contract: the OAuth `state` parameter must be `<provider>:mobile[:context][:session_token]`.
 // The server reads `:mobile` and routes the callback through the mobile-aware /oauth/complete path
 // (universal/app-link target) instead of the web profile page. Context defaults are server-inferred
-// when omitted, so we leave the third segment off for the 'unknown' context.
+// when omitted, so we leave the third segment off for the 'unknown' context. For native `link`
+// flows we append a URL-safe base64-encoded session token as a 4th segment because the
+// SafariViewController cookie jar doesn't share with the app's localStorage-based auth, and crust
+// needs to know which mobile user is requesting the link.
 const MOBILE_STATE_CONTEXTS: ReadonlySet<OAuthFlowContext> = new Set(['login', 'signup', 'link']);
 
-export function applyMobileOAuthState(url: string, context: OAuthFlowContext): string {
+function encodeBase64Url(value: string): string {
+	const base64 =
+		typeof btoa === 'function'
+			? btoa(value)
+			: // SSR / Node fallback. Sky runs SPA-only, so this branch is mostly defensive.
+				Buffer.from(value, 'utf-8').toString('base64');
+	return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export function applyMobileOAuthState(
+	url: string,
+	context: OAuthFlowContext,
+	sessionToken?: string | null
+): string {
 	let parsed: URL;
 	try {
 		parsed = new URL(url);
@@ -109,12 +125,19 @@ export function applyMobileOAuthState(url: string, context: OAuthFlowContext): s
 	}
 
 	const suffix = MOBILE_STATE_CONTEXTS.has(context) ? `:mobile:${context}` : ':mobile';
-	parsed.searchParams.set('state', `${currentState}${suffix}`);
+	let nextState = `${currentState}${suffix}`;
+
+	if (context === 'link' && sessionToken && Capacitor.isNativePlatform()) {
+		nextState += `:${encodeBase64Url(sessionToken)}`;
+	}
+
+	parsed.searchParams.set('state', nextState);
 	return parsed.toString();
 }
 
 export function useMobileOAuth() {
 	const isNative = Capacitor.isNativePlatform();
+	const authStore = useAuthStore();
 
 	const state = ref<OAuthFlowState>(readState());
 
@@ -137,10 +160,7 @@ export function useMobileOAuth() {
 			throw new Error(message);
 		}
 
-		// Rewrite the `state` query param to follow crust's mobile contract so the server-side
-		// callback redirects to /oauth/complete (universal/app-link target) instead of the web
-		// profile page.
-		const targetUrl = applyMobileOAuthState(url, context);
+		const targetUrl = applyMobileOAuthState(url, context, authStore.sessionToken);
 
 		const previousState = state.value;
 		const nextState: OAuthFlowState = {
