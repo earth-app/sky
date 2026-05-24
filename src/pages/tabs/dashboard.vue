@@ -278,9 +278,6 @@ import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
 
 const onboardingOpen = ref(false);
-function onboarding() {
-	onboardingOpen.value = true;
-}
 
 type FeedItem =
 	| { type: 'activity'; isGroup: boolean; data: Activity[] }
