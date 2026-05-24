@@ -290,6 +290,7 @@
 
 <script setup lang="ts">
 import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 import { type Color } from '@ionic/core';
 import slide from '~/animations/slide';
 
@@ -397,12 +398,14 @@ const appSettings = useAppSettingsState();
 const { selection } = useAppHaptics();
 const showCardImage = computed(() => Boolean(props.image && appSettings.value.cardThumbnails));
 
+const runtimeConfig = useRuntimeConfig();
+
 const origin = computed(() => {
-	if (import.meta.client) {
+	if (import.meta.client && !Capacitor.isNativePlatform()) {
 		return encodeURIComponent(window.location.origin);
 	}
 
-	return encodeURIComponent('https://app.earth-app.com');
+	return encodeURIComponent(runtimeConfig.public.crustBaseUrl || 'https://app.earth-app.com');
 });
 
 function goTo(url: string) {
