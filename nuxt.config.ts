@@ -19,6 +19,8 @@ export default defineNuxtConfig({
 			githubClientId: process.env.NUXT_PUBLIC_GITHUB_CLIENT_ID || '',
 			discordClientId: process.env.NUXT_PUBLIC_DISCORD_CLIENT_ID || '',
 			facebookClientId: process.env.NUXT_PUBLIC_FACEBOOK_CLIENT_ID || '',
+			appleClientId: process.env.NUXT_PUBLIC_APPLE_CLIENT_ID || '',
+			appleTeamId: process.env.NUXT_PUBLIC_APPLE_TEAM_ID || '',
 			// public keys
 			mapsApiKey: process.env.NUXT_PUBLIC_MAPS_API_KEY || ''
 		}
@@ -77,6 +79,7 @@ export default defineNuxtConfig({
 		optimizeDeps: {
 			exclude: ['@earth-app/crust', 'stores', 'types', 'utils', 'schemas'],
 			include: [
+				'@capacitor-community/apple-sign-in',
 				'@capacitor/app',
 				'@capacitor/browser',
 				'@capacitor/core',
@@ -157,6 +160,14 @@ export default defineNuxtConfig({
 					cssLayer: 'base',
 					size: '48px'
 				}
+			}
+		],
+		[
+			'@codecov/nuxt-plugin',
+			{
+				enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
+				bundleName: 'sky',
+				uploadToken: process.env.CODECOV_TOKEN
 			}
 		]
 	],
