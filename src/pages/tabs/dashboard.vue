@@ -25,23 +25,36 @@
 						The Earth App
 					</h2>
 					<ClientOnly>
-						<div class="flex justify-center">
+						<div class="flex flex-col gap-2 items-center">
 							<h4 class="text-lg! m-0!">
 								Welcome, {{ user?.username ? `@${user.username}!` : '' }}
 							</h4>
-							<IonButton
-								color="primary"
-								shape="round"
-								fill="outline"
-								size="small"
-								@click="startWelcomeTour"
-								class="ml-2"
-							>
-								<UIcon
-									name="mdi:account-arrow-right"
-									class="min-w-4 min-h-4"
-								/>
-							</IonButton>
+							<div class="flex gap-2">
+								<IonButton
+									color="primary"
+									shape="round"
+									fill="outline"
+									size="small"
+									@click="startWelcomeTour"
+								>
+									<UIcon
+										name="mdi:account-arrow-right"
+										class="min-w-4 min-h-4"
+									/>
+								</IonButton>
+								<IonButton
+									color="tertiary"
+									shape="round"
+									fill="outline"
+									size="small"
+									@click="onboardingOpen = true"
+								>
+									<UIcon
+										name="mdi:restart"
+										class="min-w-4 min-h-4"
+									/>
+								</IonButton>
+							</div>
 						</div>
 					</ClientOnly>
 				</div>
@@ -243,6 +256,19 @@
 					</div>
 				</ClientOnly>
 			</div>
+			<IonModal
+				:is-open="onboardingOpen"
+				@didDismiss="onboardingOpen = false"
+				style="--max-height: 80%; --width: 80%; --min-width: 350px"
+			>
+				<IonContent
+					id="onboarding-modal-content"
+					class="border-2"
+					:scroll-y="true"
+				>
+					<OnboardingQuest @done="onboardingOpen = false" />
+				</IonContent>
+			</IonModal>
 		</IonContent>
 	</IonPage>
 </template>
@@ -250,6 +276,11 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
+
+const onboardingOpen = ref(false);
+function onboarding() {
+	onboardingOpen.value = true;
+}
 
 type FeedItem =
 	| { type: 'activity'; isGroup: boolean; data: Activity[] }
