@@ -312,7 +312,9 @@
 					<IonLabel
 						><span class="flex items-center">
 							<UIcon
-								:name="`logos:${provider.toLowerCase()}-icon`"
+								:name="
+									provider === 'apple' ? 'logos:apple' : `logos:${provider.toLowerCase()}-icon`
+								"
 								class="size-5 mr-2"
 							/>
 							{{ capitalizeFully(provider) }}</span
@@ -611,7 +613,8 @@ const {
 	deleteAccount
 } = useAuth();
 const config = useRuntimeConfig();
-const { beginFlow } = useMobileOAuth();
+const { isNative, beginFlow } = useMobileOAuth();
+const authStore = useAuthStore();
 const {
 	selection,
 	impactLight,
@@ -1102,16 +1105,19 @@ async function handleOAuthProvider(provider: OAuthProvider) {
 			}
 
 			await impactMedium();
-			const unlinkUrl = new URL(
-				`/api/auth/unlink-callback?provider=${provider}`,
-				config.public.baseUrl
-			).toString();
-			await beginFlow(unlinkUrl, 'unlink');
+			const unlinkUrl = new URL('/api/auth/unlink-callback', config.public.baseUrl);
+			unlinkUrl.searchParams.set('provider', provider);
+
+			if (isNative && authStore.sessionToken) {
+				unlinkUrl.searchParams.set('session_token', authStore.sessionToken);
+			}
+
+			await beginFlow(unlinkUrl.toString(), 'unlink');
 			return;
 		}
 
 		await impactLight();
-		const authUrl = authLink(provider);
+		const authUrl = authLink(provider, 'link', 'mobile');
 		await beginFlow(authUrl, 'link');
 	} catch (error: any) {
 		notifyError();
