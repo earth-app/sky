@@ -23,7 +23,10 @@ defineProps<{
 const { user } = useAuth();
 
 function back() {
-	if (!user.value) router.push('/');
+	if (!user.value) {
+		router.navigate('/', 'root', 'replace');
+		return;
+	}
 
 	if (router.canGoBack()) {
 		router.back();
