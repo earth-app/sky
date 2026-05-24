@@ -5,7 +5,7 @@
 				<IonButtons slot="start">
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
-				<IonTitle>Quests {{ quest?.title ? `- ${quest.title}` : '' }}</IonTitle>
+				<IonTitle>{{ quest?.title ? quest.title : 'Quest' }}</IonTitle>
 			</IonToolbar>
 		</IonHeader>
 
@@ -38,13 +38,11 @@
 								class="text-2xl! mr-2"
 							/>
 
-							<div class="flex flex-col">
-								<span class="font-semibold text-base!"
-									>Step #{{ openStep.index + 1 }}
-									{{ openStep.altIndex ? `(Alt ${openStep.altIndex + 1})` : '' }}</span
-								>
-								<span class="text-xs! opacity-80">{{ trimString(openStep.description, 100) }}</span>
-							</div>
+							<span class="font-semibold text-base! mr-2"
+								>Step #{{ openStep.index + 1 }}
+								{{ openStep.altIndex ? `(Alt ${openStep.altIndex + 1})` : '' }}</span
+							>
+							<span class="text-xs! opacity-80">{{ trimString(openStep.description, 100) }}</span>
 						</div>
 					</IonTitle>
 					<IonButtons slot="end">
