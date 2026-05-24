@@ -229,7 +229,9 @@
 
 <script setup lang="ts">
 import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 import { DateTime } from 'luxon';
+import { injectMissingExif } from '~/utils/exif';
 
 const props = defineProps<{
 	quest: Quest;
@@ -249,16 +251,50 @@ const emit = defineEmits<{
 	submitted: [];
 }>();
 
-// Pipe auth/user lookups through the mobile request layer so this screen uses the same
-// offline-aware, data-saver-respecting transport as the rest of the mobile shell.
 const { user } = useAuth(makeMServerRequest);
-const { lat, lng, fetchLocation } = useGeolocation();
+
+const { lat, lng, alt, fetchLocation } = useGeolocation();
 const isNative = computed(() => Capacitor.isNativePlatform());
-const userId = computed(() => user.value?.id || '');
 
 const submitting = ref(false);
 const succeeded = ref(false);
 const submitError = ref('');
+
+// native override - capacitor > local shim
+const nativeLat = ref<number | null>(null);
+const nativeLng = ref<number | null>(null);
+const nativeAlt = ref<number | null>(null);
+
+async function fetchNativeLocation() {
+	if (!isNative.value) return;
+	try {
+		const perm = await Geolocation.checkPermissions();
+		if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
+			const req = await Geolocation.requestPermissions({ permissions: ['location'] });
+			if (req.location !== 'granted' && req.coarseLocation !== 'granted') return;
+		}
+		const pos = await Geolocation.getCurrentPosition({
+			enableHighAccuracy: true,
+			timeout: 8000,
+			maximumAge: 60_000
+		});
+		nativeLat.value = pos.coords.latitude;
+		nativeLng.value = pos.coords.longitude;
+		nativeAlt.value = pos.coords.altitude ?? null;
+	} catch {
+		// Permission denied or no fix — fall back to whatever useGeolocation() yielded.
+	}
+}
+
+const currentLat = computed(() =>
+	nativeLat.value != null ? nativeLat.value : (lat.value as number | null)
+);
+const currentLng = computed(() =>
+	nativeLng.value != null ? nativeLng.value : (lng.value as number | null)
+);
+const currentAlt = computed(() =>
+	nativeAlt.value != null ? nativeAlt.value : (alt.value as number | null)
+);
 
 const category = computed(() => {
 	switch (props.step.type) {
@@ -287,6 +323,7 @@ const category = computed(() => {
 onMounted(() => {
 	if (props.quest.permissions.includes('location')) {
 		fetchLocation();
+		void fetchNativeLocation();
 	}
 });
 
@@ -304,28 +341,42 @@ function formatTime(seconds: number) {
 }
 
 async function submitPhoto(file: File) {
-	submitError.value = '';
-
-	if (!userId.value) {
+	if (!user.value) {
 		submitError.value = 'Your account is still loading. Please try again in a moment.';
 		return;
 	}
 
+	const { updateQuest } = useUser(user.value!.id, makeMServerRequest);
+
+	submitError.value = '';
 	submitting.value = true;
-
 	try {
-		const dataUrl = await fileToDataUrl(file);
+		const rawDataUrl = await fileToDataUrl(file);
 
-		const res = await updateQuestM(
-			userId.value,
+		const isImage = category.value === 'photo' || category.value === 'draw_picture';
+		const dataUrl = isImage
+			? await injectMissingExif(rawDataUrl, {
+					location:
+						currentLat.value != null && currentLng.value != null
+							? {
+									latitude: currentLat.value,
+									longitude: currentLng.value,
+									altitude: currentAlt.value
+								}
+							: null,
+					platform: Capacitor.getPlatform()
+				})
+			: rawDataUrl;
+
+		const res = await updateQuest(
 			{
 				type: props.step.type,
 				index: props.step.index,
 				...(props.step.altIndex !== undefined ? { altIndex: props.step.altIndex } : {}),
 				dataUrl
 			},
-			lat.value,
-			lng.value
+			currentLat.value,
+			currentLng.value
 		);
 
 		if (res.validated) {

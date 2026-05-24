@@ -98,61 +98,6 @@ export async function makeMServerRequest<T>(
 
 // #endregion
 
-// #region Quest Updates
-
-export async function updateQuestM(
-	identifier: string,
-	stepResponse: {
-		type: string;
-		index: number;
-		altIndex?: number;
-		dataUrl?: string;
-		[x: string]: any;
-	},
-	lat: number | null,
-	lng: number | null
-): Promise<{ message: string; completed: boolean; validated: boolean }> {
-	if (!identifier) {
-		return {
-			message: `Invalid user identifier '${identifier}'`,
-			completed: false,
-			validated: false
-		};
-	}
-
-	const { fetchUserQuest } = useUserStore();
-	const authStore = useAuthStore();
-
-	const res = await makeMServerRequest<{
-		message: string;
-		completed: boolean;
-		validated: boolean;
-	}>(null, '/api/user/updateQuest', authStore.sessionToken, {
-		method: 'POST',
-		headers: {
-			'X-Latitude': String(lat ?? 0),
-			'X-Longitude': String(lng ?? 0)
-		},
-		body: stepResponse
-	});
-
-	if (!res.success) {
-		return {
-			message: formatApiError(res.message, 'Failed to update quest. Please try again.'),
-			completed: false,
-			validated: false
-		};
-	}
-
-	if (res.data.validated) {
-		await fetchUserQuest(identifier, true);
-	}
-
-	return res.data;
-}
-
-// #endregion
-
 // #region Time on Page Tracking
 
 export function useTimeOnPageM(
