@@ -1,7 +1,7 @@
 <template>
 	<IonCard
 		class="min-w-60 w-7/8 max-w-full p-4"
-		color="dark"
+		:color="theme"
 	>
 		<UForm
 			id="signup"
