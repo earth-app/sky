@@ -16,7 +16,7 @@
 			"files": "**/*.{plist,storyboard,xcprivacy}",
 			"options": {
 				"parser": "xml",
-				"xmlWhitespaceSensitivity": "ignore"
+				"xmlWhitespaceSensitivity": "strict"
 			}
 		}
 	]
