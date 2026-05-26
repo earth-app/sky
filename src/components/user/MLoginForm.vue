@@ -5,23 +5,24 @@
 	>
 		<UForm
 			id="login"
-			:state="{ username, password }"
+			:state="{ userOrEmail, password }"
 			@submit="handleLogin"
 			class="space-x-6 *:mb-4"
-			:schema="z.object({ username: usernameSchema, password: passwordSchema })"
+			:schema="z.object({ userOrEmail: userOrEmailSchema, password: passwordSchema })"
 		>
 			<UFormField
-				label="Username"
-				name="username"
+				label="Username or Email"
+				name="userOrEmail"
 				:required="true"
 			>
 				<IonInput
-					v-model="username"
+					v-model="userOrEmail"
 					:disabled="isSubmitting"
-					placeholder="cooldude78"
+					placeholder="cooldude78 or you@example.com"
 					class="min-w-60 w-2/5 max-w-120"
 					counter
-					:maxlength="20"
+					:maxlength="100"
+					autocomplete="username"
 				/>
 			</UFormField>
 
@@ -48,7 +49,6 @@
 					type="submit"
 					form="login"
 					color="success"
-					mode="md"
 					fill="solid"
 					:disabled="isSubmitting || !canSubmit"
 					:aria-busy="isSubmitting"
@@ -62,7 +62,10 @@
 						Logging in...
 					</template>
 					<template v-else>
-						<UIcon name="mdi:lock" />
+						<UIcon
+							name="mdi:lock"
+							class="mr-1"
+						/>
 						Login
 					</template>
 				</IonButton>
@@ -81,18 +84,33 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { passwordSchema, usernameSchema } from 'schemas';
+import { passwordSchema } from 'schemas';
 import z from 'zod';
+import slide from '~/animations/slide';
 
-const username = ref('');
+const userOrEmailSchema = z
+	.string()
+	.min(3, 'Must be at least 3 characters')
+	.max(100, 'Must be at most 100 characters');
+
+const userOrEmail = ref('');
 const password = ref('');
 const isSubmitting = ref(false);
-const canSubmit = computed(() => username.value.trim().length > 0 && password.value.length > 0);
+const canSubmit = computed(() => userOrEmail.value.trim().length > 0 && password.value.length > 0);
 const error = ref('');
 
 const login = useLogin();
 const { fetchUser } = useAuth();
 const authStore = useAuthStore();
+const ionRouter = useIonRouter();
+const route = useRoute();
+const pendingLogin = useState<{
+	ticket: string;
+	email: string;
+	expiresAt: number;
+	userOrEmail: string;
+	password: string;
+} | null>('pendingLogin2FA', () => null);
 
 const emit = defineEmits<{
 	loginSuccess: [];
@@ -131,9 +149,9 @@ async function handleLogin() {
 	error.value = '';
 
 	try {
-		const result = await login(username.value, password.value);
+		const result = await login(userOrEmail.value, password.value);
 
-		if (result.success) {
+		if (result.success && result.verified) {
 			// Avoid force=true when a token already exists; forcing can clear a valid token on native.
 			if (!authStore.currentUser && authStore.sessionToken) {
 				await fetchUser();
@@ -149,11 +167,29 @@ async function handleLogin() {
 			emit('loginSuccess');
 
 			await Toast.show({
-				text: `Login Successful! Welcome back, ${username.value}!`,
+				text: `Login Successful! Welcome back, ${userOrEmail.value}!`,
 				duration: 'short'
 			});
 
 			await refreshNuxtData();
+			return;
+		}
+
+		if (result.success && !result.verified) {
+			pendingLogin.value = {
+				ticket: result.ticket,
+				email: result.email,
+				expiresAt: Date.now() + result.expiresIn * 1000,
+				userOrEmail: userOrEmail.value,
+				password: password.value
+			};
+
+			const redirect = route.query.redirect;
+			const target =
+				typeof redirect === 'string' && redirect.startsWith('/')
+					? `/login/verify-new-ip?redirect=${encodeURIComponent(redirect)}`
+					: '/login/verify-new-ip';
+			ionRouter.push(target, slide);
 			return;
 		}
 
