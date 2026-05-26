@@ -8,7 +8,7 @@
 				:loading="loading"
 				:disabled="loading"
 				class="self-center"
-				@click="handleEnd"
+				@click="handleEndClick"
 				>End Quest</IonButton
 			>
 
@@ -19,7 +19,7 @@
 				:loading="loading"
 				:disabled="loading"
 				class="self-center"
-				@click="handleStart(true)"
+				@click="handleReplaceClick"
 				>Replace &amp; Start Quest</IonButton
 			>
 
@@ -185,6 +185,7 @@
 </template>
 
 <script setup lang="ts">
+import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
 
 const props = defineProps<{
@@ -209,6 +210,12 @@ const emit = defineEmits<{
 const { user } = useAuth();
 const { quest, questHistory, fetchUserQuest, startQuest, endQuest } = useUser(user.value?.id || '');
 const { getStepIcon } = useQuests();
+const userStore = useUserStore();
+
+const masteryBadgeIdFromQuestId = (questId: string | undefined): string | null => {
+	if (!questId) return null;
+	return questId.startsWith('badge_mastery_') ? questId.slice('badge_mastery_'.length) : null;
+};
 
 const loading = ref(false);
 const now = ref(Date.now());
@@ -278,6 +285,56 @@ const hasOtherActiveQuest = computed(
 	() => !!quest.value?.questId && quest.value.questId !== props.quest.id
 );
 
+const isMasteryQuest = computed(() => props.quest.id.startsWith('badge_mastery_'));
+const activeQuestIsMastery = computed(() =>
+	(quest.value?.questId ?? '').startsWith('badge_mastery_')
+);
+
+async function confirmMasteryLock(message: string, okTitle: string): Promise<boolean> {
+	const { value } = await Dialog.confirm({
+		title: 'Lock this Badge Mastery?',
+		message,
+		okButtonTitle: okTitle,
+		cancelButtonTitle: 'Cancel'
+	});
+	return value;
+}
+
+async function handleEndClick() {
+	if (isCurrentQuest.value && isMasteryQuest.value) {
+		const badgeId = masteryBadgeIdFromQuestId(props.quest.id);
+		const ok = await confirmMasteryLock(
+			`If you abandon this quest, the mastery for "${props.quest.title}" will be permanently locked. You will not be able to generate or retry it. Are you sure?`,
+			'Lock & Abandon'
+		);
+		if (!ok) return;
+		if (badgeId) userStore.lockedMasteries.add(badgeId);
+		await handleEnd();
+		await showInfoToast(`Mastery for "${props.quest.title}" has been locked.`, {
+			duration: 'long'
+		});
+		return;
+	}
+	await handleEnd();
+}
+
+async function handleReplaceClick() {
+	if (activeQuestIsMastery.value) {
+		const activeBadgeId = masteryBadgeIdFromQuestId(quest.value?.questId);
+		const activeTitle = quest.value?.quest?.title || 'this Badge Mastery';
+		const ok = await confirmMasteryLock(
+			`Your active quest "${activeTitle}" is a Badge Mastery quest. Starting this one will permanently lock that mastery. Are you sure?`,
+			'Lock & Start'
+		);
+		if (!ok) return;
+		if (activeBadgeId) userStore.lockedMasteries.add(activeBadgeId);
+		await handleStart(true);
+		await showInfoToast(`Mastery for "${activeTitle}" has been locked.`, { duration: 'long' });
+		return;
+	}
+	await handleStart(true);
+}
+
 async function handleStart(override: boolean = false) {
 	loading.value = true;
 
@@ -287,11 +344,8 @@ async function handleStart(override: boolean = false) {
 			text: res.message || 'Quest started!',
 			duration: 'long'
 		});
-	} catch (e: any) {
-		await Toast.show({
-			text: `Failed to start quest: ${e?.message || 'Unknown error'}`,
-			duration: 'long'
-		});
+	} catch (e) {
+		await showErrorToast(e, { fallback: 'Failed to start quest.', duration: 'long' });
 	} finally {
 		loading.value = false;
 	}
@@ -305,11 +359,8 @@ async function handleEnd() {
 			text: res.message || 'Quest ended!',
 			duration: 'long'
 		});
-	} catch (e: any) {
-		await Toast.show({
-			text: `Failed to end quest: ${e?.message || 'Unknown error'}`,
-			duration: 'long'
-		});
+	} catch (e) {
+		await showErrorToast(e, { fallback: 'Failed to end quest.', duration: 'long' });
 	} finally {
 		loading.value = false;
 	}

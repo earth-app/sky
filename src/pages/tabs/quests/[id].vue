@@ -11,6 +11,15 @@
 
 		<IonContent :scroll-y="true">
 			<div class="flex flex-col px-4">
+				<UAlert
+					v-if="quest && isMasteryQuest && !isMasteryQuestCompleted"
+					color="warning"
+					variant="subtle"
+					icon="mdi:alert-octagon-outline"
+					title="Badge Mastery Quest"
+					description="Abandoning this quest or starting a different one will permanently lock this badge's mastery. Complete every step."
+					class="my-3"
+				/>
 				<UserQuestMTimeline
 					v-if="quest"
 					:quest="quest"
@@ -90,8 +99,22 @@ const progress = computed(() => {
 	return questHistory.value.get(quest.value.id)?.progress;
 });
 
+const isMasteryQuest = computed(() => quest.value?.id?.startsWith('badge_mastery_') ?? false);
+const isMasteryQuestCompleted = computed(() => {
+	if (!quest.value) return false;
+	const id = quest.value.id;
+	if (currentQuest.value?.questId === id) return false;
+	return questHistory.value?.get(id)?.completedAt !== undefined;
+});
+
 if (route.params.id) {
-	quest.value = await fetchQuest(route.params.id as string);
+	const id = route.params.id as string;
+	quest.value = await fetchQuest(id);
+
+	if (!quest.value && id.startsWith('badge_mastery_')) {
+		await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
+		await navigateTo('/tabs/quests', { replace: true });
+	}
 }
 
 watch(
