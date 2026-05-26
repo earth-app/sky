@@ -353,8 +353,11 @@ async function submitPhoto(file: File) {
 	try {
 		const rawDataUrl = await fileToDataUrl(file);
 
-		const isImage = category.value === 'photo' || category.value === 'draw_picture';
-		const dataUrl = isImage
+		// Drawings must stay EXIF-free — cloud's validateDrawing rejects any
+		// submission carrying Make/Model/Software/DateTimeOriginal as a photo
+		// masquerading as a drawing. Only inject EXIF for actual photo steps.
+		const needsExif = category.value === 'photo';
+		const dataUrl = needsExif
 			? await injectMissingExif(rawDataUrl, {
 					location:
 						currentLat.value != null && currentLng.value != null
