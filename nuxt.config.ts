@@ -101,7 +101,8 @@ export default defineNuxtConfig({
 				'@vue/devtools-core',
 				'@vue/devtools-kit',
 				'luxon',
-				'piexifjs'
+				'piexifjs',
+				'zod'
 			]
 		},
 		define: {

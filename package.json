@@ -45,7 +45,7 @@
     "@capacitor/status-bar": "^8.0.2",
     "@capacitor/toast": "^8.0.1",
     "@codecov/nuxt-plugin": "^2.0.1",
-    "@earth-app/crust": "0.4.0-eca4634",
+    "@earth-app/crust": "0.4.0-d8992cc",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "8.8.1",
@@ -87,7 +87,7 @@
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.4",
-    "vue-tsc": "^3.3.1",
+    "vue-tsc": "^3.3.2",
     "wrangler": "^4.94.0"
   },
   "lint-staged": {
