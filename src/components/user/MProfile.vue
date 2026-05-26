@@ -5,12 +5,22 @@
 				<UAvatar
 					id="avatar"
 					:src="avatar"
-					class="size-24 shadow-lg rounded-full shadow-black/70"
+					class="size-24 my-2 shadow-lg rounded-full shadow-black/70"
 				/>
 				<UserMFriendsButtons :user="user" />
 				<UserMFriendsCount :user="user" />
+
+				<IonButton
+					v-if="user.id === currentUser?.id"
+					color="secondary"
+					shape="round"
+					router-link="/tabs/profile/editor"
+					size="small"
+					class="my-2"
+					>Edit Profile</IonButton
+				>
 			</div>
-			<div class="flex items-center">
+			<div class="flex items-center px-2">
 				<div class="flex flex-col">
 					<h2 class="text-lg! my-0!">{{ displayName }}</h2>
 					<h3 class="text-sm! my-0! text-gray-600 light:text-gray-400">{{ user.username }}</h3>
@@ -337,6 +347,7 @@ const { name: displayName } = useDisplayName(props.user);
 const i18n = useI18n();
 
 const user = computed(() => userState.value || props.user);
+const { user: currentUser } = useAuth();
 
 const { friends, fetchFriends } = useFriends(props.user.id);
 const {
