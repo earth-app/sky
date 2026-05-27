@@ -154,7 +154,13 @@
 
 			<template v-else-if="category === 'audio'">
 				<UserQuestStepRecorder
-					v-if="!submitting && !succeeded"
+					v-if="!isNative && !submitting && !succeeded"
+					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					@capture="submitPhoto"
+				/>
+
+				<UserQuestStepMRecord
+					v-else-if="isNative && !submitting && !succeeded"
 					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
 					@capture="submitPhoto"
 				/>
@@ -203,6 +209,70 @@
 					:server-request="makeMServerRequest"
 					@submitted="emit('submitted')"
 				/>
+			</template>
+
+			<template v-else-if="category === 'scan_barcode'">
+				<UserQuestStepMBarcode
+					v-if="!submitting && !succeeded"
+					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:kind="scanKind"
+					:keyword="scanKeyword"
+					@capture="submitBarcode"
+					@scan-taken="submitError = ''"
+					@scan-rejected="submitError = ''"
+				/>
+				<div
+					v-else-if="submitting"
+					class="flex flex-col items-center gap-3 py-8!"
+				>
+					<UIcon
+						name="i-lucide-upload"
+						class="size-10 animate-bounce text-primary"
+					/>
+					<span class="text-sm! opacity-70">Validating barcode…</span>
+				</div>
+				<div
+					v-else-if="succeeded"
+					class="flex flex-col items-center gap-3 py-8"
+				>
+					<UIcon
+						name="i-lucide-circle-check"
+						class="size-14 text-success"
+					/>
+					<span class="text-base! font-medium!">Step complete!</span>
+				</div>
+			</template>
+
+			<template v-else-if="category === 'distance_covered'">
+				<UserQuestStepMDistance
+					v-if="!submitting && !succeeded"
+					:quest-id="quest.id"
+					:step-index="step.index"
+					:alt-index="step.altIndex"
+					:target-meters="distanceTargetMeters"
+					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					@capture="submitDistance"
+				/>
+				<div
+					v-else-if="submitting"
+					class="flex flex-col items-center gap-3 py-8!"
+				>
+					<UIcon
+						name="i-lucide-upload"
+						class="size-10 animate-bounce text-primary"
+					/>
+					<span class="text-sm! opacity-70">Submitting distance…</span>
+				</div>
+				<div
+					v-else-if="succeeded"
+					class="flex flex-col items-center gap-3 py-8"
+				>
+					<UIcon
+						name="i-lucide-circle-check"
+						class="size-14 text-success"
+					/>
+					<span class="text-base! font-medium!">Step complete!</span>
+				</div>
 			</template>
 
 			<template v-else>
@@ -315,9 +385,31 @@ const category = computed(() => {
 			return 'order_items';
 		case 'describe_text':
 			return 'describe_text';
+		case 'scan_barcode':
+			return 'scan_barcode';
+		case 'distance_covered':
+			return 'distance_covered';
 		default:
 			return props.step.type;
 	}
+});
+
+const scanKind = computed<'food' | 'music' | 'book' | undefined>(() => {
+	if (props.step.type !== 'scan_barcode') return undefined;
+	const raw = props.step.parameters?.[0];
+	return raw === 'food' || raw === 'music' || raw === 'book' ? raw : undefined;
+});
+
+const scanKeyword = computed<string | undefined>(() => {
+	if (props.step.type !== 'scan_barcode') return undefined;
+	const raw = props.step.parameters?.[1];
+	return typeof raw === 'string' && raw.trim().length > 0 ? raw : undefined;
+});
+
+const distanceTargetMeters = computed<number>(() => {
+	if (props.step.type !== 'distance_covered') return 0;
+	const raw = Number(props.step.parameters?.[0]);
+	return Number.isFinite(raw) && raw > 0 ? raw : 0;
 });
 
 onMounted(() => {
@@ -400,6 +492,56 @@ async function submitPhoto(file: File) {
 	} finally {
 		submitting.value = false;
 	}
+}
+
+async function submitStepResponse(extra: Record<string, unknown>, validatingLabel: string) {
+	if (!user.value) {
+		submitError.value = 'Your account is still loading. Please try again in a moment.';
+		return;
+	}
+
+	const { updateQuest } = useUser(user.value!.id, makeMServerRequest);
+
+	submitError.value = '';
+	submitting.value = true;
+	try {
+		const res = await updateQuest(
+			{
+				type: props.step.type,
+				index: props.step.index,
+				...(props.step.altIndex !== undefined ? { altIndex: props.step.altIndex } : {}),
+				...extra
+			},
+			currentLat.value,
+			currentLng.value
+		);
+
+		if (res.validated) {
+			succeeded.value = true;
+			await new Promise((r) => setTimeout(r, 900));
+			emit('submitted');
+			return;
+		}
+
+		submitError.value = formatApiError(
+			res.message,
+			`We could not validate that ${validatingLabel}. Please try again.`
+		);
+		await showErrorToast(submitError.value, { duration: 'long' });
+	} catch (e: unknown) {
+		submitError.value = formatApiError(e, 'Submission failed. Please try again.');
+		await showErrorToast(submitError.value, { duration: 'long' });
+	} finally {
+		submitting.value = false;
+	}
+}
+
+async function submitBarcode(payload: { data: string; format: number }) {
+	await submitStepResponse({ data: payload.data, format: payload.format }, 'barcode');
+}
+
+async function submitDistance(distance: number) {
+	await submitStepResponse({ distance }, 'distance');
 }
 
 function fileToDataUrl(file: File): Promise<string> {
