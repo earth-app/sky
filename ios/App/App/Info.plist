@@ -50,6 +50,8 @@
 	<string>The Earth App needs your location to verify your location when taking photos!</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>The Earth App needs your location to verify your location when taking photos!</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The Earth App needs your microphone to record audio for quest steps.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow access to choose images for event submissions</string>
 	<key>UIBackgroundModes</key>
