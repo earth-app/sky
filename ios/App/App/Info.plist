@@ -3,16 +3,8 @@
 	"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIUserInterfaceStyle</key>
-	<string>Automatic</string>
-	<key>NSHumanReadableCopyright</key>
-	<string>Copyright (c) 2026 The Earth App</string>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.lifestyle</string>
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
-	<key>FirebaseAppDelegateProxyEnabled</key>
-	<false />
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
@@ -29,8 +21,6 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -42,18 +32,30 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false />
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false />
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.lifestyle</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true />
 	<key>NSCameraUsageDescription</key>
 	<string>The Earth App needs your camera so you can take photos of the outside world!</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright (c) 2026 The Earth App</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>The Earth App needs your location to verify your location when taking photos!</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>The Earth App needs your location to verify your location when taking photos!</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>The Earth App needs your microphone to record audio for quest steps.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>The Earth App uses motion data to help you submit quest steps!</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Allow access to choose images for event submissions</string>
+	<string>The Earth App needs access to choose images for event submissions!</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
@@ -79,9 +81,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIUserInterfaceStyle</key>
+	<string>Automatic</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true />
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false />
 </dict>
 </plist>
