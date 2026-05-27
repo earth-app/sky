@@ -185,10 +185,8 @@
 </template>
 
 <script setup lang="ts">
-import { Camera } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
-import { Geolocation } from '@capacitor/geolocation';
 import { Toast } from '@capacitor/toast';
 
 const props = defineProps<{
@@ -213,6 +211,7 @@ const emit = defineEmits<{
 const { user } = useAuth();
 const { quest, questHistory, fetchUserQuest, startQuest, endQuest } = useUser(user.value?.id || '');
 const { getStepIcon } = useQuests();
+const { require: requirePermission } = useQuestPermissions();
 const userStore = useUserStore();
 
 const masteryBadgeIdFromQuestId = (questId: string | undefined): string | null => {
@@ -338,37 +337,6 @@ async function handleReplaceClick() {
 	await handleStart(true);
 }
 
-async function requestQuestPermission(perm: 'camera' | 'location' | 'record'): Promise<boolean> {
-	try {
-		if (perm === 'camera') {
-			const current = await Camera.checkPermissions();
-			if (current.camera === 'granted') return true;
-			const req = await Camera.requestPermissions({ permissions: ['camera'] });
-			return req.camera === 'granted';
-		}
-
-		if (perm === 'location') {
-			const current = await Geolocation.checkPermissions();
-			if (current.location === 'granted' || current.coarseLocation === 'granted') return true;
-			const req = await Geolocation.requestPermissions({ permissions: ['location'] });
-			return req.location === 'granted' || req.coarseLocation === 'granted';
-		}
-
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-		stream.getTracks().forEach((t) => t.stop());
-		return true;
-	} catch (e) {
-		console.error(`Failed to request quest permission "${perm}":`, e);
-		return false;
-	}
-}
-
-const permissionLabels: Record<'camera' | 'location' | 'record', string> = {
-	camera: 'Camera',
-	location: 'Location',
-	record: 'Microphone'
-};
-
 async function handleStart(override: boolean = false) {
 	loading.value = true;
 
@@ -383,16 +351,8 @@ async function handleStart(override: boolean = false) {
 
 		const perms = props.quest.permissions ?? [];
 		for (const perm of perms) {
-			const granted = await requestQuestPermission(perm);
-			if (!granted) {
-				await showErrorToast(
-					new Error(
-						`${permissionLabels[perm]} access is required to start this quest. Please allow it in your device settings.`
-					),
-					{ duration: 'long' }
-				);
-				return;
-			}
+			const granted = await requirePermission(perm);
+			if (!granted) return;
 		}
 
 		const res = await startQuest(props.quest.id, override);

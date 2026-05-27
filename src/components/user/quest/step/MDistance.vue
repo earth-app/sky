@@ -141,7 +141,8 @@ const emit = defineEmits<{
 	capture: [distance: number];
 }>();
 
-// constraints from the task brief:
+const { require: requirePermission } = useQuestPermissions();
+
 // - 20 mph cap rejects vehicular travel (≈ 8.9408 m/s)
 // - 30-day expiry resets local progress so stale runs do not accumulate forever
 // - notifications fire at 3 days, 1 day, 12 hours, and 1 hour before expiry
@@ -263,18 +264,6 @@ async function clearState() {
 	startedAt.value = null;
 	await Preferences.remove({ key: storageKey.value });
 	await cancelExpiryNotifications();
-}
-
-async function ensurePedometerPermission(): Promise<boolean> {
-	try {
-		const current = await CapacitorPedometer.checkPermissions();
-		if (current.activityRecognition === 'granted') return true;
-		const requested = await CapacitorPedometer.requestPermissions();
-		return requested.activityRecognition === 'granted';
-	} catch (e) {
-		console.error('Pedometer permission check failed:', e);
-		return false;
-	}
 }
 
 async function ensureNotificationPermission(): Promise<boolean> {
@@ -421,14 +410,8 @@ async function startTracking() {
 		return;
 	}
 
-	const pedOk = await ensurePedometerPermission();
-	if (!pedOk) {
-		await showErrorToast(
-			new Error('Activity recognition permission is required to track distance.'),
-			{ duration: 'long' }
-		);
-		return;
-	}
+	const motionOk = await requirePermission('motion');
+	if (!motionOk) return;
 
 	if (!startedAt.value) {
 		startedAt.value = Date.now();
@@ -503,6 +486,10 @@ async function confirmReset() {
 async function submit() {
 	if (props.disabled || submitting.value) return;
 	if (progress.value < props.targetMeters) return;
+
+	const motionOk = await requirePermission('motion');
+	if (!motionOk) return;
+
 	submitting.value = true;
 	try {
 		const submittedMeters = Math.round(progress.value);

@@ -164,6 +164,8 @@ const emit = defineEmits<{
 	'photo-rejected': [];
 }>();
 
+const { require: requirePermission, ensure: ensurePermission } = useQuestPermissions();
+
 type CameraStage = 'permission' | 'capturing' | 'preview' | 'error';
 
 const stage = ref<CameraStage>('permission');
@@ -176,18 +178,6 @@ const previewFile = ref<File | null>(null);
 const supportsFlip = computed(() => Capacitor.getPlatform() !== 'android');
 const facingLabel = computed(() => (facingMode.value === 'environment' ? 'front' : 'rear'));
 
-async function ensureCameraPermission(): Promise<boolean> {
-	try {
-		const current = await Camera.checkPermissions();
-		if (current.camera === 'granted') return true;
-		const requested = await Camera.requestPermissions({ permissions: ['camera'] });
-		return requested.camera === 'granted';
-	} catch (e) {
-		console.error('Error checking/requesting camera permissions:', e);
-		return false;
-	}
-}
-
 async function startCamera() {
 	if (props.disabled) {
 		await Toast.show({
@@ -198,11 +188,11 @@ async function startCamera() {
 		return;
 	}
 
-	const permission = await ensureCameraPermission();
+	const permission = await requirePermission('camera');
 	if (!permission) {
 		stage.value = 'error';
 		errorMsg.value =
-			'Camera access was denied. Please allow camera permissions in your device settings.';
+			'Camera access is required to complete this quest step. Please allow it in your device settings.';
 		return;
 	}
 
@@ -287,11 +277,13 @@ async function photoToFile(photo: MediaResult): Promise<File | null> {
 
 async function takePhoto() {
 	stage.value = 'capturing';
-	const granted = await ensureCameraPermission();
+	// startCamera() already prompted (and surfaced the denial dialog) before we got
+	// here; this is a silent backup guard for the retake path.
+	const granted = await ensurePermission('camera');
 	if (!granted) {
 		stage.value = 'error';
 		errorMsg.value =
-			'Camera access was denied. Please allow camera permissions in your device settings.';
+			'Camera access is required to complete this quest step. Please allow it in your device settings.';
 		return;
 	}
 

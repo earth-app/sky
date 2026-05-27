@@ -156,12 +156,14 @@
 				<UserQuestStepRecorder
 					v-if="!isNative && !submitting && !succeeded"
 					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:min-length="audioMinLength"
 					@capture="submitPhoto"
 				/>
 
 				<UserQuestStepMRecord
 					v-else-if="isNative && !submitting && !succeeded"
 					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:min-length="audioMinLength"
 					@capture="submitPhoto"
 				/>
 				<div
@@ -322,6 +324,7 @@ const emit = defineEmits<{
 }>();
 
 const { user } = useAuth(makeMServerRequest);
+const { require: requirePermission } = useQuestPermissions();
 
 const { lat, lng, alt, fetchLocation } = useGeolocation();
 const isNative = computed(() => Capacitor.isNativePlatform());
@@ -412,8 +415,13 @@ const distanceTargetMeters = computed<number>(() => {
 	return Number.isFinite(raw) && raw > 0 ? raw : 0;
 });
 
+const audioMinLength = computed<number | undefined>(() => {
+	const raw = props.step.parameters?.[2];
+	return typeof raw === 'number' && raw > 0 ? raw : undefined;
+});
+
 onMounted(() => {
-	if (props.quest.permissions.includes('location')) {
+	if (props.quest.permissions?.includes('location')) {
 		fetchLocation();
 		void fetchNativeLocation();
 	}
@@ -436,6 +444,12 @@ async function submitPhoto(file: File) {
 	if (!user.value) {
 		submitError.value = 'Your account is still loading. Please try again in a moment.';
 		return;
+	}
+
+	if (props.step.type === 'take_photo_location') {
+		const locationOk = await requirePermission('location');
+		if (!locationOk) return;
+		await fetchNativeLocation();
 	}
 
 	const { updateQuest } = useUser(user.value!.id, makeMServerRequest);

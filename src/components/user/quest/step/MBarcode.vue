@@ -180,6 +180,8 @@ const emit = defineEmits<{
 	'scan-rejected': [];
 }>();
 
+const { require: requirePermission } = useQuestPermissions();
+
 type BarcodeStage = 'intro' | 'scanning' | 'preview' | 'error';
 
 const stage = ref<BarcodeStage>('intro');
@@ -224,6 +226,14 @@ async function startScan() {
 			duration: 'short',
 			position: 'bottom'
 		});
+		return;
+	}
+
+	const cameraOk = await requirePermission('camera');
+	if (!cameraOk) {
+		stage.value = 'error';
+		errorMsg.value =
+			'Camera access is required to complete this quest step. Please allow it in your device settings.';
 		return;
 	}
 
