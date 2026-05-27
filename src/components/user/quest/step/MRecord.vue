@@ -70,12 +70,24 @@
 			<span
 				v-else
 				class="text-sm! text-neutral-500!"
-				>Tap to start recording</span
+				>Tap to Start</span
+			>
+
+			<span
+				v-if="stage === 'recording' && !canStop"
+				class="-mt-4! text-[0.72rem]! text-neutral-500! tabular-nums!"
+				>Keep Recording - {{ stopCountdown }}s left</span
 			>
 
 			<button
 				v-if="stage === 'recording'"
-				class="size-16! rounded-full! border-4! border-red-500! flex items-center justify-center! active:scale-90 transition-transform!"
+				class="size-16! rounded-full! border-4! flex items-center justify-center! transition-all!"
+				:class="
+					canStop
+						? 'border-red-500! active:scale-90 cursor-pointer'
+						: 'border-red-500/30 opacity-40 cursor-not-allowed'
+				"
+				:disabled="!canStop"
 				@click="stopRecording"
 			>
 				<span class="w-5 h-5 bg-red-500 rounded-sm" />
@@ -147,17 +159,18 @@ import {
 
 type Stage = 'permission' | 'ready' | 'recording' | 'preview' | 'error';
 
-const props = defineProps<{ disabled?: boolean }>();
+const props = withDefaults(defineProps<{ disabled?: boolean; minLength?: number }>(), {
+	minLength: 10
+});
 const emit = defineEmits<{ capture: [file: File] }>();
+
+const { notifyDenied } = useQuestPermissions();
 
 const MAX_DURATION_S = 300;
 const AMPLITUDE_POLL_MS = 100;
 const BAR_COUNT = 20;
 const MIN_BAR_PX = 4;
 const MAX_BAR_PX = 52;
-// iOS reports normalized average power, Android reports peak sample, so the
-// dynamic range that lands in [0, 1] is small at room volume. A gentle gamma
-// makes quiet speech read on the meter without saturating loud bursts.
 const AMPLITUDE_GAMMA = 0.6;
 
 const stage = ref<Stage>('permission');
@@ -167,6 +180,9 @@ const bars = ref<number[]>(Array(BAR_COUNT).fill(MIN_BAR_PX));
 const previewUrl = ref('');
 const previewFile = ref<File | null>(null);
 const recordedUri = ref<string | null>(null);
+
+const canStop = computed(() => elapsed.value >= props.minLength);
+const stopCountdown = computed(() => Math.max(0, Math.ceil(props.minLength - elapsed.value)));
 
 let errorListener: PluginListenerHandle | null = null;
 let elapsedTimer: ReturnType<typeof setInterval> | null = null;
@@ -237,7 +253,8 @@ async function requestPermission() {
 		}
 		stage.value = 'error';
 		errorMsg.value =
-			'Microphone access was denied. Please allow microphone permissions in your device settings.';
+			'Microphone access is required to complete this quest step. Please allow it in your device settings.';
+		await notifyDenied('record');
 	} catch (e) {
 		stage.value = 'error';
 		errorMsg.value = formatApiError(e, 'Unable to access your microphone. Please try again.');
