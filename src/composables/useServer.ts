@@ -38,15 +38,44 @@ async function maybeDataSaverDelay() {
 	await new Promise((resolve) => setTimeout(resolve, 180));
 }
 
+const DEFAULT_RETRIES = 2;
+const DEFAULT_RETRY_DELAY_MS = 400;
+
+function getErrorStatus(error: unknown): number | null {
+	const e = error as
+		| { statusCode?: number; status?: number; response?: { status?: number } }
+		| null
+		| undefined;
+	const candidate = e?.statusCode ?? e?.status ?? e?.response?.status;
+	const numeric = Number(candidate);
+	return Number.isFinite(numeric) && numeric >= 100 && numeric < 600 ? numeric : null;
+}
+
+function isTransientError(error: unknown): boolean {
+	const status = getErrorStatus(error);
+	if (status === null) return true; // network-level error (no HTTP response) — retry
+	if (status === 408 || status === 425 || status === 429) return true;
+	return status >= 500 && status <= 599;
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export type ServerRequestResult<T> =
 	| { success: true; data: T }
 	| { success: false; message: string };
+
+export interface MServerRequestOptions extends Record<string, any> {
+	/** Number of retries on transient failures (default {@link DEFAULT_RETRIES}). Set to 0 to disable. */
+	retries?: number;
+	/** Base backoff in ms; grows exponentially per attempt with jitter (default {@link DEFAULT_RETRY_DELAY_MS}). */
+	retryDelayMs?: number;
+}
 
 export async function makeMServerRequest<T>(
 	key: string | null,
 	suburl: string,
 	token: string | null | undefined = null,
-	options: any = {}
+	options: MServerRequestOptions = {}
 ): Promise<ServerRequestResult<T>> {
 	if (isOfflineRequestBlocked()) {
 		return {
@@ -55,45 +84,71 @@ export async function makeMServerRequest<T>(
 		};
 	}
 
-	try {
-		await maybeDataSaverDelay();
+	const {
+		headers: extraHeaders,
+		retries = DEFAULT_RETRIES,
+		retryDelayMs = DEFAULT_RETRY_DELAY_MS,
+		...restOptions
+	} = options ?? {};
 
-		const baseHeaders: Record<string, string> = {
-			Accept: 'application/json',
-			'User-Agent': `Earth-App Sky/1.0`
-		};
+	const baseHeaders: Record<string, string> = {
+		Accept: 'application/json',
+		'User-Agent': `Earth-App Sky/1.0`
+	};
 
-		if (token) {
-			baseHeaders['Authorization'] = `Bearer ${token}`;
-		}
-
-		if (options.body && (options.method === 'POST' || options.method === 'PATCH')) {
-			baseHeaders['Content-Type'] = 'application/json';
-		}
-
-		// crustBaseUrl is used so dev environments can point at a local crust instance.
-		const config = useRuntimeConfig();
-		const baseUrl =
-			(config.public.crustBaseUrl as string | undefined) || 'https://app.earth-app.com';
-
-		const { headers: extraHeaders, ...restOptions } = options ?? {};
-
-		const data = await $fetch<T>(`${baseUrl}${suburl}`, {
-			...restOptions,
-			headers: { ...baseHeaders, ...(extraHeaders as Record<string, string> | undefined) }
-		});
-
-		return {
-			success: true,
-			data
-		};
-	} catch (error: unknown) {
-		console.error(`Failed to fetch ${key ?? suburl}:`, error);
-		return {
-			success: false,
-			message: formatApiError(error, 'An error occurred while fetching server data.')
-		};
+	if (token) {
+		baseHeaders['Authorization'] = `Bearer ${token}`;
 	}
+
+	if (restOptions.body && (restOptions.method === 'POST' || restOptions.method === 'PATCH')) {
+		baseHeaders['Content-Type'] = 'application/json';
+	}
+
+	// crustBaseUrl is used so dev environments can point at a local crust instance.
+	const config = useRuntimeConfig();
+	const baseUrl = (config.public.crustBaseUrl as string | undefined) || 'https://app.earth-app.com';
+
+	const maxAttempts = Math.max(1, retries + 1);
+	let lastError: unknown;
+
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			await maybeDataSaverDelay();
+
+			const data = await $fetch<T>(`${baseUrl}${suburl}`, {
+				...restOptions,
+				headers: { ...baseHeaders, ...(extraHeaders as Record<string, string> | undefined) }
+			});
+
+			return {
+				success: true,
+				data
+			};
+		} catch (error: unknown) {
+			lastError = error;
+
+			if (attempt < maxAttempts && isTransientError(error)) {
+				// Exponential backoff with jitter so simultaneous retries don't stampede the edge.
+				const backoff = retryDelayMs * 2 ** (attempt - 1) + Math.random() * retryDelayMs;
+				console.warn(
+					`Transient failure fetching ${key ?? suburl} (attempt ${attempt}/${maxAttempts}); retrying in ${Math.round(backoff)}ms`
+				);
+				await wait(backoff);
+				continue;
+			}
+
+			break;
+		}
+	}
+
+	console.error(`Failed to fetch ${key ?? suburl}:`, lastError);
+	return {
+		success: false,
+		message: formatApiError(
+			lastError,
+			'An error occurred while fetching server data. Please try again.'
+		)
+	};
 }
 
 // #endregion
