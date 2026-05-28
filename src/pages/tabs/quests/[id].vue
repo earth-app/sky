@@ -51,7 +51,6 @@
 								>Step #{{ openStep.index + 1 }}
 								{{ openStep.altIndex ? `(Alt ${openStep.altIndex + 1})` : '' }}</span
 							>
-							<span class="text-xs! opacity-80">{{ trimString(openStep.description, 100) }}</span>
 						</div>
 					</IonTitle>
 					<IonButtons slot="end">
@@ -136,7 +135,7 @@ const openStep = ref<
 			index: number;
 			altIndex?: number;
 			isCurrentQuest: boolean;
-			isCurrentStep: boolean;
+			isUnlocked: boolean;
 			data?: string;
 	  })
 	| null
