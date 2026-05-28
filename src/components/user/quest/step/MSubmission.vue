@@ -29,7 +29,7 @@
 			Start this quest to unlock the step interface.
 		</h2>
 		<h2
-			v-else-if="!step.isCurrentStep && !step.completed"
+			v-else-if="!step.isUnlocked && !step.completed"
 			class="text-sm! text-neutral-500 mb-2!"
 		>
 			Complete previous steps to unlock this step.
@@ -71,6 +71,37 @@
 					>
 						<ArticleMCard :article="stepArticle" />
 					</div>
+					<div
+						v-else-if="category === 'scan_barcode' && barcodeSubmission"
+						class="flex flex-col items-center gap-2 py-4 px-6 border border-neutral-200 dark:border-neutral-700 rounded-lg"
+					>
+						<UIcon
+							:name="barcodeKindIcon"
+							class="size-8 opacity-80"
+						/>
+						<span class="text-base! font-medium">{{ barcodeSubmission.title }}</span>
+						<span class="text-xs! opacity-60 uppercase tracking-wide">{{
+							barcodeSubmission.kind
+						}}</span>
+					</div>
+					<div
+						v-else-if="category === 'distance_covered' && distanceSubmission"
+						class="flex flex-col items-center gap-2 py-4 px-6 border border-neutral-200 dark:border-neutral-700 rounded-lg"
+					>
+						<UIcon
+							name="mdi:map-marker-distance"
+							class="size-8 opacity-80"
+						/>
+						<span class="text-base! font-medium">{{ formatDistance(distanceSubmission) }}</span>
+						<span class="text-xs! opacity-60 uppercase tracking-wide">covered</span>
+					</div>
+					<div
+						v-else-if="category === 'describe_text' && describeSubmission"
+						class="flex flex-col items-start gap-2 py-4 px-6 border border-neutral-200 dark:border-neutral-700 rounded-lg max-w-md! w-full"
+					>
+						<span class="text-xs! opacity-60 uppercase tracking-wide">Your response</span>
+						<p class="text-sm! whitespace-pre-wrap m-0!">{{ describeSubmission }}</p>
+					</div>
 				</div>
 
 				<Score
@@ -86,7 +117,7 @@
 			<template v-else-if="category === 'photo'">
 				<UserQuestStepCapture
 					v-if="!isNative && !submitting && !succeeded"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					@capture="submitPhoto"
 					@photo-taken="submitError = ''"
 					@photo-rejected="submitError = ''"
@@ -94,7 +125,7 @@
 
 				<UserQuestStepMCapture
 					v-else-if="isNative && !submitting && !succeeded"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					@capture="submitPhoto"
 					@photo-taken="submitError = ''"
 					@photo-rejected="submitError = ''"
@@ -126,7 +157,7 @@
 			<template v-else-if="category === 'draw_picture'">
 				<UserQuestStepDrawing
 					v-if="!submitting && !succeeded"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					@capture="submitPhoto"
 					@close="emit('submitted')"
 				/>
@@ -155,14 +186,14 @@
 			<template v-else-if="category === 'audio'">
 				<UserQuestStepRecorder
 					v-if="!isNative && !submitting && !succeeded"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					:min-length="audioMinLength"
 					@capture="submitPhoto"
 				/>
 
 				<UserQuestStepMRecord
 					v-else-if="isNative && !submitting && !succeeded"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					:min-length="audioMinLength"
 					@capture="submitPhoto"
 				/>
@@ -190,33 +221,35 @@
 
 			<template v-else-if="category === 'describe_text'">
 				<UserQuestStepText
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
-					@capture="emit('submitted')"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
+					@capture="onDelegatedSubmitted"
 				/>
 			</template>
 
 			<template v-else-if="category === 'match_terms'">
 				<UserQuestStepMatcher
 					:step="step"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
+					:submit="true"
 					:server-request="makeMServerRequest"
-					@submitted="emit('submitted')"
+					@submitted="onDelegatedSubmitted"
 				/>
 			</template>
 
 			<template v-else-if="category === 'order_items'">
 				<UserQuestStepOrderer
 					:step="step"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
+					:submit="true"
 					:server-request="makeMServerRequest"
-					@submitted="emit('submitted')"
+					@submitted="onDelegatedSubmitted"
 				/>
 			</template>
 
 			<template v-else-if="category === 'scan_barcode'">
 				<UserQuestStepMBarcode
 					v-if="!submitting && !succeeded"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					:kind="scanKind"
 					:keyword="scanKeyword"
 					@capture="submitBarcode"
@@ -252,7 +285,7 @@
 					:step-index="step.index"
 					:alt-index="step.altIndex"
 					:target-meters="distanceTargetMeters"
-					:disabled="!step.isCurrentQuest || !step.isCurrentStep"
+					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					@capture="submitDistance"
 				/>
 				<div
@@ -315,7 +348,7 @@ const props = defineProps<{
 		index: number;
 		altIndex?: number;
 		isCurrentQuest: boolean;
-		isCurrentStep: boolean;
+		isUnlocked: boolean;
 	};
 }>();
 
@@ -326,7 +359,7 @@ const emit = defineEmits<{
 const { user } = useAuth(makeMServerRequest);
 const { require: requirePermission } = useQuestPermissions();
 
-const { lat, lng, alt, fetchLocation } = useGeolocation();
+const { lat, lng, alt, fetchLocation } = useQuestGeolocation();
 const isNative = computed(() => Capacitor.isNativePlatform());
 
 const submitting = ref(false);
@@ -427,6 +460,23 @@ onMounted(() => {
 	}
 });
 
+function stepCompleteMessage(questCompleted: boolean): string {
+	if (questCompleted) return 'Quest Complete! Nice work.';
+	const reward = props.step.reward;
+	return reward ? `Step complete! +${reward} bonus points` : 'Step complete!';
+}
+
+function notifyStepComplete(questCompleted = false) {
+	void showInfoToast(stepCompleteMessage(questCompleted), { duration: 'short' });
+}
+
+// match_terms / order_items / describe_text are completed inside their own crust child
+// components, which only emit `submitted` on a validated response — confirm + forward.
+function onDelegatedSubmitted() {
+	notifyStepComplete();
+	emit('submitted');
+}
+
 function formatTime(seconds: number) {
 	const hours = Math.floor(seconds / 3600);
 	const mins = Math.floor((seconds % 3600) / 60);
@@ -490,6 +540,7 @@ async function submitPhoto(file: File) {
 
 		if (res.validated) {
 			succeeded.value = true;
+			notifyStepComplete(res.completed);
 			await new Promise((r) => setTimeout(r, 900));
 			emit('submitted');
 			return;
@@ -532,6 +583,7 @@ async function submitStepResponse(extra: Record<string, unknown>, validatingLabe
 
 		if (res.validated) {
 			succeeded.value = true;
+			notifyStepComplete(res.completed);
 			await new Promise((r) => setTimeout(r, 900));
 			emit('submitted');
 			return;
@@ -584,6 +636,43 @@ const completedAt = computed(() => {
 	if (!props.step.completedAt) return null;
 	return DateTime.fromMillis(props.step.completedAt).toLocaleString(DateTime.DATETIME_SHORT);
 });
+
+const barcodeSubmission = computed<{ kind: string; title: string } | null>(() => {
+	if (props.step.type !== 'scan_barcode') return null;
+	const entry = progress.value as (QuestProgressEntry & { kind?: string; title?: string }) | null;
+	if (!entry?.kind || !entry?.title) return null;
+	return { kind: entry.kind, title: entry.title };
+});
+
+const barcodeKindIcon = computed(() => {
+	switch (barcodeSubmission.value?.kind) {
+		case 'food':
+			return 'mdi:food';
+		case 'music':
+			return 'mdi:music';
+		case 'book':
+			return 'mdi:book-open-page-variant';
+		default:
+			return 'mdi:barcode';
+	}
+});
+
+const distanceSubmission = computed<number | null>(() => {
+	if (props.step.type !== 'distance_covered') return null;
+	const entry = progress.value as (QuestProgressEntry & { distance?: number }) | null;
+	return typeof entry?.distance === 'number' && entry.distance > 0 ? entry.distance : null;
+});
+
+const describeSubmission = computed<string | null>(() => {
+	if (props.step.type !== 'describe_text') return null;
+	const entry = progress.value as (QuestProgressEntry & { text?: string }) | null;
+	return typeof entry?.text === 'string' && entry.text.trim().length > 0 ? entry.text : null;
+});
+
+function formatDistance(meters: number): string {
+	if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
+	return `${Math.round(meters)} m`;
+}
 
 const stepArticle = ref<Article | null>(null);
 

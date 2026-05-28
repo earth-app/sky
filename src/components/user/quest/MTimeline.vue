@@ -89,19 +89,15 @@
 						"
 						:variant="altStep.completed ? 'solid' : 'subtle'"
 						size="xl"
-						:class="
-							altStep.delayedUntil > now
-								? 'opacity-40 hover:cursor-not-allowed'
-								: 'hover:cursor-pointer'
-						"
-						@click="
-							altStep.delayedUntil <= now &&
-							emit('select-step', {
-								...altStep,
-								isCurrentQuest,
-								isCurrentStep: isCurrentStep(index)
-							})
-						"
+						:class="[
+							'hover:cursor-pointer',
+							{
+								'opacity-40':
+									altStep.delayedUntil > now ||
+									(isCurrentQuest && currentIndex >= 0 && index > currentIndex)
+							}
+						]"
+						@click="onStepClick(altStep)"
 						hydrate-on-visible
 					/>
 					<span
@@ -128,19 +124,15 @@
 						"
 						:variant="item.completed ? 'solid' : 'subtle'"
 						size="xl"
-						:class="
-							item.delayedUntil > now
-								? 'opacity-40 hover:cursor-not-allowed'
-								: 'hover:cursor-pointer'
-						"
-						@click="
-							item.delayedUntil <= now &&
-							emit('select-step', {
-								...item,
-								isCurrentQuest,
-								isCurrentStep: isCurrentStep(index)
-							})
-						"
+						:class="[
+							'hover:cursor-pointer',
+							{
+								'opacity-40':
+									item.delayedUntil > now ||
+									(isCurrentQuest && currentIndex >= 0 && index > currentIndex)
+							}
+						]"
+						@click="onStepClick(item)"
 						hydrate-on-visible
 					/>
 
@@ -202,7 +194,7 @@ const emit = defineEmits<{
 			index: number;
 			altIndex?: number;
 			isCurrentQuest: boolean;
-			isCurrentStep: boolean;
+			isUnlocked: boolean;
 			data?: string;
 		}
 	];
@@ -281,6 +273,12 @@ const isCurrentQuest = computed(() => !!quest.value && quest.value.questId === p
 function isCurrentStep(index: number) {
 	if (!quest.value) return false;
 	return currentIndex.value === index;
+}
+
+function isUnlocked(index: number) {
+	if (!quest.value) return false;
+	if (currentIndex.value === -1) return true;
+	return index <= currentIndex.value;
 }
 
 const hasOtherActiveQuest = computed(
@@ -380,6 +378,51 @@ async function handleEnd() {
 	} finally {
 		loading.value = false;
 	}
+}
+
+type TimelineStep = QuestStep & {
+	icon: string;
+	index: number;
+	altIndex?: number;
+	completed: boolean;
+	completedAt?: number;
+	delayedUntil: number;
+};
+
+function formatRemaining(ms: number): string {
+	const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+	const days = Math.floor(totalSeconds / 86400);
+	const hours = Math.floor((totalSeconds % 86400) / 3600);
+	const mins = Math.floor((totalSeconds % 3600) / 60);
+	const secs = totalSeconds % 60;
+
+	if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+	if (hours > 0) return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+	if (mins > 0) return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+	return `${secs}s`;
+}
+
+async function onStepClick(step: TimelineStep) {
+	if (step.delayedUntil > now.value) {
+		const remaining = step.delayedUntil - now.value;
+		await showInfoToast(`This step unlocks in ${formatRemaining(remaining)}.`, {
+			duration: 'long'
+		});
+
+		void scheduleStepUnlockNotification({
+			questId: props.quest.id,
+			questTitle: props.quest.title,
+			stepIndex: step.index,
+			unlockAt: step.delayedUntil
+		});
+		return;
+	}
+
+	emit('select-step', {
+		...step,
+		isCurrentQuest: isCurrentQuest.value,
+		isUnlocked: isUnlocked(step.index)
+	});
 }
 
 function getPrevCompletedAt(index: number): number {
