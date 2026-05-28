@@ -33,6 +33,7 @@ import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { Network, type ConnectionStatus } from '@capacitor/network';
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
 import slide from './animations/slide';
+import { initDailyNotifications } from './composables/useDailyNotifications';
 import {
 	applyNetworkStatus,
 	isOffline,
@@ -195,6 +196,7 @@ let stopUserCacheWatch: (() => void) | null = null;
 let stopOfflineSettingWatch: (() => void) | null = null;
 let stopDataSaverSettingWatch: (() => void) | null = null;
 let pushTeardown: (() => Promise<void>) | null = null;
+let dailyNotificationTeardown: (() => void) | null = null;
 
 const handledDeepLinkTimestamps = new Map<string, number>();
 const MAX_DEEP_LINK_HISTORY = 64;
@@ -398,6 +400,12 @@ onMounted(async () => {
 		} catch (error) {
 			console.warn('Push notification setup failed:', error);
 		}
+
+		try {
+			dailyNotificationTeardown = initDailyNotifications();
+		} catch (error) {
+			console.warn('Daily notification setup failed:', error);
+		}
 		return;
 	}
 
@@ -445,6 +453,11 @@ onBeforeUnmount(() => {
 		const teardown = pushTeardown;
 		pushTeardown = null;
 		void teardown().catch((error) => console.warn('Push teardown failed:', error));
+	}
+
+	if (dailyNotificationTeardown) {
+		dailyNotificationTeardown();
+		dailyNotificationTeardown = null;
 	}
 });
 
