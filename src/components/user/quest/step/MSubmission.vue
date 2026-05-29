@@ -139,7 +139,7 @@
 						name="i-lucide-upload"
 						class="size-10 animate-bounce text-primary"
 					/>
-					<span class="text-sm opacity-70">Validating submission…</span>
+					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
 
 				<div
@@ -169,7 +169,7 @@
 						name="i-lucide-upload"
 						class="size-10 animate-bounce text-primary"
 					/>
-					<span class="text-sm! opacity-70">Validating drawing…</span>
+					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
 				<div
 					v-else-if="succeeded"
@@ -205,7 +205,7 @@
 						name="i-lucide-upload"
 						class="size-10 animate-bounce text-primary!"
 					/>
-					<span class="text-sm! opacity-70">Validating recording…</span>
+					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
 				<div
 					v-else-if="succeeded"
@@ -264,7 +264,7 @@
 						name="i-lucide-upload"
 						class="size-10 animate-bounce text-primary"
 					/>
-					<span class="text-sm! opacity-70">Validating barcode…</span>
+					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
 				<div
 					v-else-if="succeeded"
@@ -296,7 +296,7 @@
 						name="i-lucide-upload"
 						class="size-10 animate-bounce text-primary"
 					/>
-					<span class="text-sm! opacity-70">Submitting distance…</span>
+					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
 				<div
 					v-else-if="succeeded"
@@ -365,6 +365,40 @@ const isNative = computed(() => Capacitor.isNativePlatform());
 const submitting = ref(false);
 const succeeded = ref(false);
 const submitError = ref('');
+
+const validatingMessages = [
+	'Submitting...',
+	'Validating your submission...',
+	'Checking the map...',
+	'Consulting the elements...',
+	'Adjusting the algorithm...',
+	'Polishing the details...',
+	'Counting the rewards...',
+	'Checking the details...',
+	'Reviewing the data...',
+	'Double-checking your preferences...',
+	'Almost there...'
+];
+const validatingMessage = ref(validatingMessages[0]);
+let validatingInterval: ReturnType<typeof setInterval> | null = null;
+
+watch(submitting, (loading) => {
+	if (loading) {
+		let i = 0;
+		validatingMessage.value = validatingMessages[0];
+		validatingInterval = setInterval(() => {
+			i = (i + 1) % validatingMessages.length;
+			validatingMessage.value = validatingMessages[i];
+		}, 2500);
+	} else if (validatingInterval) {
+		clearInterval(validatingInterval);
+		validatingInterval = null;
+	}
+});
+
+onBeforeUnmount(() => {
+	if (validatingInterval) clearInterval(validatingInterval);
+});
 
 // native override - capacitor > local shim
 const nativeLat = ref<number | null>(null);
