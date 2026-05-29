@@ -49,14 +49,14 @@
     "@capgo/capacitor-audio-recorder": "^8.2.1",
     "@capgo/capacitor-pedometer": "^8.0.32",
     "@codecov/nuxt-plugin": "^2.0.1",
-    "@earth-app/crust": "0.4.0-aa7985a",
+    "@earth-app/crust": "0.4.0-e7855a3",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "8.8.1",
     "@ionic/vue-router": "8.8.1",
     "@nuxt/icon": "^2.2.2",
     "@nuxt/image": "^2.0.0",
-    "@nuxt/ui": "^4.8.0",
+    "@nuxt/ui": "^4.8.1",
     "@nuxtjs/google-fonts": "^3.2.0",
     "@nuxtjs/i18n": "^10.4.0",
     "@nuxtjs/ionic": "^1.0.2",
@@ -68,7 +68,7 @@
     "nuxt": "^4.4.6",
     "nuxt-viewport": "^2.4.0",
     "piexifjs": "^1.0.6",
-    "vue": "^3.5.34"
+    "vue": "^3.5.35"
   },
   "overrides": {
     "@ionic/core": "8.8.1",
@@ -91,8 +91,7 @@
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.7.4",
-    "vue-tsc": "^3.3.2",
-    "wrangler": "^4.94.0"
+    "vue-tsc": "^3.3.2"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
