@@ -106,6 +106,7 @@
 					<UserBadgeMPage
 						:badges="badges || []"
 						:search="search || ''"
+						:user-id="props.user.id"
 					/>
 				</template>
 			</MContentDrawer>

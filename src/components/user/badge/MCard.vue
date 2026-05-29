@@ -23,12 +23,21 @@
 			<span class="text-sm opacity-90 text-center">{{ badge.description }}</span>
 		</div>
 	</div>
-	<IonModal :is-open="showDetails">
+	<IonModal
+		:is-open="showDetails"
+		:backdrop-dismiss="!masteryLoading"
+		:can-dismiss="!masteryLoading"
+		@did-dismiss="showDetails = false"
+	>
 		<IonHeader>
 			<IonToolbar class="pl-4">
 				<IonTitle>Badge Details</IonTitle>
 				<IonButtons slot="end">
-					<IonButton @click="showDetails = false">Close</IonButton>
+					<IonButton
+						:disabled="masteryLoading"
+						@click="showDetails = false"
+						>Close</IonButton
+					>
 				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
@@ -91,7 +100,7 @@
 						<IonButton
 							id="badge-mastery-cta"
 							:color="masteryButtonColor"
-							:fill="masteryLocked ? 'outline' : 'solid'"
+							:fill="masteryLocked || masteryCapReached ? 'outline' : 'solid'"
 							:disabled="masteryDisabled"
 							@click="handleMasteryClick"
 						>
@@ -128,7 +137,7 @@
 							name="dots"
 							class="size-3"
 						/>
-						Checking mastery status…
+						Checking mastery status...
 					</span>
 					<span
 						v-else-if="masteryLocked"
@@ -137,17 +146,47 @@
 						This badge mastery has been permanently locked and cannot be regenerated.
 					</span>
 					<span
+						v-else-if="masteryQuestReady && masteryExpiresInDays !== null"
+						class="text-xs opacity-70 text-center max-w-72"
+					>
+						Pick up where you left off — expires in
+						{{ masteryExpiresInDays }} day{{ masteryExpiresInDays === 1 ? '' : 's' }}. Resetting
+						will permanently lock this mastery.
+					</span>
+					<span
 						v-else-if="masteryQuestReady"
 						class="text-xs opacity-70 text-center max-w-72"
 					>
 						Pick up where you left off. Resetting will permanently lock this mastery.
 					</span>
 					<span
-						v-else
+						v-else-if="masteryCapReached"
+						class="text-xs text-error text-center max-w-72"
+					>
+						You have {{ masteryList?.active }} / {{ masteryList?.cap }} active mastery quests.
+						Complete or let one expire before generating another.
+					</span>
+					<span
+						v-else-if="!masteryStatusFetched"
 						class="text-xs opacity-60 text-center max-w-72"
 					>
 						Generate a personalised AI quest to deepen your mastery of this badge.
 					</span>
+					<span
+						v-if="masteryList && !masteryCapReached && !masteryQuestReady && !masteryLocked"
+						class="text-xs opacity-60 text-center"
+					>
+						{{ masteryList.active }} / {{ masteryList.cap }} active mastery slots used
+					</span>
+
+					<!-- rotating reassurance while ai inference runs -->
+					<div
+						v-if="masteryLoading && !masteryQuestReady"
+						class="flex flex-col items-center gap-1 mt-2 text-sm opacity-90"
+					>
+						<span>{{ generatingMessage }}</span>
+						<span class="text-xs opacity-70">this may take up to a minute</span>
+					</div>
 				</div>
 
 				<div class="flex items-center">
@@ -172,6 +211,8 @@
 	</IonModal>
 </template>
 <script setup lang="ts">
+import { App as CapacitorApp } from '@capacitor/app';
+import type { PluginListenerHandle } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { DateTime } from 'luxon';
 import { BadgeMasteryGenerationError } from 'types/user';
@@ -191,6 +232,50 @@ const masteryStatusLoading = ref(false);
 const masteryStatusFetched = ref(false);
 const masteryLocked = ref(false);
 const masteryQuestReady = ref(false);
+
+// rotates while masteryLoading — ai inference can run 20-60s and a silent spinner reads as a hang
+const generatingMessages = [
+	'Loading...',
+	'Generating your quest...',
+	'Picking the perfect steps...',
+	'Consulting the badge archives...',
+	'Tuning difficulty to your profile...',
+	'Polishing the timeline...',
+	'Almost there...'
+];
+const generatingMessage = ref(generatingMessages[0]);
+let generatingInterval: ReturnType<typeof setInterval> | null = null;
+
+// hardware back button is swallowed while generating — bailing mid-call burns the slot with no quest
+let backHandle: PluginListenerHandle | null = null;
+
+watch(masteryLoading, async (loading) => {
+	if (loading) {
+		let i = 0;
+		generatingMessage.value = generatingMessages[0];
+		generatingInterval = setInterval(() => {
+			i = (i + 1) % generatingMessages.length;
+			generatingMessage.value = generatingMessages[i];
+		}, 2500);
+		backHandle = await CapacitorApp.addListener('backButton', () => {
+			// intentional no-op while generation is in flight
+		});
+	} else {
+		if (generatingInterval) {
+			clearInterval(generatingInterval);
+			generatingInterval = null;
+		}
+		if (backHandle) {
+			await backHandle.remove();
+			backHandle = null;
+		}
+	}
+});
+
+onBeforeUnmount(() => {
+	if (generatingInterval) clearInterval(generatingInterval);
+	if (backHandle) backHandle.remove();
+});
 
 const rarityColor = computed(() => {
 	switch (props.badge.rarity) {
@@ -231,32 +316,61 @@ const canShowMastery = computed(() => {
 	return true;
 });
 
+// per-user cap snapshot — blocks NEW generation only; once a quest is ready, "continue" is always allowed
+const masteryList = computed(() => {
+	const uid = authUser.value?.id;
+	if (!uid) return null;
+	return userStore.masteryLists.get(uid) ?? null;
+});
+const masteryCapReached = computed(() => {
+	const list = masteryList.value;
+	if (!list) return false;
+	return list.active >= list.cap;
+});
+const masteryExpiresInDays = computed(() => {
+	const item = masteryList.value?.items.find((i) => i.badge_id === props.badge.id);
+	if (!item) return null;
+	const days = DateTime.fromMillis(item.expires_at).diffNow('days').days;
+	return days > 0 ? Math.ceil(days) : 0;
+});
+
 const masteryDisabled = computed(
-	() => masteryLoading.value || masteryStatusLoading.value || masteryLocked.value
+	() =>
+		masteryLoading.value ||
+		masteryStatusLoading.value ||
+		masteryLocked.value ||
+		(masteryCapReached.value && !masteryQuestReady.value)
 );
 
 const masteryButtonLabel = computed(() => {
-	if (masteryLoading.value) return masteryQuestReady.value ? 'Opening…' : 'Generating…';
+	if (masteryLoading.value) return masteryQuestReady.value ? 'Opening...' : 'Generating...';
 	if (masteryLocked.value) return 'Mastery Locked';
 	if (masteryQuestReady.value) return 'Continue Mastery Quest';
+	if (masteryCapReached.value) return 'Mastery cap reached';
 	return 'Master This Badge';
 });
 
 const masteryButtonIcon = computed(() => {
 	if (masteryLocked.value) return 'mdi:lock';
 	if (masteryQuestReady.value) return 'mdi:play-circle-outline';
+	if (masteryCapReached.value) return 'mdi:alert-octagon-outline';
 	return 'mdi:medal-outline';
 });
 
 const masteryButtonColor = computed(() => {
 	if (masteryLocked.value) return 'medium';
 	if (masteryQuestReady.value) return 'warning';
+	if (masteryCapReached.value) return 'medium';
 	return 'primary';
 });
 
 watch(showDetails, async (open) => {
 	if (!open) return;
 	if (!canShowMastery.value) return;
+	const uid = authUser.value?.id;
+
+	// cap snapshot — cached after first open, so re-opens are instant
+	if (uid && !userStore.masteryLists.has(uid)) userStore.fetchMasteryList(uid);
 	if (masteryStatusFetched.value) return;
 	await loadMasteryStatus();
 });
@@ -342,7 +456,7 @@ async function generateAndOpen() {
 					break;
 				case 'conflict':
 					masteryQuestReady.value = true;
-					await showInfoToast('Mastery already exists for this badge; opening it instead…', {
+					await showInfoToast('Mastery already exists for this badge; opening it instead...', {
 						duration: 'short'
 					});
 					showDetails.value = false;
@@ -350,6 +464,15 @@ async function generateAndOpen() {
 					await navigateTo(`/tabs/quests/badge_mastery_${props.badge.id}`, {
 						replace: true
 					});
+					break;
+				case 'cap_reached':
+					// don't mark badge as exempt — the slot is just temporarily full. store
+					// already refreshed the list, so the disabled state will catch up on next open
+					await showInfoToast(
+						error.message ||
+							'Mastery cap reached. Complete or let one expire before generating another.',
+						{ duration: 'long' }
+					);
 					break;
 				case 'ai_failed':
 					await showErrorToast(new Error('Generation failed. Please try again.'), {
