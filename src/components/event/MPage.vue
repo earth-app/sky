@@ -1,5 +1,19 @@
 <template>
 	<div class="flex flex-col items-center w-full pt-8">
+		<div class="flex justify-end w-full pr-4">
+			<IonButton
+				fill="clear"
+				size="small"
+				color="secondary"
+				aria-label="Help"
+				@click="startTour('event-profile')"
+			>
+				<UIcon
+					name="mdi:progress-question"
+					class="size-5"
+				/>
+			</IonButton>
+		</div>
 		<div class="flex items-start justify-center w-full px-4">
 			<div class="flex flex-col w-full">
 				<IonImg
@@ -11,12 +25,14 @@
 					@click="thumbnail && openPreview()"
 				/>
 				<EventMCard
+					id="event-profile-card"
 					:event="event"
 					no-link
 					full
 					class="w-full"
 				/>
 				<UserMCard
+					id="event-host-card"
 					:user="event.host"
 					class="my-2"
 				/>
@@ -94,6 +110,14 @@
 			</div>
 		</IonContent>
 	</IonModal>
+
+	<ClientOnly>
+		<MSiteTour
+			:steps="eventTour"
+			name="Event Tour"
+			tour-id="event-profile"
+		/>
+	</ClientOnly>
 </template>
 
 <script setup lang="ts">
@@ -128,4 +152,36 @@ function openInfo() {
 	if (!props.event.fields?.info) return;
 	infoOpen.value = true;
 }
+
+// event tour
+
+const { startTour } = useSiteTour();
+
+const eventTour: SiteTourStep[] = [
+	{
+		id: 'event-profile-card',
+		title: 'Event Overview',
+		description:
+			'Everything you need at a glance: name, date, location, sign-up status, attendee count, and a description. The Sign Up button appears here if registration is open.',
+		footer: 'Live status banners show ongoing, starting soon, or concluded events.',
+		icon: 'mdi:calendar-star',
+		highlightPadding: 12
+	},
+	{
+		id: 'event-host-card',
+		title: 'Meet the Host',
+		description:
+			"This card shows who's running the event. Tap the host's name or avatar to visit their profile, see their other events, and add them as a friend.",
+		footer: 'Pro tip: hosts often share extra context on their profile bio.',
+		icon: 'mdi:account-tie-outline'
+	},
+	{
+		id: 'event-submissions',
+		title: 'Event Submissions & Gallery',
+		description:
+			'During and shortly after the event, attendees can upload photos to share their experience. Submissions earn Impact Points and can be featured in the public gallery.',
+		footer: 'Submissions are open from the event start through 3 days after it ends.',
+		icon: 'mdi:image-multiple-outline'
+	}
+];
 </script>

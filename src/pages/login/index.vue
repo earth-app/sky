@@ -2,8 +2,30 @@
 	<IonPage>
 		<IonContent :fullscreen="true">
 			<div class="flex flex-col items-center mt-8">
-				<h1 class="text-3xl font-semibold mb-4 mt-24 sm:mt-8">Login</h1>
-				<div class="flex flex-col w-full px-8 max-w-sm gap-2 mb-4">
+				<div class="flex items-center gap-2 mb-4 mt-24 sm:mt-8">
+					<h1
+						id="login"
+						class="text-3xl font-semibold m-0"
+					>
+						Login
+					</h1>
+					<IonButton
+						fill="clear"
+						size="small"
+						color="secondary"
+						aria-label="Help"
+						@click="startTour('login')"
+					>
+						<UIcon
+							name="mdi:progress-question"
+							class="size-5"
+						/>
+					</IonButton>
+				</div>
+				<div
+					id="login-oauth"
+					class="flex flex-col w-full px-8 max-w-sm gap-2 mb-4"
+				>
 					<UserOAuthShield
 						v-for="provider in OAUTH_PROVIDERS"
 						:key="provider"
@@ -11,7 +33,12 @@
 						context="login"
 					/>
 				</div>
-				<UserMLoginForm @loginSuccess="handleLoginSuccess" />
+				<div
+					id="login-form"
+					class="w-full flex justify-center"
+				>
+					<UserMLoginForm @loginSuccess="handleLoginSuccess" />
+				</div>
 				<p class="text-sm text-gray-500 mt-3">
 					Need an account?
 					<button
@@ -24,6 +51,14 @@
 				</p>
 				<Back text />
 			</div>
+
+			<ClientOnly>
+				<MSiteTour
+					:steps="loginTour"
+					name="Login Tour"
+					tour-id="login"
+				/>
+			</ClientOnly>
 		</IonContent>
 	</IonPage>
 </template>
@@ -102,4 +137,33 @@ function handleLoginSuccess() {
 function goToSignup() {
 	ionRouter.push('/signup', slide);
 }
+
+const { startTour } = useSiteTour();
+
+const loginTour: SiteTourStep[] = [
+	{
+		id: 'login',
+		title: 'Welcome Back',
+		description:
+			'Glad to have you again. You can sign in with the same method you used to sign up — OAuth provider, or username + password.',
+		footer: 'Forgot your password? You can reset it from the form below.',
+		icon: 'mdi:login-variant'
+	},
+	{
+		id: 'login-oauth',
+		title: 'OAuth Sign-In',
+		description:
+			'If you signed up using Google, Microsoft, or GitHub, tap the matching button. You only need to authorize once per device.',
+		footer: 'Linked multiple providers? Any of them gets you in.',
+		icon: 'mdi:link-variant'
+	},
+	{
+		id: 'login-form',
+		title: 'Username & Password',
+		description:
+			'Use the username or email you signed up with, plus your password. We never email your password — if asked to "confirm" it via email, that\'s a phishing attempt.',
+		footer: 'Trouble logging in? Use the password reset link to get back in via email.',
+		icon: 'mdi:form-textbox-password'
+	}
+];
 </script>

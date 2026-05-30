@@ -1,13 +1,28 @@
 <template>
 	<IonPage>
 		<IonHeader class="bg-black/10 dark:bg-gray-900/20">
-			<IonSearchbar
-				id="discover-search"
-				v-model="search"
-				placeholder="Explore..."
-				:color="theme"
-				class="w-full max-w-2xl mt-12 border-b-2 border-black/15 dark:border-white/30"
-			/>
+			<div class="flex items-center w-full">
+				<IonSearchbar
+					id="discover-search"
+					v-model="search"
+					placeholder="Explore..."
+					:color="theme"
+					class="flex-1 max-w-2xl mt-12 border-b-2 border-black/15 dark:border-white/30"
+				/>
+				<IonButton
+					id="discover-help"
+					fill="clear"
+					color="secondary"
+					class="mt-12 mr-2"
+					aria-label="Help"
+					@click="startTour('discover-index')"
+				>
+					<UIcon
+						name="mdi:progress-question"
+						class="size-5"
+					/>
+				</IonButton>
+			</div>
 		</IonHeader>
 		<IonContent
 			ref="contentRef"
@@ -16,6 +31,7 @@
 			<div class="flex flex-col items-center my-8 px-4">
 				<IonSegment
 					v-if="showSegmentSelector"
+					id="discover-segments"
 					v-model="selectedSegment"
 					color="primary"
 					class="flex items-center py-1 w-full max-w-2xl mb-4 *:flex *:items-center *:min-w-12! *:max-w-1/6 *:text-secondary"
@@ -52,7 +68,10 @@
 					</IonSegmentButton>
 				</IonSegment>
 
-				<div class="w-full max-w-2xl flex flex-col items-center gap-2">
+				<div
+					id="discover-results"
+					class="w-full max-w-2xl flex flex-col items-center gap-2"
+				>
 					<span
 						v-if="showResultsSummary"
 						class="text-sm opacity-70 font-semibold"
@@ -125,6 +144,14 @@
 					</div>
 				</div>
 			</div>
+
+			<ClientOnly>
+				<MSiteTour
+					:steps="discoverTour"
+					name="Discover Tour"
+					tour-id="discover-index"
+				/>
+			</ClientOnly>
 		</IonContent>
 	</IonPage>
 </template>
@@ -854,4 +881,40 @@ async function loadMore() {
 		}
 	}
 }
+
+const { startTour } = useSiteTour();
+
+const discoverTour = computed<SiteTourStep[]>(() => [
+	{
+		id: 'discover-search',
+		title: 'Discover Anything',
+		description:
+			'Search across people, activities, articles, prompts, and events. Type a keyword to find what you need, or leave it blank for a curated random feed.',
+		footer: 'Results stream in as you type.',
+		icon: 'mdi:magnify',
+		placement: 'bottom',
+		highlightPadding: 8
+	},
+	{
+		id: 'discover-results',
+		title: showSegmentSelector.value ? 'Filtered Results' : 'Your Feed',
+		description: showSegmentSelector.value
+			? 'When you search or land on a specific tab, results are filtered to that type. Tap any card to open it.'
+			: 'Without a search query, you get a shuffled mix of activities, articles, prompts, events, and users — refreshed each load.',
+		footer: 'Scroll to load more, or pull-to-refresh to shuffle a new batch.',
+		icon: 'mdi:compass-outline',
+		highlightPadding: 12,
+		waitFor: 'discover-results'
+	},
+	{
+		id: 'discover-segments',
+		title: 'Filter by Type',
+		description:
+			'Once you start searching, this segment bar appears so you can narrow results to users, activities, articles, prompts, or events.',
+		footer: "The selector also appears when you arrive here from the welcome tour's deep links.",
+		icon: 'mdi:filter-variant',
+		highlightPadding: 6,
+		condition: () => showSegmentSelector.value
+	}
+]);
 </script>

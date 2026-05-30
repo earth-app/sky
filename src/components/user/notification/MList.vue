@@ -10,7 +10,10 @@
 			v-else
 			class="flex flex-col"
 		>
-			<div class="flex items-center mb-2">
+			<div
+				:id="additional ? 'notifications-count' : undefined"
+				class="flex items-center mb-2"
+			>
 				<span class="text-sm! font-medium mr-2">
 					{{ notifications.length }} Notification{{ notifications.length > 1 ? 's' : '' }}
 				</span>
@@ -46,12 +49,14 @@
 					Clear All
 				</IonButton>
 			</div>
-			<UserNotificationMCard
-				v-for="notification in displayed"
-				:key="notification.id"
-				:notification="notification"
-				:additional="additional"
-			/>
+			<div :id="additional ? 'notifications-list' : undefined">
+				<UserNotificationMCard
+					v-for="notification in displayed"
+					:key="notification.id"
+					:notification="notification"
+					:additional="additional"
+				/>
+			</div>
 		</div>
 	</div>
 </template>

@@ -1,27 +1,46 @@
 <template>
 	<!-- tour start -->
 	<Teleport :to="overlayTeleportTarget">
+		<!-- dim backdrop with cutout -->
+		<div
+			v-if="isActive && showDim"
+			:style="{
+				position: 'fixed',
+				top: dimStyle.top,
+				left: dimStyle.left,
+				width: dimStyle.width,
+				height: dimStyle.height,
+				borderRadius: `${effectiveRadius}px`,
+				boxShadow: `0 0 0 9999px ${dimColor}`,
+				pointerEvents: allowInteraction ? 'none' : 'auto',
+				transition: 'top 180ms ease, left 180ms ease, width 180ms ease, height 180ms ease',
+				zIndex: dimZIndex
+			}"
+			@click="onBackdropClick"
+		/>
+
+		<!-- highlight box -->
 		<div
 			v-if="isActive && boxStyle.display === 'block'"
 			ref="highlightBox"
+			:class="['site-tour-highlight', { 'site-tour-highlight--pulse': showPulse }]"
 			:style="{
 				position: 'fixed',
 				top: boxStyle.top,
 				left: boxStyle.left,
 				width: boxStyle.width,
 				height: boxStyle.height,
-				border: '2px solid #3B82F6',
-				borderRadius: '8px',
-				boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',
-				transition: 'top 90ms linear, left 90ms linear, width 90ms linear, height 90ms linear',
-				willChange: 'top, left, width, height',
+				borderRadius: `${effectiveRadius}px`,
 				pointerEvents: 'none',
 				zIndex: boxStyle.zIndex
 			}"
 		/>
+
+		<!-- tooltip card -->
 		<div
 			v-if="isActive && step"
 			ref="tooltipCard"
+			class="site-tour-card-wrap motion-preset-fade-md"
 			@click.stop
 			@mousedown.stop
 			@pointerdown.stop
@@ -33,24 +52,31 @@
 				right: tooltipStyle.right,
 				maxWidth: tooltipStyle.maxWidth,
 				transform: tooltipStyle.transform,
-				transition: 'top 100ms linear, left 100ms linear, transform 100ms linear',
-				willChange: 'top, left, transform',
+				transition: 'top 180ms ease, left 180ms ease, right 180ms ease, transform 180ms ease',
 				zIndex: tooltipStyle.zIndex,
 				pointerEvents: 'auto'
 			}"
 		>
 			<IonCard
-				class="shadow-lg min-w-70 w-[90vw] sm:w-[72vw] lg:w-[52vw] max-w-200 p-4 border-4 border-blue-600 rounded-lg"
+				class="shadow-lg min-w-70 w-[90vw] sm:w-[72vw] lg:w-[52vw] max-w-200 p-4 border-4 border-blue-600 rounded-lg site-tour-card"
 			>
 				<IonCardHeader class="pb-2">
 					<div class="flex justify-between items-center gap-2">
-						<h3 class="text-lg font-semibold m-0!">{{ step.title }}</h3>
+						<div class="flex items-center gap-2 min-w-0">
+							<UIcon
+								v-if="step.icon"
+								:name="step.icon"
+								class="size-5 text-blue-500 shrink-0"
+							/>
+							<h3 class="text-lg font-semibold m-0! truncate">{{ step.title }}</h3>
+						</div>
 						<IonButton
 							fill="clear"
 							size="small"
 							color="medium"
 							class="-mr-2"
-							@click="close"
+							@click="close({ completed: false })"
+							aria-label="Close tour"
 						>
 							<UIcon
 								name="i-heroicons-x-mark"
@@ -61,14 +87,20 @@
 				</IonCardHeader>
 
 				<IonCardContent class="p-0!">
-					<p class="text-sm! text-gray-600 dark:text-gray-400">
+					<p class="text-sm! text-gray-600 dark:text-gray-400 whitespace-pre-line">
 						{{ step.description }}
 					</p>
+
+					<IonImg
+						v-if="step.image"
+						:src="step.image"
+						class="mt-3 rounded-md w-full max-h-48 object-cover border border-gray-200 dark:border-gray-800"
+					/>
 
 					<div class="mt-1 flex flex-wrap items-center justify-between">
 						<p
 							v-if="step.footer"
-							class="text-xs! text-gray-500 px-2"
+							class="text-xs! text-gray-500 px-2 flex-1"
 						>
 							{{ step.footer }}
 						</p>
@@ -76,37 +108,64 @@
 							<span class="text-xs! text-gray-500 text-center mx-2">
 								Step {{ visibleStepIndex + 1 }} of {{ visibleSteps.length }}
 							</span>
-							<IonButton
-								v-if="index > 1"
-								fill="outline"
-								color="primary"
-								size="small"
-								@click="gotoPreviousStep"
-								class="w-30"
-							>
-								<UIcon
-									name="i-heroicons-arrow-left"
-									class="size-4 mr-1"
-								/>
-								<span>Previous</span>
-							</IonButton>
-							<IonButton
-								fill="solid"
-								color="primary"
-								size="small"
-								@click="gotoNextStep"
-								class="w-30"
-							>
-								<span>{{ visibleStepIndex >= visibleSteps.length - 1 ? 'Finish' : 'Next' }}</span>
-								<UIcon
-									:name="
-										visibleStepIndex >= visibleSteps.length - 1
-											? 'i-heroicons-flag'
-											: 'i-heroicons-arrow-right'
-									"
-									class="size-4 ml-1"
-								/>
-							</IonButton>
+							<div class="flex flex-col gap-2 items-stretch w-full sm:flex-row sm:justify-end">
+								<IonButton
+									v-if="index > 0"
+									fill="outline"
+									color="primary"
+									size="small"
+									:disabled="busy"
+									@click="gotoPreviousStep"
+									class="sm:w-30"
+								>
+									<UIcon
+										name="i-heroicons-arrow-left"
+										class="size-4 mr-1"
+									/>
+									<span>Back</span>
+								</IonButton>
+								<IonButton
+									v-if="step.cta"
+									:color="step.cta.color || 'success'"
+									fill="solid"
+									size="small"
+									:disabled="busy || ctaLoading"
+									@click="runCTA"
+									class="sm:w-30"
+								>
+									<IonSpinner
+										v-if="ctaLoading"
+										name="crescent"
+										class="size-4 mr-1"
+									/>
+									<UIcon
+										v-else
+										:name="step.cta.icon || 'mdi:flash'"
+										class="size-4 mr-1"
+									/>
+									<span>{{ step.cta.label }}</span>
+								</IonButton>
+								<IonButton
+									fill="solid"
+									color="primary"
+									size="small"
+									:disabled="busy"
+									@click="gotoNextStep"
+									class="sm:w-30"
+								>
+									<IonSpinner
+										v-if="advancing"
+										name="crescent"
+										class="size-4 mr-1"
+									/>
+									<span>{{ isLastVisibleStep ? 'Finish' : 'Next' }}</span>
+									<UIcon
+										v-if="!advancing"
+										:name="isLastVisibleStep ? 'i-heroicons-flag' : 'i-heroicons-arrow-right'"
+										class="size-4 ml-1"
+									/>
+								</IonButton>
+							</div>
 						</div>
 					</div>
 				</IonCardContent>
@@ -123,32 +182,46 @@ const props = defineProps<{
 	tourId: string;
 	name: string;
 	steps: SiteTourStep[];
+	dim?: boolean;
+	pulse?: boolean;
+	allowSkip?: boolean;
+	persist?: boolean;
 }>();
 
 const emit = defineEmits<{
 	(event: 'next-step', oldStep: number): void;
 	(event: 'prev-step', oldStep: number): void;
 	(event: 'close-tour'): void;
+	(event: 'complete-tour'): void;
 }>();
 
-const { registerTour, unregisterTour, isActiveTour, stopTour } = useSiteTour();
+const { registerTour, unregisterTour, isActiveTour, stopTour, activeStepIndex, markCompleted } =
+	useSiteTour();
 const overlayTeleportTarget = ref<string | HTMLElement>('body');
 const highlightBox = ref<HTMLElement | null>(null);
 const tooltipCard = ref<HTMLElement | null>(null);
 const router = useIonRouter();
 const index = ref(0);
 const step = computed(() => props.steps[index.value] || null);
+
 const TOUR_ROUTE_DURATION_MS = 300;
-const TARGET_LOOKUP_TIMEOUT_MS = 900;
-const SHADOW_LOOKUP_INTERVAL_MS = 80;
-const zBase = 20_000;
+const TARGET_LOOKUP_TIMEOUT_MS = 2000;
+const SHADOW_LOOKUP_INTERVAL_MS = 60;
+const BASE_LAYER_Z_INDEX = 20_000;
+
 const boxStyle = ref({
 	top: '0px',
 	left: '0px',
 	width: '0px',
 	height: '0px',
 	display: 'none',
-	zIndex: `${zBase}`
+	zIndex: `${BASE_LAYER_Z_INDEX + 1}`
+});
+const dimStyle = ref({
+	top: '-50vh',
+	left: '-50vw',
+	width: '0px',
+	height: '0px'
 });
 const tooltipStyle = ref({
 	top: '0px',
@@ -156,8 +229,14 @@ const tooltipStyle = ref({
 	right: 'auto',
 	maxWidth: 'none',
 	transform: 'none',
-	zIndex: `${zBase + 1}`
+	zIndex: `${BASE_LAYER_Z_INDEX + 2}`
 });
+const dimZIndex = ref(`${BASE_LAYER_Z_INDEX}`);
+const dimColor = 'rgba(0, 0, 0, 0.55)';
+
+const busy = ref(false);
+const advancing = ref(false);
+const ctaLoading = ref(false);
 
 let currentElementId: string | null = null;
 
@@ -166,12 +245,12 @@ let resizeObserver: ResizeObserver | null = null;
 let mutationObserver: MutationObserver | null = null;
 let observedElement: HTMLElement | null = null;
 
-// track active layer container (e.g. dialog or popover) to ensure the highlight is visible above it and to avoid
-// closing modals or popovers when interacting with the tooltip
+// active layer container (modal/popover) so highlight stays above and modal does not close
 let activeLayerContainer: HTMLElement | null = null;
 let hasScrolledToFallbackTooltip = false;
 let missingElementWarningId: string | null = null;
 let lastShadowLookupAt = 0;
+let displayToken = 0;
 const trackedScrollContainers = new Set<HTMLElement>();
 
 const ionicOverlaySelector = [
@@ -205,33 +284,53 @@ defineExpose({
 	highlightBox
 });
 
-// Filter steps based on user login status
 const visibleSteps = computed(() => {
-	return props.steps.filter((step) => {
-		// If anonymous is undefined/blank, don't skip
-		if (step.anonymous === undefined) return true;
-		// If anonymous is true, skip if logged in
-		if (step.anonymous === true) return !isLoggedIn.value;
-		// If anonymous is false, skip if not logged in
-		if (step.anonymous === false) return isLoggedIn.value;
+	return props.steps.filter((s) => {
+		if (s.anonymous === undefined) return true;
+		if (s.anonymous === true) return !isLoggedIn.value;
+		if (s.anonymous === false) return isLoggedIn.value;
 		return true;
 	});
 });
 
-// Get the current visible step index (0-based)
 const visibleStepIndex = computed(() => {
-	if (!isLoggedIn.value) {
-		return index.value;
-	}
-	// Count how many non-anonymous steps come before the current index
 	let count = 0;
 	for (let i = 0; i < index.value && i < props.steps.length; i++) {
-		const currentStep = props.steps[i];
-		if (currentStep && !currentStep.anonymous) {
+		const s = props.steps[i];
+		if (!s) continue;
+		if (s.anonymous === undefined) {
+			count++;
+		} else if (s.anonymous === true && !isLoggedIn.value) {
+			count++;
+		} else if (s.anonymous === false && isLoggedIn.value) {
 			count++;
 		}
 	}
 	return count;
+});
+
+const isLastVisibleStep = computed(() => visibleStepIndex.value >= visibleSteps.value.length - 1);
+
+const showPulse = computed(() => {
+	if (step.value?.pulse === false) return false;
+	if (props.pulse === false) return false;
+	if (step.value?.pulse === true) return true;
+	if (props.pulse === true) return true;
+	return true; // default-on for new visual feedback
+});
+
+const showDim = computed(() => {
+	if (!isActive.value) return false;
+	if (step.value?.dim === false) return false;
+	if (step.value?.dim === true) return true;
+	return !!props.dim;
+});
+
+const allowInteraction = computed(() => step.value?.interactive === true);
+
+const effectiveRadius = computed(() => {
+	if (typeof step.value?.radius === 'number') return step.value.radius;
+	return 10;
 });
 
 const tourSlide = (baseEl: HTMLElement, opts?: Record<string, unknown>) => {
@@ -264,31 +363,110 @@ function getCurrentRouteTarget(): string {
 	return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
-async function waitForStepTarget(targetId?: string) {
-	await nextTick();
+function shouldSkipStep(s: SiteTourStep): boolean {
+	if (s.anonymous === true && isLoggedIn.value) return true;
+	if (s.anonymous === false && !isLoggedIn.value) return true;
+	if (s.condition && !s.condition()) return true;
+	return false;
+}
 
-	if (!import.meta.client || !targetId) return;
+async function waitForElement(id: string, timeout: number): Promise<HTMLElement | null> {
+	const existing = document.getElementById(id) || findElementByIdIncludingShadow(id);
+	if (existing) return existing;
+	if (timeout <= 0) return null;
 
-	const deadline = Date.now() + TARGET_LOOKUP_TIMEOUT_MS;
-	while (Date.now() < deadline) {
-		const directMatch = document.getElementById(targetId);
-		if (directMatch) {
-			return;
-		}
+	return new Promise((resolve) => {
+		const start = Date.now();
+		const interval = SHADOW_LOOKUP_INTERVAL_MS;
 
-		const now = Date.now();
-		if (now - lastShadowLookupAt >= SHADOW_LOOKUP_INTERVAL_MS) {
-			lastShadowLookupAt = now;
-			if (findElementByIdIncludingShadow(targetId)) {
+		const tick = () => {
+			const el = document.getElementById(id) || findElementByIdIncludingShadow(id);
+			if (el) {
+				resolve(el);
 				return;
 			}
+			if (Date.now() - start >= timeout) {
+				resolve(null);
+				return;
+			}
+			setTimeout(tick, interval);
+		};
+
+		setTimeout(tick, interval);
+	});
+}
+
+async function waitForCondition(check: () => boolean, timeout: number): Promise<boolean> {
+	if (check()) return true;
+	const start = Date.now();
+	return new Promise((resolve) => {
+		const interval = 80;
+		const tick = () => {
+			if (check()) {
+				resolve(true);
+				return;
+			}
+			if (Date.now() - start >= timeout) {
+				resolve(false);
+				return;
+			}
+			setTimeout(tick, interval);
+		};
+		setTimeout(tick, interval);
+	});
+}
+
+async function executeActions(actions: SiteTourStepAction[] | undefined) {
+	if (!actions || actions.length === 0) return;
+
+	for (const action of actions) {
+		if (action.delay && action.delay > 0) {
+			await new Promise((resolve) => setTimeout(resolve, action.delay));
 		}
 
-		await nextAnimationFrame();
+		const target = action.target
+			? document.getElementById(action.target) || findElementByIdIncludingShadow(action.target)
+			: null;
+
+		switch (action.type) {
+			case 'click':
+				if (target instanceof HTMLElement) {
+					target.click();
+				}
+				break;
+			case 'focus':
+				if (target instanceof HTMLElement) {
+					target.focus({ preventScroll: false });
+				}
+				break;
+			case 'scroll':
+				if (target instanceof HTMLElement) {
+					target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+				}
+				break;
+			case 'set-value':
+				if (
+					(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) &&
+					typeof action.value === 'string'
+				) {
+					target.value = action.value;
+					target.dispatchEvent(new Event('input', { bubbles: true }));
+					target.dispatchEvent(new Event('change', { bubbles: true }));
+				}
+				break;
+			case 'dispatch-event':
+				if (target instanceof HTMLElement && action.event) {
+					target.dispatchEvent(new CustomEvent(action.event, { bubbles: true }));
+				}
+				break;
+			case 'wait':
+				// already handled above via delay
+				break;
+		}
 	}
 }
 
-async function navigateToStepRoute(route: string, targetId?: string) {
+async function navigateToStepRoute(route: string) {
 	const targetRoute = normalizeRouteTarget(route);
 
 	if (!import.meta.client) {
@@ -299,49 +477,81 @@ async function navigateToStepRoute(route: string, targetId?: string) {
 	if (getCurrentRouteTarget() !== targetRoute) {
 		router.push(targetRoute, tourSlide);
 	}
-
-	await waitForStepTarget(targetId);
 }
 
 async function display() {
-	if (index.value < 0 || index.value >= props.steps.length) {
-		// finished the tour
-		close();
-		return;
-	}
+	const token = ++displayToken;
+	busy.value = true;
 
-	if (step.value === null) {
-		// finished the tour
-		close();
-		return;
-	}
+	try {
+		if (index.value < 0 || index.value >= props.steps.length) {
+			close({ completed: true });
+			return;
+		}
 
-	// Skip steps based on anonymous property and login status
-	if (step.value?.anonymous !== undefined) {
-		const shouldSkip =
-			(step.value.anonymous === true && isLoggedIn.value) ||
-			(step.value.anonymous === false && !isLoggedIn.value);
-		if (shouldSkip) {
+		if (step.value === null) {
+			close({ completed: true });
+			return;
+		}
+
+		const currentStep = step.value;
+
+		if (shouldSkipStep(currentStep)) {
 			index.value++;
+			if (token !== displayToken) return;
 			await display();
 			return;
 		}
-	}
 
-	// Clean up previous highlight
-	destroyTourHighlight();
-	if (step.value) {
-		// Navigate to URL if provided
-		if (step.value.url) {
-			await navigateToStepRoute(step.value.url, step.value.id);
-		} else {
-			await waitForStepTarget(step.value.id);
+		destroyTourHighlight();
+
+		if (currentStep.url) {
+			await navigateToStepRoute(currentStep.url);
+			if (token !== displayToken) return;
+			await nextTick();
 		}
 
-		// Create new highlight
-		createTourHighlight(step.value.id);
-	} else {
-		console.warn(`No step found at index ${index.value}`);
+		if (currentStep.delay && currentStep.delay > 0) {
+			await new Promise((resolve) => setTimeout(resolve, currentStep.delay));
+			if (token !== displayToken) return;
+		}
+
+		if (currentStep.waitFor) {
+			const waited = await waitForCondition(() => {
+				const id = currentStep.waitFor!;
+				const el = document.getElementById(id) || findElementByIdIncludingShadow(id);
+				return !!el;
+			}, currentStep.waitTimeout ?? 2500);
+			if (!waited) {
+				console.warn(
+					`Tour "${props.tourId}" timed out waiting for waitFor element "${currentStep.waitFor}".`
+				);
+			}
+			if (token !== displayToken) return;
+		}
+
+		if (currentStep.id) {
+			// hydration-tolerant target lookup avoids highlighting a stale element
+			// while the next page or shadow root mounts
+			await waitForElement(currentStep.id, currentStep.waitTimeout ?? TARGET_LOOKUP_TIMEOUT_MS);
+			if (token !== displayToken) return;
+		}
+
+		await executeActions(currentStep.actions);
+		if (token !== displayToken) return;
+
+		createTourHighlight(currentStep.id);
+
+		try {
+			await currentStep.onEnter?.();
+		} catch (err) {
+			console.warn(`Tour step onEnter failed:`, err);
+		}
+	} finally {
+		if (token === displayToken) {
+			busy.value = false;
+			advancing.value = false;
+		}
 	}
 }
 
@@ -358,10 +568,18 @@ function prerenderRouteIfSupported(route: string) {
 }
 
 async function gotoNextStep() {
+	if (busy.value) return;
+	advancing.value = true;
 	const oldStep = index.value;
 
-	// Prepare next route only when runtime exposes route prerender support.
-	const nextIndex = index.value + 1;
+	const currentStep = props.steps[oldStep];
+	try {
+		await currentStep?.onExit?.();
+	} catch (err) {
+		console.warn('Tour step onExit failed:', err);
+	}
+
+	const nextIndex = oldStep + 1;
 	if (nextIndex < props.steps.length) {
 		const nextStep = props.steps[nextIndex];
 		if (nextStep?.prerendered && nextStep?.url) {
@@ -369,43 +587,87 @@ async function gotoNextStep() {
 		}
 	}
 
-	index.value++;
+	if (nextIndex >= props.steps.length) {
+		emit('next-step', oldStep);
+		close({ completed: true });
+		return;
+	}
+
+	index.value = nextIndex;
 	await display();
 	emit('next-step', oldStep);
 }
 
 async function gotoPreviousStep() {
+	if (busy.value) return;
 	const oldStep = index.value;
-	index.value--;
 
-	// Skip steps based on anonymous property and login status (going backwards)
-	while (index.value >= 0) {
-		const currentStep = props.steps[index.value];
-		if (currentStep?.anonymous !== undefined) {
-			const shouldSkip =
-				(currentStep.anonymous === true && isLoggedIn.value) ||
-				(currentStep.anonymous === false && !isLoggedIn.value);
-			if (shouldSkip) {
-				index.value--;
-			} else {
-				break;
-			}
+	const currentStep = props.steps[oldStep];
+	try {
+		await currentStep?.onExit?.();
+	} catch (err) {
+		console.warn('Tour step onExit failed:', err);
+	}
+
+	let newIndex = oldStep - 1;
+	while (newIndex >= 0) {
+		const s = props.steps[newIndex];
+		if (s && shouldSkipStep(s)) {
+			newIndex--;
 		} else {
 			break;
 		}
 	}
+	if (newIndex < 0) newIndex = 0;
 
+	index.value = newIndex;
 	await display();
 	emit('prev-step', oldStep);
 }
 
-function close() {
-	// Clean up highlight
+async function runCTA() {
+	const cta = step.value?.cta;
+	if (!cta) return;
+	if (ctaLoading.value) return;
+
+	ctaLoading.value = true;
+	try {
+		await cta.handler();
+		if (cta.closeOnSuccess) {
+			close({ completed: false });
+			return;
+		}
+		if (cta.advance !== false) {
+			await gotoNextStep();
+		}
+	} catch (err) {
+		console.error('Tour CTA handler failed:', err);
+	} finally {
+		ctaLoading.value = false;
+	}
+}
+
+function close(options: { completed?: boolean } = {}) {
+	const wasActive = isActive.value;
 	destroyTourHighlight();
 
-	emit('close-tour');
-	stopTour();
+	if (wasActive) {
+		if (options.completed) {
+			emit('complete-tour');
+			if (props.persist !== false) {
+				markCompleted(props.tourId);
+			}
+		}
+		emit('close-tour');
+		stopTour({ completed: options.completed });
+	}
+
 	index.value = 0;
+}
+
+function onBackdropClick() {
+	if (props.allowSkip === false) return;
+	close({ completed: false });
 }
 
 function parseNumericZIndex(value: string): number | null {
@@ -568,7 +830,7 @@ function updateOverlayTeleportTarget(targetElement?: HTMLElement | null) {
 }
 
 function applyLayerZIndex(targetElement?: HTMLElement | null) {
-	let layerZIndex = zBase;
+	let layerZIndex = BASE_LAYER_Z_INDEX;
 	let current: HTMLElement | null = targetElement || null;
 
 	while (current) {
@@ -579,8 +841,9 @@ function applyLayerZIndex(targetElement?: HTMLElement | null) {
 		current = getElementParentAcrossShadow(current);
 	}
 
-	boxStyle.value.zIndex = `${layerZIndex}`;
-	tooltipStyle.value.zIndex = `${layerZIndex + 1}`;
+	dimZIndex.value = `${layerZIndex}`;
+	boxStyle.value.zIndex = `${layerZIndex + 1}`;
+	tooltipStyle.value.zIndex = `${layerZIndex + 2}`;
 }
 
 function isScrollableContainer(element: HTMLElement): boolean {
@@ -698,7 +961,6 @@ function ensureGlobalPositionObservers() {
 	}
 }
 
-// Throttle update to prevent layout thrashing
 let updateTicking = false;
 function updateBoxPosition() {
 	if (!currentElementId) return;
@@ -714,7 +976,6 @@ function updateBoxPosition() {
 		const element = resolveCurrentElement();
 
 		if (!element) {
-			// Element not found - hide highlight box and center the tooltip
 			if (missingElementWarningId !== currentElementId) {
 				console.warn(`Element with id "${currentElementId}" not found for tour highlight.`);
 				missingElementWarningId = currentElementId;
@@ -732,19 +993,17 @@ function updateBoxPosition() {
 		ensureObserversForTarget(element);
 		applyLayerZIndex(element);
 
-		// Batch all layout reads first
 		const rect = element.getBoundingClientRect();
 		const viewportWidth = window.innerWidth;
 		const viewportHeight = window.innerHeight;
 
-		// Calculate position with padding
-		const padding = 8;
+		const padding =
+			typeof step.value?.highlightPadding === 'number' ? step.value.highlightPadding : 8;
 		let top = rect.top - padding;
 		let left = rect.left - padding;
 		let width = rect.width + padding * 2;
 		let height = rect.height + padding * 2;
 
-		// Ensure the box doesn't overflow off the viewport
 		if (left < 0) {
 			width += left;
 			left = 0;
@@ -760,11 +1019,9 @@ function updateBoxPosition() {
 			height = viewportHeight - top;
 		}
 
-		// Ensure minimum dimensions
 		width = Math.max(width, 0);
 		height = Math.max(height, 0);
 
-		// Batch all DOM writes
 		boxStyle.value = {
 			...boxStyle.value,
 			top: `${top}px`,
@@ -774,7 +1031,13 @@ function updateBoxPosition() {
 			display: 'block'
 		};
 
-		// Calculate tooltip position (already computed values)
+		dimStyle.value = {
+			top: `${top}px`,
+			left: `${left}px`,
+			width: `${width}px`,
+			height: `${height}px`
+		};
+
 		updateTooltipPosition(top, left, width, height, viewportWidth, viewportHeight);
 		hasScrolledToFallbackTooltip = false;
 		updateTicking = false;
@@ -786,6 +1049,13 @@ function positionFallbackTooltip() {
 	boxStyle.value = {
 		...boxStyle.value,
 		display: 'none'
+	};
+
+	dimStyle.value = {
+		top: '50%',
+		left: '50%',
+		width: '0px',
+		height: '0px'
 	};
 
 	tooltipStyle.value = {
@@ -829,7 +1099,6 @@ function updateTooltipPosition(
 	const padding = 16;
 	const maxTooltipWidth = Math.max(280, Math.min(viewportWidth - padding * 2, 800));
 
-	// Try to get actual tooltip dimensions, or use estimated values
 	let tooltipWidth = 0;
 	let tooltipHeight = 0;
 	if (tooltipCard.value) {
@@ -841,22 +1110,39 @@ function updateTooltipPosition(
 	}
 	tooltipWidth = Math.min(tooltipWidth, maxTooltipWidth);
 
+	const placement: SiteTourStepPlacement = step.value?.placement || 'auto';
+
 	const belowTop = boxTop + boxHeight + tooltipOffset;
 	const aboveTop = boxTop - tooltipHeight - tooltipOffset;
 	const fitsBelow = belowTop + tooltipHeight <= viewportHeight - padding;
 	const fitsAbove = aboveTop >= padding;
 
 	let tooltipTop = belowTop;
-	if (!fitsBelow && fitsAbove) {
+	let tooltipLeft = boxLeft + boxWidth / 2 - tooltipWidth / 2;
+
+	if (placement === 'center') {
+		tooltipTop = Math.max(padding, viewportHeight / 2 - tooltipHeight / 2);
+		tooltipLeft = Math.max(padding, viewportWidth / 2 - tooltipWidth / 2);
+	} else if (placement === 'top' && fitsAbove) {
 		tooltipTop = aboveTop;
-	} else if (!fitsBelow && !fitsAbove) {
-		tooltipTop = Math.max(padding, viewportHeight - tooltipHeight - padding);
+	} else if (placement === 'bottom' && fitsBelow) {
+		tooltipTop = belowTop;
+	} else if (placement === 'left') {
+		tooltipTop = boxTop + boxHeight / 2 - tooltipHeight / 2;
+		tooltipLeft = boxLeft - tooltipWidth - tooltipOffset;
+	} else if (placement === 'right') {
+		tooltipTop = boxTop + boxHeight / 2 - tooltipHeight / 2;
+		tooltipLeft = boxLeft + boxWidth + tooltipOffset;
+	} else {
+		// auto
+		if (!fitsBelow && fitsAbove) {
+			tooltipTop = aboveTop;
+		} else if (!fitsBelow && !fitsAbove) {
+			tooltipTop = Math.max(padding, viewportHeight - tooltipHeight - padding);
+		}
 	}
 
-	const boxCenter = boxLeft + boxWidth / 2;
-	let tooltipLeft = boxCenter - tooltipWidth / 2;
 	tooltipLeft = Math.max(padding, Math.min(tooltipLeft, viewportWidth - tooltipWidth - padding));
-
 	tooltipTop = Math.max(padding, Math.min(tooltipTop, viewportHeight - tooltipHeight - padding));
 
 	tooltipStyle.value = {
@@ -912,7 +1198,6 @@ function destroyTourHighlight() {
 	overlayTeleportTarget.value = 'body';
 	clearTrackedScrollContainers();
 
-	// Clean up observers and listeners
 	if (resizeObserver) {
 		resizeObserver.disconnect();
 		resizeObserver = null;
@@ -921,20 +1206,25 @@ function destroyTourHighlight() {
 		mutationObserver.disconnect();
 		mutationObserver = null;
 	}
-	window.removeEventListener('scroll', updateBoxPosition, true);
-	document.removeEventListener('scroll', updateBoxPosition, true);
-	window.removeEventListener('resize', updateBoxPosition);
-	for (const eventName of ionicOverlayEvents) {
-		document.removeEventListener(eventName, updateBoxPosition as EventListener);
+	if (import.meta.client) {
+		window.removeEventListener('scroll', updateBoxPosition, true);
+		document.removeEventListener('scroll', updateBoxPosition, true);
+		window.removeEventListener('resize', updateBoxPosition);
+		for (const eventName of ionicOverlayEvents) {
+			document.removeEventListener(eventName, updateBoxPosition as EventListener);
+		}
 	}
 }
 
-// Register/unregister tour
 onMounted(() => {
 	registerTour({
 		id: props.tourId,
 		name: props.name,
-		steps: props.steps
+		steps: props.steps,
+		dim: props.dim,
+		pulse: props.pulse,
+		allowSkip: props.allowSkip,
+		persist: props.persist
 	});
 });
 
@@ -943,11 +1233,10 @@ onUnmounted(() => {
 	destroyTourHighlight();
 });
 
-// Watch for tour activation
 if (import.meta.client) {
 	watch(isActive, (active) => {
 		if (active) {
-			index.value = 0;
+			index.value = Math.max(0, Math.min(activeStepIndex.value || 0, props.steps.length - 1));
 			if (props.steps.length > 0) {
 				display();
 			}
@@ -956,5 +1245,86 @@ if (import.meta.client) {
 			index.value = 0;
 		}
 	});
+
+	watch(activeStepIndex, (newIdx) => {
+		if (!isActive.value) return;
+		if (newIdx === index.value) return;
+		const clamped = Math.max(0, Math.min(newIdx, props.steps.length - 1));
+		if (clamped !== index.value) {
+			index.value = clamped;
+			display();
+		}
+	});
+
+	// keyboard navigation - mostly useful on iPad / web, harmless on phones
+	window.addEventListener('keydown', (event: KeyboardEvent) => {
+		if (!isActive.value) return;
+		if (event.key === 'Escape' && props.allowSkip !== false) {
+			event.preventDefault();
+			close({ completed: false });
+		} else if (event.key === 'ArrowRight' && !busy.value) {
+			event.preventDefault();
+			gotoNextStep();
+		} else if (event.key === 'ArrowLeft' && !busy.value && index.value > 0) {
+			event.preventDefault();
+			gotoPreviousStep();
+		}
+	});
 }
+
+// hardware-back support: when a tour is active, intercept back to close the tour first.
+// priority 100 wins over the global router-back handler (10).
+useBackButton(100, (processNextHandler) => {
+	if (isActive.value) {
+		if (props.allowSkip !== false) {
+			close({ completed: false });
+		}
+		return;
+	}
+	processNextHandler();
+});
 </script>
+
+<style scoped>
+.site-tour-highlight {
+	border: 2px solid #3b82f6;
+	box-shadow:
+		0 0 0 4px rgba(59, 130, 246, 0.18),
+		0 0 14px rgba(59, 130, 246, 0.55);
+	background: transparent;
+	transition:
+		top 180ms ease,
+		left 180ms ease,
+		width 180ms ease,
+		height 180ms ease,
+		box-shadow 250ms ease;
+	will-change: top, left, width, height;
+}
+
+.site-tour-highlight--pulse {
+	animation: site-tour-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes site-tour-pulse {
+	0%,
+	100% {
+		box-shadow:
+			0 0 0 4px rgba(59, 130, 246, 0.18),
+			0 0 12px rgba(59, 130, 246, 0.45);
+	}
+	50% {
+		box-shadow:
+			0 0 0 10px rgba(59, 130, 246, 0.05),
+			0 0 22px rgba(59, 130, 246, 0.7);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.site-tour-highlight--pulse {
+		animation: none;
+	}
+	.site-tour-card-wrap {
+		transition: none !important;
+	}
+}
+</style>

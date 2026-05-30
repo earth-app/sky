@@ -1,6 +1,9 @@
 <template>
 	<div class="flex flex-col justify-center w-full pb-8">
-		<div class="flex items-center justify-center mb-4 mt-2 px-3">
+		<div
+			id="avatar"
+			class="flex items-center justify-center mb-4 mt-2 px-3"
+		>
 			<UAvatar
 				:src="avatar"
 				alt="Profile Avatar"
@@ -19,14 +22,32 @@
 				/>
 				Regenerate Avatar
 			</IonButton>
+			<IonButton
+				class="ml-2"
+				size="small"
+				fill="clear"
+				color="secondary"
+				aria-label="Help"
+				@click="startTour('user-profile')"
+			>
+				<UIcon
+					name="mdi:progress-question"
+					class="size-5"
+				/>
+			</IonButton>
 		</div>
 
 		<div class="flex flex-col items-center w-full px-3">
-			<h2 class="text-lg! mb-2 text-center font-semibold!">Profile</h2>
+			<h2
+				id="name"
+				class="text-lg! mb-2 text-center font-semibold!"
+			>
+				Profile
+			</h2>
 			<IonList
 				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
 			>
-				<IonItem>
+				<IonItem id="visibility">
 					<IonSelect
 						label="Visibility"
 						label-placement="fixed"
@@ -92,7 +113,7 @@
 						autocomplete="username"
 					/>
 				</IonItem>
-				<IonItem>
+				<IonItem id="bio">
 					<IonTextarea
 						label="Bio"
 						label-placement="fixed"
@@ -170,6 +191,7 @@
 
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Field Privacy</h2>
 			<IonList
+				id="privacy"
 				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
 			>
 				<IonItem
@@ -199,6 +221,7 @@
 
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Activities</h2>
 			<IonList
+				id="activities"
 				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
 			>
 				<IonItem
@@ -217,6 +240,7 @@
 
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Points Shop</h2>
 			<IonList
+				id="cosmetics"
 				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
 			>
 				<IonItem lines="none">
@@ -303,6 +327,7 @@
 
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">OAuth Providers</h2>
 			<IonList
+				id="oauth"
 				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
 			>
 				<IonItem
@@ -347,6 +372,7 @@
 
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Notifications</h2>
 			<IonList
+				id="email-subscriptions"
 				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
 			>
 				<IonItem>
@@ -364,6 +390,7 @@
 
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Security</h2>
 			<IonList
+				id="password-change"
 				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
 			>
 				<IonItem lines="none">
@@ -382,7 +409,10 @@
 				</IonItem>
 			</IonList>
 
-			<IonList class="w-full mt-2! max-w-md p-2! rounded-xl border-2 border-red-500/50">
+			<IonList
+				id="account-deletion"
+				class="w-full mt-2! max-w-md p-2! rounded-xl border-2 border-red-500/50"
+			>
 				<IonItem>
 					<IonInput
 						v-model="deletePassword"
@@ -585,6 +615,14 @@
 				</IonList>
 			</IonContent>
 		</IonModal>
+
+		<ClientOnly>
+			<MSiteTour
+				:steps="userProfileTour"
+				name="User Profile Tour"
+				tour-id="user-profile"
+			/>
+		</ClientOnly>
 	</div>
 </template>
 
@@ -1510,6 +1548,115 @@ async function confirmActivityChanges() {
 		});
 	}
 }
+
+// profile editor tour
+
+const { startTour } = useSiteTour();
+
+const userProfileTour: SiteTourStep[] = [
+	{
+		id: 'avatar',
+		title: 'Welcome to your profile',
+		description:
+			"This is your home base on the Earth App. From here you edit your identity, manage activities, pick cosmetics, and control who sees what.\n\nWe'll walk through the highlights in 30 seconds.",
+		footer: 'Tap "Regenerate Avatar" any time to roll a fresh look.',
+		icon: 'mdi:account-circle',
+		dim: true,
+		placement: 'bottom'
+	},
+	{
+		id: 'name',
+		title: 'Your Identity',
+		description:
+			'Update your first name, last name, username, and country here. Tap each field to edit, then tap Save Profile when done.',
+		footer: 'Your username must be unique. Changing it updates your public profile URL.',
+		icon: 'mdi:badge-account-outline'
+	},
+	{
+		id: 'bio',
+		title: 'Your Bio',
+		description:
+			"A great bio is short, honest, and a little fun. Share what you're passionate about, what you're learning, or what brought you here.",
+		footer: 'Friends and visitors see this prominently on your public profile.',
+		icon: 'mdi:text-account'
+	},
+	{
+		id: 'activities',
+		title: 'Your Activities',
+		description:
+			'Activities are the engine behind your recommendations. The more accurately you list what you care about, the better your articles, prompts, and event suggestions become.',
+		footer: 'Aim for at least 3–5 activities. Update them whenever your interests shift.',
+		icon: 'mdi:run',
+		highlightPadding: 12
+	},
+	{
+		id: 'cosmetics',
+		title: 'Avatar Cosmetics',
+		description:
+			'Spend Impact Points to unlock visual flair for your avatar — frames, accents, themed sets. Selected cosmetics show on your profile and on every comment you make.',
+		footer: 'Tap any locked cosmetic to see the price and preview. Reset is one button away.',
+		icon: 'mdi:palette',
+		highlightPadding: 12
+	},
+	{
+		id: 'visibility',
+		title: 'Account Visibility',
+		description:
+			'Three modes:\n• Private — only you and your circle\n• Unlisted — hidden from search, but visible to anyone with the link\n• Public — anyone can find and view\n\nYou can change this anytime.',
+		footer: 'This is the master switch. Per-field privacy below gives you finer control.',
+		icon: 'mdi:shield-account'
+	},
+	{
+		id: 'privacy',
+		title: 'Field-Level Privacy',
+		description:
+			'For each field — email, address, country, etc. — pick exactly who can see it: just you, your circle of friends, all users, or fully public.\n\nAdministrators can always see all fields for moderation purposes.',
+		footer: "Only fill in fields you're comfortable sharing per your chosen privacy level.",
+		icon: 'mdi:lock-outline'
+	},
+	{
+		id: 'oauth',
+		title: 'OAuth Providers',
+		description:
+			"Link Google, Microsoft, Apple, or GitHub to sign in without a password. Linking multiple providers means you're never locked out if one is unavailable.",
+		footer: 'You can unlink any provider at any time as long as another login method remains.',
+		icon: 'mdi:link-variant'
+	},
+	{
+		id: 'email-subscriptions',
+		title: 'Email Notifications',
+		description:
+			'Toggle email notifications for replies, friend activity, weekly recaps, and feature announcements. We never sell your email and we keep the volume low.',
+		footer: "Off by default for new accounts. Turn it on for a weekly digest if you'd like.",
+		icon: 'mdi:email-outline'
+	},
+	{
+		id: 'password-change',
+		title: 'Change Password',
+		description:
+			"Update your password here. Use something long and unique — a password manager makes this painless. If you signed up via OAuth, you don't need a password at all.",
+		footer: 'Changing your password signs you out of all other sessions.',
+		icon: 'mdi:shield-lock-outline',
+		cta: {
+			label: 'Open Password Form',
+			icon: 'mdi:shield-lock',
+			color: 'warning',
+			advance: true,
+			handler: () => {
+				passwordModalOpen.value = true;
+			}
+		}
+	},
+	{
+		id: 'account-deletion',
+		title: 'Account Deletion',
+		description:
+			"Deleting your account is permanent — your profile, content, and history are removed and cannot be recovered. If you're unsure, we recommend setting your profile to Private instead.",
+		footer:
+			'Before deleting, consider exporting anything you want to keep. Reach out to support if you need help.',
+		icon: 'mdi:account-remove-outline'
+	}
+];
 </script>
 
 <style scoped>

@@ -1,7 +1,24 @@
 <template>
 	<div class="flex flex-col items-center w-full">
-		<div class="mt-8 mb-4 text-wrap max-w-full px-4">
-			<div class="flex justify-center mb-4">
+		<div class="flex justify-end w-full pr-4 mt-2">
+			<IonButton
+				fill="clear"
+				size="small"
+				color="secondary"
+				aria-label="Help"
+				@click="startTour('article-profile')"
+			>
+				<UIcon
+					name="mdi:progress-question"
+					class="size-5"
+				/>
+			</IonButton>
+		</div>
+		<div class="mt-2 mb-4 text-wrap max-w-full px-4">
+			<div
+				id="author-avatar"
+				class="flex justify-center mb-4"
+			>
 				<UAvatar
 					:src="authorAvatar"
 					alt="Author's avatar"
@@ -19,7 +36,10 @@
 					@{{ article.author.username }}
 				</span>
 			</h2>
-			<div class="flex mt-2 flex-wrap">
+			<div
+				id="article-tags"
+				class="flex mt-2 flex-wrap"
+			>
 				<UBadge
 					v-for="(tag, index) in article.tags"
 					:key="`article-tag-${index}`"
@@ -107,7 +127,12 @@
 				{{ paragraph }}
 			</p>
 		</div>
-		<h3 class="text-xs! text-gray-400">{{ time }}</h3>
+		<h3
+			id="article-time"
+			class="text-xs! text-gray-400"
+		>
+			{{ time }}
+		</h3>
 		<div
 			v-if="article.ocean"
 			class="flex flex-col items-center my-8"
@@ -132,6 +157,14 @@
 				in-browser
 			/>
 		</div>
+
+		<ClientOnly>
+			<MSiteTour
+				:steps="articleTour"
+				name="Article Tour"
+				tour-id="article-profile"
+			/>
+		</ClientOnly>
 	</div>
 </template>
 
@@ -141,6 +174,7 @@ import { Toast } from '@capacitor/toast';
 import { DateTime } from 'luxon';
 import type { Article } from 'types/article';
 import { parseLooseDate, trimString } from 'utils';
+import slide from '~/animations/slide';
 
 const props = defineProps<{
 	article: Article;
@@ -233,4 +267,53 @@ async function removeArticle() {
 		});
 	}
 }
+
+// article tour
+
+const { startTour } = useSiteTour();
+
+const articleTour = computed<SiteTourStep[]>(() => [
+	{
+		id: 'author-avatar',
+		title: 'Welcome to Articles',
+		description:
+			'Articles are short, focused reads on hobbies, sciences, places, and ideas. Anyone can publish — and our @cloud account adapts scientific papers into approachable summaries.',
+		footer: "Tap the avatar to visit the author's profile.",
+		icon: 'mdi:book-open-page-variant-outline'
+	},
+	{
+		id: 'article-tags',
+		title: props.article.title,
+		description: `By @${props.article.author.username}.\n\n"${props.article.description}"\n\nTags below describe what this piece covers — useful for finding more like it.`,
+		footer: 'Tap any tag chip to find related articles.',
+		icon: 'mdi:tag-multiple-outline'
+	},
+	{
+		id: 'quiz-button',
+		anonymous: false,
+		title: 'Test Your Knowledge',
+		description:
+			'Most articles include a quick quiz. Taking it locks in what you read, awards Impact Points, and progresses any related quests you have running.',
+		footer:
+			"You can take a quiz once. After that, this button switches to 'View Quiz' so you can review your answers.",
+		icon: 'mdi:school-outline',
+		highlightPadding: 6,
+		condition: () => Array.isArray(quiz.value) && quiz.value.length > 0,
+		cta: {
+			label: 'Open Quiz',
+			icon: 'mdi:school',
+			color: 'tertiary',
+			advance: false,
+			closeOnSuccess: true,
+			handler: () => router.push(`/tabs/articles/${props.article.id}/quiz`, slide)
+		}
+	},
+	{
+		id: 'article-time',
+		title: 'Sources & Citations',
+		description: `Published on ${time.value}.\n\nIf this article is based on a paper or external source, you'll find the citation and a short summary right below — perfect for going deeper.`,
+		footer: 'Enjoy the read!',
+		icon: 'mdi:link-variant'
+	}
+]);
 </script>

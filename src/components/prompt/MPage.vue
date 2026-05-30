@@ -7,6 +7,20 @@
 		>
 			<IonRefresherContent />
 		</IonRefresher>
+		<div class="flex justify-end w-full pr-2 mt-2">
+			<IonButton
+				fill="clear"
+				size="small"
+				color="secondary"
+				aria-label="Help"
+				@click="startTour('prompt-profile')"
+			>
+				<UIcon
+					name="mdi:progress-question"
+					class="size-5"
+				/>
+			</IonButton>
+		</div>
 		<div class="flex flex-col items-center justify-center">
 			<PromptMCard
 				:prompt="prompt"
@@ -20,6 +34,7 @@
 						class="self-center mr-4 shadow-md shadow-black/10 light:shadow-black/30"
 					/>
 					<IonTextarea
+						id="response-input"
 						:value="newResponse"
 						class="w-full border-2 p-2 rounded-lg"
 						:placeholder="
@@ -42,6 +57,7 @@
 					/>
 				</div>
 				<IonButton
+					id="post-button"
 					color="secondary"
 					:disabled="posting || newResponse.trim().length === 0 || isOfflineMode"
 					@click="postResponse"
@@ -83,6 +99,14 @@
 		>
 			Prompt responses are unavailable offline.
 		</p>
+
+		<ClientOnly>
+			<MSiteTour
+				:steps="promptTour"
+				name="Prompt Tour"
+				tour-id="prompt-profile"
+			/>
+		</ClientOnly>
 	</div>
 </template>
 
@@ -210,6 +234,39 @@ onMounted(async () => {
 
 	await loadResponses();
 });
+
+// prompt tour
+
+const { startTour } = useSiteTour();
+
+const promptTour: SiteTourStep[] = [
+	{
+		title: 'Welcome to Prompts',
+		description:
+			'Prompts are short, creative or thoughtful questions designed to make you think — and to spark conversation. Read the prompt above, then scroll to see what the community wrote.',
+		footer: "There's no right answer. The best responses are honest and specific.",
+		icon: 'mdi:lightbulb-on-outline',
+		placement: 'center',
+		dim: true
+	},
+	{
+		id: 'response-input',
+		title: 'Write Your Response',
+		description:
+			'Tap here to share your thoughts. Keep it as short or as long as you like — a sentence is fine, an essay is fine.',
+		footer: 'You must be signed in to post. Responses inherit your account privacy settings.',
+		icon: 'mdi:text-box-edit-outline',
+		actions: user.value ? [{ type: 'focus', target: 'response-input', delay: 300 }] : undefined
+	},
+	{
+		id: 'post-button',
+		title: 'Post & Join the Conversation',
+		description:
+			'Tap Post to share your response. It joins the feed below where others can read, react, and reply. You can edit or delete it later from your own profile.',
+		footer: 'Posting a thoughtful prompt response earns Impact Points.',
+		icon: 'mdi:send'
+	}
+];
 </script>
 
 <style>

@@ -5,7 +5,7 @@
 				<IonButtons slot="start">
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
-				<IonTitle>{{ quest?.title ? quest.title : 'Quest' }}</IonTitle>
+				<IonTitle>Quest</IonTitle>
 			</IonToolbar>
 		</IonHeader>
 
@@ -20,6 +20,13 @@
 					description="Abandoning this quest or starting a different one will permanently lock this badge's mastery. Complete every step."
 					class="my-3"
 				/>
+
+				<h2
+					v-if="quest"
+					class="text-lg! font-semibold text-center m-0!"
+				>
+					{{ quest.title }}
+				</h2>
 				<UserQuestMTimeline
 					v-if="quest"
 					:quest="quest"

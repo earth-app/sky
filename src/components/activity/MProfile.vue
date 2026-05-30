@@ -75,7 +75,10 @@
 		>
 			{{ activity.description }}
 		</h3>
-		<div class="flex flex-col justify-center gap-4 px-4 w-full">
+		<div
+			id="activity-cards"
+			class="flex flex-col justify-center gap-4 px-4 w-full"
+		>
 			<!-- Skeleton Loading Cards -->
 			<InfoCardSkeleton
 				v-if="cards.length === 0 && !offlineMode"
@@ -119,6 +122,7 @@
 				:steps="activityTour"
 				name="Activity Tour"
 				tour-id="activities"
+				:pulse="true"
 			/>
 		</ClientOnly>
 	</div>
@@ -212,23 +216,30 @@ const { startTour } = useSiteTour();
 const activityTour: SiteTourStep[] = [
 	{
 		id: 'activity-icon',
-		title: 'Welcome to Activities!',
+		title: `Welcome to ${props.activity.name}`,
 		description:
-			'Activities allow you to explore hobbies, sports, or interests you may have never heard before.',
-		footer: 'Click next to learn more about this activity.'
+			"Activities are hobbies, sports, and interests you can explore on the Earth App. Each one has its own page with curated guides, resources, and — if you're up for it — a quest.",
+		footer: 'Even if this one is new to you, give it a few cards and see if it sticks.',
+		icon: 'mdi:run-fast',
+		placement: 'bottom'
 	},
 	{
 		id: 'activity-description',
-		title: props.activity.name,
-		description: `${props.activity.name} is described here. You can learn more about it by exploring the cards below, which may include guides, resources, and more!`,
-		footer: 'Scroll down to explore the cards!'
+		title: 'What This Activity Is',
+		description: `A short overview of ${props.activity.name}. Scan this first to get the gist before diving into the cards below.`,
+		footer: 'Admins can edit this description as the activity evolves.',
+		icon: 'mdi:information-outline'
 	},
 	{
-		id: 'card-1',
-		title: 'Activity Cards',
+		id: 'activity-cards',
+		title: 'Resources & Guides',
+		waitFor: 'card-0',
+		waitTimeout: 4000,
 		description:
-			'These little snippets of information are filled with resources, guides, and more to help you explore this activity. Click on any card that interests you to learn more!',
-		footer: 'Enjoy exploring the activity!'
+			'Each card is a curated resource — a guide, a video, an article, a useful link, or a quick how-to. Tap a card to open it.',
+		footer: 'Cards load progressively. Pull to refresh for a fresh shuffle.',
+		icon: 'mdi:cards-outline',
+		highlightPadding: 12
 	}
 ];
 

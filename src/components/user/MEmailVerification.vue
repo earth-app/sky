@@ -4,7 +4,12 @@
 		color="dark"
 	>
 		<div class="flex flex-col gap-3">
-			<h2 class="text-xl font-semibold">Email Verification</h2>
+			<h2
+				id="verification-title"
+				class="text-xl font-semibold"
+			>
+				Email Verification
+			</h2>
 			<p
 				v-if="user?.account.email"
 				class="text-sm text-gray-500"
@@ -49,6 +54,7 @@
 					Verify
 				</IonButton>
 				<IonButton
+					id="verification-help"
 					color="secondary"
 					fill="outline"
 					:disabled="loading || !user?.account.email"

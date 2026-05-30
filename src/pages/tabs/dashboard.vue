@@ -291,7 +291,7 @@ type ContentType = FeedItem['type'];
 const { user, fetchUser, fetchRecommendedActivities } = useAuth();
 const { motd, fetchMotd } = useMotd();
 const { settings: appSettings, init: initSettings } = useAppSettings();
-const { startTour } = useSiteTour();
+const { startTour, startTourIfNew, hasCompleted } = useSiteTour();
 const { fetchNotifications } = useNotifications();
 
 const motdColor = computed(() => {
@@ -760,6 +760,17 @@ onMounted(async () => {
 
 	await nextTick();
 	await refreshFeed(0);
+
+	// auto-start the welcome tour the first time a signed-in user lands on the
+	// dashboard on this device. uses localStorage-backed completion tracking so
+	// the same user signing in on a new phone gets a fresh welcome.
+	if (user.value && !hasCompleted('welcome')) {
+		// give the dashboard one more frame to settle so the highlight lands
+		// on real ids (notifications, badges, etc.) rather than stale ones
+		setTimeout(() => {
+			if (user.value) startTourIfNew('welcome');
+		}, 600);
+	}
 });
 
 // activity scrolling
