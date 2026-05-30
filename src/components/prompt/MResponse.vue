@@ -51,7 +51,7 @@
 		>
 			<IonHeader>
 				<IonToolbar>
-					<IonTitle>Edit Prompt Response</IonTitle>
+					<IonTitle>Edit Response</IonTitle>
 					<IonButtons slot="end">
 						<IonButton
 							fill="clear"
