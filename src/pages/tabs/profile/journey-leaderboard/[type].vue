@@ -5,7 +5,7 @@
 				<IonButtons slot="start">
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
-				<IonTitle>Journey Leaderboard - {{ capitalizeFully(type) }}</IonTitle>
+				<IonTitle>Journey Leaderboard</IonTitle>
 			</IonToolbar>
 		</IonHeader>
 
