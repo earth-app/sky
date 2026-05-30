@@ -190,7 +190,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		icon: 'mdi:account-edit-outline'
 	},
 	{
-		url: '/tabs/profile/quests',
+		url: '/tabs/quests',
 		title: 'Quests',
 		description:
 			'Quests are guided journeys that turn an activity into a structured adventure with steps, rewards, and a satisfying finish. Start with one tied to an activity you already love.',
