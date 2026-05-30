@@ -30,7 +30,7 @@
 						/>
 					</div>
 				</IonTabButton>
-				<!-- spacing placeholder for create button -->
+				<!-- spacing placeholder for the centered create FAB -->
 				<IonTabButton disabled />
 				<IonTabButton
 					tab="discover"
@@ -57,56 +57,52 @@
 						/>
 					</div>
 				</IonTabButton>
+
+				<IonFab class="create-fab">
+					<IonFabButton class="size-10">
+						<UIcon
+							name="mdi:plus-circle"
+							class="size-7"
+						/>
+					</IonFabButton>
+
+					<IonFabList
+						side="top"
+						class="gap-2 mb-14 *:size-10 min-w-11!"
+					>
+						<IonFabButton
+							color="secondary"
+							router-link="/tabs/prompts/new"
+						>
+							<UIcon
+								name="mdi:comment-plus-outline"
+								class="min-w-6/10 min-h-6/10"
+							/>
+						</IonFabButton>
+
+						<IonFabButton
+							color="secondary"
+							router-link="/tabs/articles/new"
+						>
+							<UIcon
+								name="mdi:pencil-plus-outline"
+								class="min-w-6/10 min-h-6/10"
+							/>
+						</IonFabButton>
+
+						<IonFabButton
+							color="secondary"
+							router-link="/tabs/events/new"
+						>
+							<UIcon
+								name="mdi:calendar-plus-outline"
+								class="min-w-6/10 min-h-6/10"
+							/>
+						</IonFabButton>
+					</IonFabList>
+				</IonFab>
 			</IonTabBar>
 		</IonTabs>
-
-		<IonFab
-			slot="fixed"
-			vertical="bottom"
-			class="bottom-4! left-1/2 translate-x-[-50%]"
-		>
-			<IonFabButton class="size-10">
-				<UIcon
-					name="mdi:plus-circle"
-					class="size-7"
-				/>
-			</IonFabButton>
-
-			<IonFabList
-				side="top"
-				class="gap-2 mb-14 *:size-10 min-w-11!"
-			>
-				<IonFabButton
-					color="secondary"
-					router-link="/tabs/prompts/new"
-				>
-					<UIcon
-						name="mdi:comment-plus-outline"
-						class="min-w-6/10 min-h-6/10"
-					/>
-				</IonFabButton>
-
-				<IonFabButton
-					color="secondary"
-					router-link="/tabs/articles/new"
-				>
-					<UIcon
-						name="mdi:pencil-plus-outline"
-						class="min-w-6/10 min-h-6/10"
-					/>
-				</IonFabButton>
-
-				<IonFabButton
-					color="secondary"
-					router-link="/tabs/events/new"
-				>
-					<UIcon
-						name="mdi:calendar-plus-outline"
-						class="min-w-6/10 min-h-6/10"
-					/>
-				</IonFabButton>
-			</IonFabList>
-		</IonFab>
 	</IonPage>
 </template>
 
@@ -148,6 +144,20 @@ onMounted(async () => {
 
 <style>
 @layer base {
+	ion-tab-bar#navbar {
+		overflow: visible;
+		contain: none;
+	}
+
+	#navbar .create-fab {
+		top: auto;
+		right: auto;
+		bottom: 1rem;
+		left: 50%;
+		margin: 0;
+		transform: translateX(-50%);
+	}
+
 	.tab-selected div {
 		outline: 2px solid var(--ion-tab-bar-color-selected);
 	}
