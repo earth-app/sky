@@ -41,7 +41,7 @@
 		>
 			<IonHeader>
 				<IonToolbar class="px-2">
-					<IonTitle>Submissions ({{ submissions.length }})</IonTitle>
+					<IonTitle>Submissions ({{ comma(submissions.length) }})</IonTitle>
 					<IonButtons slot="end">
 						<IonButton
 							color="danger"

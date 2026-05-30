@@ -2,7 +2,7 @@
 	<IonPage>
 		<IonHeader>
 			<IonToolbar>
-				<IonTitle>Edit Profile - {{ user?.username }}</IonTitle>
+				<IonTitle>Edit Profile</IonTitle>
 				<IonButtons slot="start">
 					<IonBackButton :default-href="profileRoute" />
 				</IonButtons>
