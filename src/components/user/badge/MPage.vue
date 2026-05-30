@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col items-center px-4 gap-4">
+	<div class="flex flex-col items-center px-4 gap-2">
 		<!-- mastery surface: only the badge owner ever sees this; mantle2 403s cross-user anyway -->
 		<section
 			v-if="showMastery"
@@ -93,11 +93,12 @@
 			</IonList>
 		</section>
 
-		<h4 class="text-base">{{ completedBadges.length }} / {{ badges.length }} Completed</h4>
+		<h4 class="text-base m-0!">{{ completedBadges.length }} / {{ badges.length }} Completed</h4>
+		<span class="text-sm opacity-80 mb-4">{{ loadedBadges.length }} shown</span>
 
 		<div
-			v-if="badges.length > 0"
-			class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 justify-items-center items-center gap-4"
+			v-if="loadedBadges.length > 0"
+			class="grid grid-cols-1 justify-items-center items-center gap-4"
 		>
 			<LazyUserBadgeMCard
 				v-for="badge in loadedBadges"
@@ -133,7 +134,7 @@ const props = defineProps<{
 
 const userStore = useUserStore();
 const { user: authUser } = useAuth();
-const { quest, fetchUserQuest } = useUser(props.userId);
+const { fetchUserQuest, masteryList, fetchMasteryList } = useUser(props.userId);
 
 const normalizedSearch = computed(() => props.search?.trim().toLowerCase() || '');
 
@@ -141,8 +142,14 @@ const loadedBadges = computed(() => {
 	if (!normalizedSearch.value) return props.badges;
 
 	return props.badges.filter((badge) => {
-		const searchableValues = [badge.name, badge.description, badge.id].filter(Boolean);
-		return searchableValues.some((value) => value.toLowerCase().includes(normalizedSearch.value));
+		const searchableValues = [
+			badge.name,
+			badge.description,
+			badge.id,
+			badge.rarity,
+			badge.tracker_id
+		].filter(Boolean);
+		return searchableValues.some((value) => value?.toLowerCase().includes(normalizedSearch.value));
 	});
 });
 
@@ -161,11 +168,6 @@ const isOwnProfile = computed(() => {
 });
 const showMastery = computed(() => isOwnProfile.value);
 
-const masteryList = computed(() => {
-	const uid = authUser.value?.id;
-	if (!uid) return null;
-	return userStore.masteryLists.get(uid) ?? null;
-});
 const masteryListLoading = computed(() => {
 	const uid = authUser.value?.id;
 	if (!uid) return false;
@@ -201,16 +203,16 @@ function masteryStatusFor(item: MasteryListItem): string | null {
 onMounted(() => {
 	if (!showMastery.value) return;
 	const uid = authUser.value?.id;
-	if (uid && !userStore.masteryLists.has(uid)) {
+	if (uid) {
 		fetchUserQuest();
-		userStore.fetchMasteryList(uid);
+		fetchMasteryList();
 	}
 });
 
 watch(isOwnProfile, (own) => {
-	if (own && authUser.value && !userStore.masteryLists.has(authUser.value.id)) {
+	if (own && authUser.value) {
 		fetchUserQuest();
-		userStore.fetchMasteryList(authUser.value.id);
+		fetchMasteryList();
 	}
 });
 </script>

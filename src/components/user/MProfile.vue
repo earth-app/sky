@@ -11,7 +11,7 @@
 				<UserMFriendsCount :user="user" />
 
 				<IonButton
-					v-if="user.id === currentUser?.id"
+					v-if="isCurrentUser"
 					color="secondary"
 					shape="round"
 					router-link="/tabs/profile/editor"
@@ -101,6 +101,7 @@
 				ref="badgesDrawerRef"
 				title="Badges"
 				class="w-full"
+				searchable
 			>
 				<template #default="{ search }">
 					<UserBadgeMPage
@@ -342,13 +343,17 @@ const {
 	pointsHistory,
 	fetchPoints,
 	attendingEvents,
-	fetchAttendingEvents
+	fetchAttendingEvents,
+	fetchUserQuest,
+	fetchMasteryList
 } = useUser(props.user.id);
 const { name: displayName } = useDisplayName(props.user);
 const i18n = useI18n();
 
 const user = computed(() => userState.value || props.user);
 const { user: currentUser } = useAuth();
+
+const isCurrentUser = computed(() => user.value?.id === currentUser.value?.id);
 
 const { friends, fetchFriends } = useFriends(props.user.id);
 const {
@@ -387,6 +392,11 @@ onMounted(async () => {
 	await fetchAttendingEvents();
 	selectedDate.value = today(getLocalTimeZone()) as DateValue;
 	showEvents(selectedDate.value as any);
+
+	if (currentUser) {
+		fetchUserQuest();
+		fetchMasteryList();
+	}
 });
 
 const badgesDrawerRef = ref<InstanceType<typeof MContentDrawer>>();

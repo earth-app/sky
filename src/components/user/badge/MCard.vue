@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="flex justify-center w-70 aspect-video gap-4 p-4 rounded-lg border-4 border-gray-700 bg-gray-600 light:bg-gray-200 hover:opacity-90 transition-opacity duration-300 cursor-pointer"
+		class="flex justify-center w-70 gap-4 p-4 rounded-lg border-4 border-gray-700 bg-gray-600 light:bg-gray-200 hover:opacity-90 transition-opacity duration-300 cursor-pointer"
 		:class="[
 			'user_id' in badge && badge.granted ? 'border-yellow-500' : '',
 			badge.mastered ? 'ring-2 ring-purple-400/70' : ''
@@ -65,7 +65,7 @@
 						>Mastered</UBadge
 					>
 				</div>
-				<p class="text-center text-base">{{ badge.description }}</p>
+				<p class="text-center text-base px-8">{{ badge.description }}</p>
 				<span
 					v-if="'granted' in badge && badge.granted"
 					class="text-sm text-center opacity-90 mt-2 mx-10"
@@ -81,13 +81,15 @@
 				</span>
 				<div
 					v-else-if="'progress' in badge"
-					class="w-full px-8"
+					class="flex flex-col w-full px-8"
 				>
-					<span class="text-sm opacity-90">{{ Math.round(badge.progress * 100) }}%</span>
+					<span class="text-sm! font-semibold opacity-90 self-center"
+						>{{ Math.round(badge.progress * 100) }}%</span
+					>
 					<IonProgressBar
 						:value="badge.progress"
 						class="w-full mt-1"
-						:color="rarityColor"
+						:color="ionRarityColor"
 						status
 					/>
 				</div>
@@ -185,7 +187,7 @@
 						class="flex flex-col items-center gap-1 mt-2 text-sm opacity-90"
 					>
 						<span>{{ generatingMessage }}</span>
-						<span class="text-xs opacity-70">this may take up to a minute</span>
+						<span class="text-xs opacity-70">this may take up to two minutes</span>
 					</div>
 				</div>
 
@@ -287,6 +289,19 @@ const rarityColor = computed(() => {
 			return 'warning';
 		case 'green':
 			return 'success';
+	}
+});
+
+const ionRarityColor = computed(() => {
+	switch (props.badge.rarity) {
+		case 'normal':
+			return 'medium';
+		case 'rare':
+			return 'secondary';
+		case 'amazing':
+			return 'warning';
+		case 'green':
+			return 'primary';
 	}
 });
 
@@ -490,27 +505,41 @@ async function generateAndOpen() {
 	}
 }
 
-const masteryTour: SiteTourStep[] = [
+const masteryTour = computed<SiteTourStep[]>(() => [
 	{
 		id: 'badge-mastery-cta',
 		title: 'Badge Mastery',
 		description:
-			'Once you earn a badge, you can deepen it with a personalised AI quest tailored to your profile and activities.',
-		footer: 'Tap "Next" to learn how starting a mastery quest works.'
+			"After earning a badge, you can deepen it with a personalised AI quest tailored to your profile and activities. It's an optional way to turn a badge into a long-form challenge — drawings, photos, audio, reflection.",
+		footer: 'Mastery is opt-in. Plenty of users skip it; plenty love the structure.',
+		icon: 'mdi:medal-outline',
+		highlightPadding: 8
 	},
 	{
 		id: 'badge-mastery-cta',
-		title: 'One-shot commitment',
+		title: 'One-shot Commitment',
 		description:
-			'Each Badge Mastery is a single attempt. Resetting the quest or starting a different one before finishing will permanently lock the mastery for that badge — forever.',
-		footer: "You'll see a confirmation prompt before anything is generated."
+			'Each Badge Mastery is a single attempt. Resetting it, or starting a different mastery before finishing, will permanently lock this one — you cannot regenerate it.\n\nThere is also a hard cap on active mastery quests at any given time.',
+		footer: "You'll see a clear confirmation prompt before generation starts.",
+		icon: 'mdi:alert-octagon-outline',
+		dim: true,
+		condition: () => !masteryLocked.value && !masteryDisabled.value,
+		cta: {
+			label: masteryQuestReady.value ? 'Continue Mastery' : 'Start Mastery',
+			icon: 'mdi:medal-outline',
+			color: 'warning',
+			advance: false,
+			closeOnSuccess: true,
+			handler: () => handleMasteryClick()
+		}
 	},
 	{
 		id: 'badge-mastery-help',
 		title: 'Need a refresher?',
 		description:
-			'Tap this help button any time to revisit this tour. A "Mastered" badge will appear once you finish the quest.',
-		footer: 'Good luck!'
+			'Tap this help button any time to revisit this tour. Once you finish the mastery, a "Mastered" chip appears next to the badge — visible on your profile too.',
+		footer: 'Good luck — and have fun with it!',
+		icon: 'mdi:progress-question'
 	}
-];
+]);
 </script>
