@@ -13,7 +13,7 @@
 				v-if="searchable"
 				v-model="search"
 				type="search"
-				color="light"
+				:color="theme"
 				placeholder="Search..."
 				class="mb-4"
 				hydrate-on-interaction
