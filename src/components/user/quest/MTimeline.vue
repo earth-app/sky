@@ -206,6 +206,18 @@ const { getStepIcon } = useQuests();
 const { require: requirePermission } = useQuestPermissions();
 const userStore = useUserStore();
 
+const accountType = computed(() => user.value?.account.account_type);
+const delayReduction = computed(() => getQuestDelayReduction(accountType.value));
+const delayReductionLabel = computed(() => {
+	const r = delayReduction.value;
+	if (r <= 0) return null;
+	if (r >= 1) return 'Bypass';
+	return `${Math.round(r * 100)}% Faster`;
+});
+function effectiveDelay(rawDelay?: number) {
+	return getEffectiveQuestStepDelay(rawDelay ?? 0, accountType.value);
+}
+
 const masteryBadgeIdFromQuestId = (questId: string | undefined): string | null => {
 	if (!questId) return null;
 	return questId.startsWith('badge_mastery_') ? questId.slice('badge_mastery_'.length) : null;
@@ -386,6 +398,7 @@ type TimelineStep = QuestStep & {
 	altIndex?: number;
 	completed: boolean;
 	completedAt?: number;
+	effectiveDelay: number;
 	delayedUntil: number;
 };
 
@@ -405,7 +418,8 @@ function formatRemaining(ms: number): string {
 async function onStepClick(step: TimelineStep) {
 	if (step.delayedUntil > now.value) {
 		const remaining = step.delayedUntil - now.value;
-		await showInfoToast(`This step unlocks in ${formatRemaining(remaining)}.`, {
+		const bonusSuffix = delayReductionLabel.value ? ` (${delayReductionLabel.value})` : '';
+		await showInfoToast(`This step unlocks in ${formatRemaining(remaining)}${bonusSuffix}.`, {
 			duration: 'long'
 		});
 
@@ -450,6 +464,7 @@ const items = computed(() => {
 					? progSlot.find((p) => p.altIndex === altIndex)
 					: undefined;
 
+				const effSeconds = effectiveDelay(altStep.delay);
 				return {
 					...altStep,
 					icon: getStepIcon(altStep.type),
@@ -457,8 +472,8 @@ const items = computed(() => {
 					altIndex,
 					completed: !!entry,
 					completedAt: entry?.submittedAt || 0,
-					delayedUntil:
-						altStep.delay && prevCompletedAt ? prevCompletedAt + altStep.delay * 1000 : 0
+					effectiveDelay: effSeconds,
+					delayedUntil: effSeconds && prevCompletedAt ? prevCompletedAt + effSeconds * 1000 : 0
 				};
 			});
 		} else {
@@ -466,13 +481,15 @@ const items = computed(() => {
 			const progSlot = props.progress?.[index];
 			const entry = !Array.isArray(progSlot) ? progSlot : undefined;
 
+			const effSeconds = effectiveDelay(step.delay);
 			return {
 				...step,
 				icon: getStepIcon(step.type),
 				index,
 				completed: !!entry,
 				completedAt: entry?.submittedAt || 0,
-				delayedUntil: step.delay && prevCompletedAt ? prevCompletedAt + step.delay * 1000 : 0
+				effectiveDelay: effSeconds,
+				delayedUntil: effSeconds && prevCompletedAt ? prevCompletedAt + effSeconds * 1000 : 0
 			};
 		}
 	});

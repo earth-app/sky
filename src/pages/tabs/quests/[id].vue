@@ -21,12 +21,23 @@
 					class="my-3"
 				/>
 
-				<h2
-					v-if="quest"
-					class="text-lg! font-semibold text-center m-0!"
-				>
-					{{ quest.title }}
-				</h2>
+				<div class="flex items-center justify-center gap-2">
+					<h2
+						v-if="quest"
+						class="text-lg! font-semibold text-center m-0!"
+					>
+						{{ quest.title }}
+					</h2>
+					<UBadge
+						v-if="quest && delayReductionLabel && hasDelayedStep"
+						color="warning"
+						variant="subtle"
+						icon="mdi:lightning-bolt"
+						size="sm"
+						:title="`Your rank unlocks quest steps faster — ${delayReductionLabel.toLowerCase()}.`"
+						>{{ delayReductionLabel }}</UBadge
+					>
+				</div>
 				<UserQuestMTimeline
 					v-if="quest"
 					:quest="quest"
@@ -106,6 +117,22 @@ const progress = computed(() => {
 });
 
 const isMasteryQuest = computed(() => quest.value?.id?.startsWith('badge_mastery_') ?? false);
+
+const accountType = computed(() => user.value?.account.account_type);
+const delayReduction = computed(() => getQuestDelayReduction(accountType.value));
+const delayReductionLabel = computed(() => {
+	const r = delayReduction.value;
+	if (r <= 0) return null;
+	if (r >= 1) return 'Bypass';
+	return `${Math.round(r * 100)}% Faster`;
+});
+const hasDelayedStep = computed(() =>
+	(quest.value?.steps ?? []).some((step) =>
+		Array.isArray(step)
+			? step.some((alt) => alt.delay && alt.delay > 0)
+			: step.delay && step.delay > 0
+	)
+);
 const isMasteryQuestCompleted = computed(() => {
 	if (!quest.value) return false;
 	const id = quest.value.id;
