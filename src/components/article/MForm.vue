@@ -3,6 +3,12 @@
 		<h2 class="text-2xl! font-bold! pt-2">
 			{{ mode === 'create' ? 'Create New Article' : 'Edit Article' }}
 		</h2>
+		<ContentTTLNotice
+			v-if="mode === 'create'"
+			kind="article"
+			variant="banner"
+			color="info"
+		/>
 		<UForm
 			:state="state"
 			class="space-y-2"
@@ -118,6 +124,30 @@
 				</div>
 			</UFormField>
 
+			<div class="mt-3">
+				<div class="flex items-center gap-2 mb-2">
+					<UIcon
+						name="mdi:diamond-stone"
+						class="size-5 text-secondary"
+					/>
+					<h3 class="font-semibold text-base">Article Quiz</h3>
+				</div>
+				<div
+					v-if="!canCreateQuiz"
+					class="rounded-lg bg-secondary/10 border border-secondary/30 p-3 text-sm"
+				>
+					<p class="font-medium mb-1">Quiz authoring is an Organizer feature.</p>
+					<p class="text-xs text-muted">
+						Upgrade your account to add interactive quizzes to your articles and earn engagement
+						from readers.
+					</p>
+				</div>
+				<ArticleMQuizEditor
+					v-else
+					ref="quizEditor"
+				/>
+			</div>
+
 			<IonButton
 				type="submit"
 				color="success"
@@ -138,6 +168,7 @@
 import { Toast } from '@capacitor/toast';
 import { articleSchema } from 'schemas';
 import type { Article } from 'types/article';
+import ArticleMQuizEditor from './MQuizEditor.vue';
 
 const props = defineProps<{
 	article?: Article;
@@ -145,9 +176,21 @@ const props = defineProps<{
 }>();
 
 const { create } = useArticles();
+const { user } = useAuth();
+const emailGate = useEmailGate();
 const { notifyError, notifySuccess } = useAppHaptics();
 const router = useIonRouter();
 const loading = ref(false);
+
+const canCreateQuiz = computed(() => {
+	if (!user.value) return false;
+	const t = user.value.account.account_type;
+	if (t === 'ADMINISTRATOR' || user.value.is_admin) return true;
+	if (props.mode === 'create') return t === 'ORGANIZER';
+	return t === 'ORGANIZER' && props.article?.author_id === user.value.id;
+});
+
+const quizEditor = ref<InstanceType<typeof ArticleMQuizEditor>>();
 
 const state = reactive<
 	Omit<Article, 'id' | 'ocean' | 'created_at' | 'updated_at' | 'author' | 'author_id'>
@@ -181,7 +224,27 @@ const removeTag = (index: number) => {
 	state.tags.splice(index, 1);
 };
 
+async function persistQuiz(articleId: string): Promise<boolean> {
+	if (!canCreateQuiz.value) return true;
+	const submitted = quizEditor.value?.getQuestions() || [];
+	if (submitted.length === 0) return true;
+
+	const articleStore = useArticleStore();
+	const resQuiz = await articleStore.changeQuiz(articleId, submitted);
+	if (!valid(resQuiz)) {
+		if (emailGate.handleServerError(resQuiz, 'create quizzes')) return false;
+		notifyError();
+		await Toast.show({
+			text: resQuiz.message || 'Failed to save quiz.',
+			duration: 'long'
+		});
+		return false;
+	}
+	return true;
+}
+
 async function handleSubmit() {
+	if (props.mode === 'create' && !emailGate.requireVerified('publish articles')) return;
 	loading.value = true;
 	if (props.mode === 'create') {
 		const res = await create({
@@ -191,6 +254,12 @@ async function handleSubmit() {
 		});
 
 		if (valid(res)) {
+			const quizOk = await persistQuiz(res.data.id);
+			if (!quizOk) {
+				loading.value = false;
+				return;
+			}
+
 			await Toast.show({
 				text: 'Your article has been created successfully.',
 				duration: 'long'
@@ -198,6 +267,8 @@ async function handleSubmit() {
 
 			router.push(`/articles/${res.data.id}`);
 		} else {
+			loading.value = false;
+			if (emailGate.handleServerError(res, 'publish articles')) return;
 			await Toast.show({
 				text: res.message || 'Failed to create article.',
 				duration: 'long'
@@ -213,6 +284,12 @@ async function handleSubmit() {
 		});
 
 		if (valid(res)) {
+			const quizOk = await persistQuiz(res.data.id);
+			if (!quizOk) {
+				loading.value = false;
+				return;
+			}
+
 			notifySuccess();
 			await Toast.show({
 				text: 'Your article has been updated successfully.',
@@ -231,4 +308,12 @@ async function handleSubmit() {
 
 	loading.value = false;
 }
+
+onMounted(async () => {
+	if (props.mode === 'edit' && props.article && canCreateQuiz.value) {
+		const { quiz, fetchQuiz } = useArticle(props.article.id);
+		if (!quiz.value) await fetchQuiz();
+		if (quiz.value) quizEditor.value?.setQuestions(quiz.value);
+	}
+});
 </script>

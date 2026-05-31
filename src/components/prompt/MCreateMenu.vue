@@ -1,6 +1,11 @@
 <template>
 	<div class="flex flex-col size-full">
 		<div class="flex flex-col items-center w-full p-4">
+			<ContentTTLNotice
+				kind="prompt"
+				variant="banner"
+				color="warning"
+			/>
 			<IonTextarea
 				label="Prompt"
 				label-placement="floating"
@@ -143,6 +148,8 @@ const visibilityOptions = com.earthapp.Visibility.values();
 
 const error = ref('');
 
+const emailGate = useEmailGate();
+
 async function newPrompt() {
 	if (!user) {
 		await Toast.show({
@@ -151,6 +158,8 @@ async function newPrompt() {
 		});
 		return;
 	}
+
+	if (!emailGate.requireVerified('create a prompt')) return;
 
 	const text = prompt.value.trim();
 
@@ -189,6 +198,8 @@ async function newPrompt() {
 
 			emit('prompt-created', res.data);
 		} else {
+			loading.value = false;
+			if (emailGate.handleServerError(res, 'create a prompt')) return;
 			notifyError();
 			await Toast.show({
 				text: res.message || 'Failed to create prompt.',
@@ -198,6 +209,8 @@ async function newPrompt() {
 
 		loading.value = false;
 	} catch (error) {
+		loading.value = false;
+		if (emailGate.handleServerError(error, 'create a prompt')) return;
 		notifyError();
 		await Toast.show({
 			text: 'An error occurred while creating the prompt.',

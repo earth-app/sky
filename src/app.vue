@@ -24,6 +24,7 @@
 				:pulse="true"
 				@close-tour="handleWelcomeTourClosed"
 			/>
+			<UserEmailMGate />
 		</ClientOnly>
 	</IonApp>
 </template>
@@ -107,7 +108,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'discover-search',
 		title: 'Articles — Read & Learn',
 		description:
-			'Bite-sized articles tailored to your interests. Read about science, culture, sustainability, and more — then take a quick quiz to lock in what you learned.',
+			'Bite-sized articles tailored to your interests. Read about science, culture, sustainability, and more — then take a quick quiz to lock in what you learned.\n\nArticles auto-archive after 2 weeks, so the catalog stays fresh. Writers: publish now while readers are looking.',
 		footer: 'Articles personalize over time as you engage with the community.',
 		icon: 'mdi:book-open-page-variant-outline',
 		prerendered: true
@@ -117,7 +118,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'discover-search',
 		title: 'Prompts — Get Creative',
 		description:
-			'Daily creative prompts to spark your imagination. Share a short response, browse what others wrote, and discover new perspectives from the community.',
+			"Daily creative prompts to spark your imagination. Share a short response, browse what others wrote, and discover new perspectives from the community.\n\nPrompts vanish after 2 days — if you've got something to say, say it now.",
 		footer: 'Your answers can be public, friends-only, or private — your call.',
 		icon: 'mdi:lightbulb-on-outline',
 		prerendered: true

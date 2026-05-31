@@ -167,8 +167,11 @@ function removeResponse(id: string) {
 const posting = ref(false);
 const newResponse = ref('');
 
+const emailGate = useEmailGate();
+
 async function postResponse() {
 	if (posting.value || isOfflineMode.value) return;
+	if (!emailGate.requireVerified('post a prompt response')) return;
 
 	posting.value = true;
 
@@ -191,10 +194,13 @@ async function postResponse() {
 			});
 		}
 	} else {
+		posting.value = false;
+		if (emailGate.handleServerError(res, 'post a prompt response')) return;
 		await Toast.show({
 			text: res.message || 'An unknown error occurred while posting your response.',
 			duration: 'long'
 		});
+		return;
 	}
 
 	posting.value = false;
