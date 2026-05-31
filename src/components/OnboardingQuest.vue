@@ -252,7 +252,7 @@ const steps: OnboardingQuestStep[] = [
 		type: 'respond_to_prompt',
 		title: 'Answer a Question',
 		description:
-			"Ask and talk about questions! Answer life's big questions or ask your own to connect with others and share your perspective."
+			"Ask and talk about questions! Answer life's big questions or ask your own to connect with others and share your perspective. Prompts only last 2 days — jump on a hot one before it disappears."
 	},
 	{
 		type: 'draw_picture',
@@ -278,14 +278,14 @@ const steps: OnboardingQuestStep[] = [
 		type: 'article_quiz',
 		title: 'Read an Article',
 		description:
-			'Expand your horizons by reading an article in the app. It could be about anything - nature, science, philosophy, or even a story from another user!',
+			'Expand your horizons by reading an article in the app. It could be about anything - nature, science, philosophy, or even a story from another user! New articles publish every few hours and old ones auto-archive after 2 weeks, so the catalog stays fresh.',
 		reward: 50
 	},
 	{
 		type: 'attend_event',
 		title: 'Join an Event',
 		description:
-			'Participate in an event to meet other explorers and share your passion for the Earth. It could be a local cleanup, a virtual discussion, or anything in between!'
+			'Participate in an event to meet other explorers and share your passion for the Earth. It could be a local cleanup, a virtual discussion, or anything in between! Events stay listed for 30 days after they end, so RSVP early to lock your spot.'
 	},
 	{
 		type: 'take_photo_objects',
@@ -328,7 +328,7 @@ const steps: OnboardingQuestStep[] = [
 		reward: 75
 	},
 	{
-		type: 'other',
+		type: 'other' as any,
 		title: 'Create an Account',
 		description:
 			'The Earth App compiles all of these activities into Quests that you can complete to earn rewards and show off your achievements. Sign up for an account to start your quest and track your progress!'
