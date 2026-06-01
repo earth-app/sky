@@ -778,15 +778,34 @@ onMounted(async () => {
 	await nextTick();
 	await refreshFeed(0);
 
-	// auto-start the welcome tour the first time a signed-in user lands on the
-	// dashboard on this device. uses localStorage-backed completion tracking so
-	// the same user signing in on a new phone gets a fresh welcome.
 	if (user.value && !hasCompleted('welcome')) {
 		// give the dashboard one more frame to settle so the highlight lands
-		// on real ids (notifications, badges, etc.) rather than stale ones
 		setTimeout(() => {
 			if (user.value) startTourIfNew('welcome');
 		}, 600);
+	}
+
+	// fetch additional data if not data constrainted
+	if (!isDataConstrained.value && user.value) {
+		const {
+			fetchUserQuest,
+			fetchQuestHistory,
+			fetchCosmetics,
+			fetchPoints,
+			fetchMasteryList,
+			fetchBadges,
+			fetchAttendingEvents,
+			fetchEventSubmissions
+		} = useUser(user.value.id, makeMServerRequest);
+
+		fetchUserQuest();
+		fetchQuestHistory();
+		fetchCosmetics();
+		fetchPoints();
+		fetchBadges();
+		fetchMasteryList();
+		fetchAttendingEvents();
+		fetchEventSubmissions();
 	}
 });
 
