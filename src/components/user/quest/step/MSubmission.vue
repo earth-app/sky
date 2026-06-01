@@ -66,10 +66,16 @@
 						class="mt-3 w-full max-w-sm!"
 					/>
 					<div
-						v-else-if="category === 'article_quiz' && step.type === 'article_quiz' && stepArticle"
+						v-else-if="
+							category === 'article_quiz' && step.type === 'article_quiz' && stepArticle !== null
+						"
 						class="flex flex-col items-center gap-3 py-4 px-6 border border-neutral-200 dark:border-neutral-700 rounded-lg"
 					>
-						<ArticleMCard :article="stepArticle" />
+						<ArticleMCard
+							v-if="stepArticle"
+							:article="stepArticle"
+						/>
+						<Loading v-else />
 					</div>
 					<div
 						v-else-if="category === 'scan_barcode' && barcodeSubmission"
@@ -221,8 +227,11 @@
 
 			<template v-else-if="category === 'describe_text'">
 				<UserQuestStepText
+					:step="step"
 					:disabled="!step.isCurrentQuest || !step.isUnlocked"
-					@capture="onDelegatedSubmitted"
+					:submit="true"
+					:server-request="makeMServerRequest"
+					@submitted="onDelegatedSubmitted"
 				/>
 			</template>
 
@@ -708,7 +717,7 @@ function formatDistance(meters: number): string {
 	return `${Math.round(meters)} m`;
 }
 
-const stepArticle = ref<Article | null>(null);
+const stepArticle = ref<Article | undefined | null>(null);
 
 const stepArticleId = computed(() => {
 	if (props.step.type !== 'article_quiz') return '';
