@@ -1,28 +1,10 @@
 <template>
-	<div
-		class="flex justify-center w-70 gap-4 p-4 rounded-lg border-4 border-gray-700 bg-gray-600 light:bg-gray-200 hover:opacity-90 transition-opacity duration-300 cursor-pointer"
-		:class="[
-			'user_id' in badge && badge.granted ? 'border-yellow-500' : '',
-			badge.mastered ? 'ring-2 ring-purple-400/70' : ''
-		]"
-		@click="showDetails = true"
-	>
-		<UIcon
-			:name="badge.icon"
-			class="self-center size-12"
-			:class="'user_id' in badge && badge.granted ? 'text-yellow-400' : ''"
-		/>
-
-		<div class="flex flex-col items-center">
-			<UBadge
-				:color="rarityColor"
-				:trailing-icon="'user_id' in badge && badge.granted ? 'mdi:check' : ''"
-				>{{ capitalizeFully(badge.rarity) }}</UBadge
-			>
-			<h3 class="font-semibold text-md md:text-lg">{{ badge.name }}</h3>
-			<span class="text-sm opacity-90 text-center">{{ badge.description }}</span>
-		</div>
-	</div>
+	<UserBadgeDisplay
+		:badge="badge"
+		:is-granted="isGranted"
+		:is-mastered="isMastered"
+		@clicked="showDetails = true"
+	/>
 	<IonModal
 		:is-open="showDetails"
 		:backdrop-dismiss="!masteryLoading"
@@ -46,23 +28,15 @@
 				<UIcon
 					:name="badge.icon"
 					class="self-center min-h-12 min-w-12 sm:size-16 md:size-20 lg:size-24"
-					:class="'user_id' in badge && badge.granted ? 'text-yellow-400' : ''"
+					:class="isMastered ? 'text-purple-400' : isGranted ? 'text-yellow-400' : ''"
 				/>
 				<div class="flex items-center justify-center gap-2 flex-wrap">
 					<h2 class="font-bold text-2xl m-0!">{{ badge.name }}</h2>
 					<UBadge
 						:color="rarityColor"
-						:trailing-icon="'user_id' in badge && badge.granted ? 'mdi:check-bold' : ''"
+						:trailing-icon="isMastered ? 'mdi:star-circle' : isGranted ? 'mdi:check' : ''"
 						class="text-lg"
 						>{{ capitalizeFully(badge.rarity) }}</UBadge
-					>
-					<UBadge
-						v-if="badge.mastered"
-						color="warning"
-						variant="soft"
-						icon="mdi:medal-outline"
-						size="lg"
-						>Mastered</UBadge
 					>
 				</div>
 				<p class="text-center text-base px-8">{{ badge.description }}</p>
@@ -101,6 +75,7 @@
 					<div class="flex items-center gap-2">
 						<IonButton
 							id="badge-mastery-cta"
+							size="small"
 							:color="masteryButtonColor"
 							:fill="masteryLocked || masteryCapReached ? 'outline' : 'solid'"
 							:disabled="masteryDisabled"
@@ -142,6 +117,13 @@
 						Checking mastery status...
 					</span>
 					<span
+						v-else-if="isCompletedMastery"
+						class="text-xs opacity-70 text-center max-w-72"
+					>
+						<template v-if="masteredAtFormatted">Mastered on {{ masteredAtFormatted }}.</template>
+						Open the timeline to revisit your completed steps.
+					</span>
+					<span
 						v-else-if="masteryLocked"
 						class="text-xs opacity-80 text-center max-w-72"
 					>
@@ -175,7 +157,13 @@
 						Generate a personalised AI quest to deepen your mastery of this badge.
 					</span>
 					<span
-						v-if="masteryList && !masteryCapReached && !masteryQuestReady && !masteryLocked"
+						v-if="
+							masteryList &&
+							!masteryCapReached &&
+							!masteryQuestReady &&
+							!masteryLocked &&
+							!isCompletedMastery
+						"
 						class="text-xs opacity-60 text-center"
 					>
 						{{ masteryList.active }} / {{ masteryList.cap }} active mastery slots used
@@ -227,6 +215,7 @@ const props = defineProps<{
 const userStore = useUserStore();
 const { user: authUser } = useAuth();
 const { startTour } = useSiteTour();
+const router = useIonRouter();
 
 const showDetails = ref(false);
 const masteryLoading = ref(false);
@@ -325,11 +314,20 @@ const isCurrentUser = computed(() => {
 const canShowMastery = computed(() => {
 	if (!isCurrentUser.value) return false;
 	if (!('granted' in props.badge) || !props.badge.granted) return false;
-	if (props.badge.mastered) return false;
 	if (props.badge.mastery_exempt) return false;
 	if (userStore.lockedMasteries.has(props.badge.id)) return false;
+	// mastered badges still surface the cta — tapping re-opens the completed timeline
 	return true;
 });
+
+const isCompletedMastery = computed(() => !!props.badge.mastered);
+
+function isUserBadge(badge: Badge): badge is UserBadge {
+	return 'user_id' in badge;
+}
+
+const isGranted = computed(() => isUserBadge(props.badge) && props.badge.granted);
+const isMastered = computed(() => isGranted && props.badge.mastered);
 
 // per-user cap snapshot — blocks NEW generation only; once a quest is ready, "continue" is always allowed
 const masteryList = computed(() => {
@@ -354,12 +352,13 @@ const masteryDisabled = computed(
 		masteryLoading.value ||
 		masteryStatusLoading.value ||
 		masteryLocked.value ||
-		(masteryCapReached.value && !masteryQuestReady.value)
+		(masteryCapReached.value && !masteryQuestReady.value && !isCompletedMastery.value)
 );
 
 const masteryButtonLabel = computed(() => {
 	if (masteryLoading.value) return masteryQuestReady.value ? 'Opening...' : 'Generating...';
 	if (masteryLocked.value) return 'Mastery Locked';
+	if (isCompletedMastery.value) return 'View Completed Mastery';
 	if (masteryQuestReady.value) return 'Continue Mastery Quest';
 	if (masteryCapReached.value) return 'Mastery cap reached';
 	return 'Master This Badge';
@@ -367,6 +366,7 @@ const masteryButtonLabel = computed(() => {
 
 const masteryButtonIcon = computed(() => {
 	if (masteryLocked.value) return 'mdi:lock';
+	if (isCompletedMastery.value) return 'mdi:star-circle';
 	if (masteryQuestReady.value) return 'mdi:play-circle-outline';
 	if (masteryCapReached.value) return 'mdi:alert-octagon-outline';
 	return 'mdi:medal-outline';
@@ -374,6 +374,7 @@ const masteryButtonIcon = computed(() => {
 
 const masteryButtonColor = computed(() => {
 	if (masteryLocked.value) return 'medium';
+	if (isCompletedMastery.value) return 'tertiary';
 	if (masteryQuestReady.value) return 'warning';
 	if (masteryCapReached.value) return 'medium';
 	return 'primary';
@@ -386,6 +387,13 @@ watch(showDetails, async (open) => {
 
 	// cap snapshot — cached after first open, so re-opens are instant
 	if (uid && !userStore.masteryLists.has(uid)) userStore.fetchMasteryList(uid);
+
+	// mastered badges short-circuit the status fetch
+	if (isCompletedMastery.value) {
+		masteryStatusFetched.value = true;
+		return;
+	}
+
 	if (masteryStatusFetched.value) return;
 	await loadMasteryStatus();
 });
@@ -393,6 +401,10 @@ watch(showDetails, async (open) => {
 async function loadMasteryStatus() {
 	const userId = authUser.value?.id;
 	if (!userId) return;
+	if (isCompletedMastery.value) {
+		masteryStatusFetched.value = true;
+		return;
+	}
 	masteryStatusLoading.value = true;
 	try {
 		if (userStore.lockedMasteries.has(props.badge.id)) {
@@ -416,7 +428,7 @@ async function loadMasteryStatus() {
 async function handleMasteryClick() {
 	if (masteryDisabled.value) return;
 
-	if (masteryQuestReady.value) {
+	if (isCompletedMastery.value || masteryQuestReady.value) {
 		await openExistingMasteryQuest();
 		return;
 	}
@@ -437,7 +449,7 @@ async function handleMasteryClick() {
 async function openExistingMasteryQuest() {
 	showDetails.value = false;
 	await nextTick();
-	await navigateTo(`/tabs/quests/badge_mastery_${props.badge.id}`, { replace: true });
+	router.push(`/tabs/quests/badge_mastery_${props.badge.id}`);
 }
 
 async function generateAndOpen() {
@@ -453,7 +465,8 @@ async function generateAndOpen() {
 		await showInfoToast('Your Badge Mastery quest is ready. Complete it without abandoning it!', {
 			duration: 'long'
 		});
-		await navigateTo(`/tabs/quests/badge_mastery_${props.badge.id}`, { replace: true });
+
+		router.push(`/tabs/quests/badge_mastery_${props.badge.id}`);
 	} catch (error) {
 		if (error instanceof BadgeMasteryGenerationError) {
 			switch (error.code) {
@@ -476,9 +489,7 @@ async function generateAndOpen() {
 					});
 					showDetails.value = false;
 					await nextTick();
-					await navigateTo(`/tabs/quests/badge_mastery_${props.badge.id}`, {
-						replace: true
-					});
+					router.push(`/tabs/quests/badge_mastery_${props.badge.id}`);
 					break;
 				case 'cap_reached':
 					// don't mark badge as exempt — the slot is just temporarily full. store

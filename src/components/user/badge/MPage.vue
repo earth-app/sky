@@ -28,11 +28,11 @@
 				Complete or let one expire before generating another.
 			</span>
 			<span
-				v-else-if="masteryList && masteryList.items.length > 0"
+				v-else-if="activeMasteryItems.length > 0"
 				class="text-xs opacity-70 text-center"
 			>
 				Each generated mastery expires in
-				{{ Math.round(masteryList.ttl_seconds / 86400) }} days if left untouched.
+				{{ Math.round(masteryList!.ttl_seconds / 86400) }} days if left untouched.
 			</span>
 
 			<div
@@ -43,23 +43,22 @@
 			</div>
 
 			<div
-				v-else-if="masteryList && masteryList.items.length === 0"
+				v-else-if="masteryList && activeMasteryItems.length === 0"
 				class="text-xs opacity-60 text-center max-w-72 py-2"
 			>
-				No mastery quests yet. Generate one from any completed badge below.
+				No active mastery quests. Generate one from any completed badge below.
 			</div>
 
 			<IonList
-				v-else-if="masteryList && masteryList.items.length > 0"
+				v-else-if="activeMasteryItems.length > 0"
 				lines="full"
 				class="w-full rounded-lg overflow-hidden bg-transparent! px-0!"
 			>
 				<IonItem
-					v-for="item in masteryList.items"
+					v-for="item in activeMasteryItems"
 					:key="item.quest.id"
 					button
 					detail
-					:disabled="item.mastered"
 					class="py-1"
 					:router-link="`/tabs/quests/${item.quest.id}`"
 				>
@@ -71,12 +70,11 @@
 					<IonLabel class="my-2">
 						<h3 class="font-semibold text-sm m-0!">{{ item.quest.title }}</h3>
 						<p class="text-xs opacity-70 m-0! whitespace-normal">
-							<span v-if="item.mastered">Mastered</span>
-							<span v-else-if="masteryStatusFor(item)">{{ masteryStatusFor(item) }}</span>
+							<span v-if="masteryStatusFor(item)">{{ masteryStatusFor(item) }}</span>
 						</p>
 					</IonLabel>
 					<IonBadge
-						v-if="isCurrentQuest(item.quest.id) || (!item.mastered && expiresInDays(item) !== null)"
+						v-if="isCurrentQuest(item.quest.id) || expiresInDays(item) !== null"
 						slot="end"
 						:color="
 							isCurrentQuest(item.quest.id)
@@ -178,6 +176,13 @@ const masteryCapReached = computed(() => {
 	if (!list) return false;
 	return list.active >= list.cap;
 });
+
+// hide finished masteries from the active list — completed masteries appear on the badge
+// itself (mastered chip + Card.vue can re-open the completed timeline), so listing them
+// here misled users into thinking the slot was still occupied
+const activeMasteryItems = computed(
+	() => masteryList.value?.items.filter((i) => !i.mastered) ?? []
+);
 
 function expiresInDays(item: MasteryListItem): number | null {
 	if (item.mastered) return null;

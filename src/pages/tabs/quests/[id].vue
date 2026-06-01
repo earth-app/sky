@@ -154,10 +154,16 @@ watch(
 	() => user.value?.id,
 	(id) => {
 		if (!id) return;
-		const { fetchUserQuest, fetchQuestHistory } = useUser(id);
+		const { fetchUserQuest, fetchQuestHistory, fetchQuestHistoryEntry } = useUser(id);
 
 		void fetchUserQuest(true);
 		void fetchQuestHistory();
+
+		// pull the full entry for the currently-viewed quest so the timeline can show completion state
+		const viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
+		if (viewedQuestId && currentQuest.value?.questId !== viewedQuestId) {
+			void fetchQuestHistoryEntry(viewedQuestId);
+		}
 	},
 	{ immediate: true }
 );
