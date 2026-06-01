@@ -102,7 +102,8 @@
 <script setup lang="ts">
 const route = useRoute();
 const { user } = useAuth();
-const { quest: currentQuest, questHistory } = useUser(user.value?.id || '');
+const userId = computed(() => user.value?.id);
+const { quest: currentQuest, questHistory } = useUser(userId);
 const { fetchQuest } = useQuests();
 
 const quest = ref<Quest | null>(null);
