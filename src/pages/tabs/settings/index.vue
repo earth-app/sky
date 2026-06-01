@@ -533,6 +533,20 @@ const settingSections = computed<SettingSection[]>(() => [
 		items: oauth2Items.value
 	},
 	{
+		section: 'Account',
+		items: [
+			{
+				kind: 'link',
+				title: 'API Keys',
+				description:
+					'Generate, view, and revoke API keys for scripts or third-party tools acting on your behalf',
+				placeholder: 'Manage',
+				color: 'primary',
+				link: '/tabs/settings/api-keys'
+			}
+		]
+	},
+	{
 		section: 'Other',
 		items: [
 			{
