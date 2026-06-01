@@ -326,6 +326,7 @@ import type { Event } from 'types/event';
 import type { User } from 'types/user';
 import { h } from 'vue';
 import MContentDrawer from '~/components/MContentDrawer.vue';
+import { BADGES_DRAWER_CLOSE } from '~/utils/injection';
 
 const props = defineProps<{
 	user: User;
@@ -403,6 +404,10 @@ const badgesDrawerRef = ref<InstanceType<typeof MContentDrawer>>();
 const openBadgesDrawer = () => {
 	badgesDrawerRef.value?.open();
 };
+
+provide(BADGES_DRAWER_CLOSE, () => {
+	badgesDrawerRef.value?.close();
+});
 
 const pointsDrawerRef = ref<InstanceType<typeof MContentDrawer>>();
 const openPointsDrawer = () => {
