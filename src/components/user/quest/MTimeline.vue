@@ -37,7 +37,8 @@
 			<IonButton
 				v-else
 				id="quest-button"
-				color="neutral"
+				fill="outline"
+				:color="theme === 'dark' ? 'light' : 'dark'"
 				disabled
 				class="self-center"
 				>Quest Completed</IonButton
@@ -201,7 +202,8 @@ const emit = defineEmits<{
 }>();
 
 const { user } = useAuth();
-const { quest, questHistory, fetchUserQuest, startQuest, endQuest } = useUser(user.value?.id || '');
+const userId = computed(() => user.value?.id);
+const { quest, questHistory, fetchUserQuest, startQuest, endQuest } = useUser(userId);
 const { getStepIcon } = useQuests();
 const { require: requirePermission } = useQuestPermissions();
 const userStore = useUserStore();
