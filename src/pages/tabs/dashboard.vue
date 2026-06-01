@@ -99,6 +99,14 @@
 					</div>
 
 					<div
+						v-if="user"
+						class="w-full px-3"
+					>
+						<OnboardingMWelcomeChecklist @open-persona="personaOpen = true" />
+						<OnboardingMPersonaPicker v-model="personaOpen" />
+					</div>
+
+					<div
 						v-if="user?.activities"
 						class="w-full max-w-full my-4 px-4"
 					>
@@ -266,7 +274,7 @@
 					class="border-2"
 					:scroll-y="true"
 				>
-					<OnboardingQuest @done="onboardingOpen = false" />
+					<OnboardingQuest @done="handleOnboardingQuestDone" />
 				</IonContent>
 			</IonModal>
 		</IonContent>
@@ -278,6 +286,15 @@ import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
 
 const onboardingOpen = ref(false);
+const personaOpen = ref(false);
+const onboarding = useOnboarding();
+
+function handleOnboardingQuestDone() {
+	onboardingOpen.value = false;
+	if (onboarding.state.value && !onboarding.state.value.completed_steps.includes('welcome')) {
+		void onboarding.completeStep('welcome');
+	}
+}
 
 type FeedItem =
 	| { type: 'activity'; isGroup: boolean; data: Activity[] }
