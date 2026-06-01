@@ -120,6 +120,7 @@ import slide from '~/animations/slide';
 const { user, fetchUser } = useAuth();
 const { settings: appSettings, init: initSettings } = useAppSettings();
 const ionRouter = useIonRouter();
+const { fetchState: fetchOnboardingState } = useOnboarding();
 
 const offlineAuthBlocked = ref(false);
 
@@ -179,6 +180,7 @@ watch(
 				await preloadRouteComponents(destination);
 			}
 
+			await fetchOnboardingState();
 			await Preferences.set({ key: 'hasOpened', value: 'true' });
 			await navigateTo(destination);
 		} else {
