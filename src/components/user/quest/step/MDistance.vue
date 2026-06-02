@@ -120,8 +120,11 @@
 </template>
 
 <script setup lang="ts">
+import { App, type AppState } from '@capacitor/app';
+import { BackgroundRunner } from '@capacitor/background-runner';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
+import { Geolocation } from '@capacitor/geolocation';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Motion, type AccelListenerEvent } from '@capacitor/motion';
 import { Preferences } from '@capacitor/preferences';
@@ -135,13 +138,16 @@ const props = defineProps<{
 	targetMeters: number;
 	disabled?: boolean;
 	alreadyCompleted?: boolean;
+	// cloud-side cancel signals delivered alongside quest progress. when this prop contains
+	// a matching cancel_distance_tracking entry we tear down the runner and wipe local state.
+	migrationSignals?: QuestMigrationSignal[];
 }>();
 
 const emit = defineEmits<{
 	capture: [distance: number];
 }>();
 
-const { require: requirePermission } = useQuestPermissions();
+const { require: requirePermission, prime: primePermission } = useQuestPermissions();
 
 // - 20 mph cap rejects vehicular travel (≈ 8.9408 m/s)
 // - 30-day expiry resets local progress so stale runs do not accumulate forever
@@ -160,17 +166,25 @@ const BIKE_RMS_THRESHOLD = 0.45; // m/s² rolling RMS that qualifies as "active"
 const BIKE_FALLBACK_SPEED_MPS = 4.0; // ≈ 14 km/h, conservative average bike pace
 const RMS_WINDOW_MS = 3000;
 
+// Background runner takes over when the app is backgrounded or killed. The
+// label/event names match the BackgroundRunner block in capacitor.config.ts —
+// keep them in sync.
+const RUNNER_LABEL = 'com.earthapp.sky.distance';
+const RUNNER_SYNC_INTERVAL_MS = 15_000;
+
 const storageKey = computed(
 	() => `quest_distance:${props.questId}:${props.stepIndex}:${props.altIndex ?? 0}`
 );
 
 const progress = ref(0);
 const startedAt = ref<number | null>(null);
+const anchorCumulativeSteps = ref<number | null>(null);
 const tracking = ref(false);
 const submitting = ref(false);
 const completed = ref(!!props.alreadyCompleted);
 const now = ref(Date.now());
 let nowTimer: ReturnType<typeof setInterval> | null = null;
+let appStateListener: PluginListenerHandle | null = null;
 
 const pedListener = ref<PluginListenerHandle | null>(null);
 const motionListener = ref<PluginListenerHandle | null>(null);
@@ -178,6 +192,9 @@ const lastSteps = ref<number | null>(null);
 const lastPedDistance = ref<number | null>(null);
 const lastSampleAt = ref<number>(0);
 const rmsSamples = ref<{ t: number; mag: number }[]>([]);
+
+let runnerSyncTimer: ReturnType<typeof setInterval> | null = null;
+let lastRunnerSyncAt = 0;
 
 const goalReached = computed(() => progress.value >= props.targetMeters);
 const progressFraction = computed(() => {
@@ -229,7 +246,17 @@ function notificationIdFor(offset: number): number {
 	return (h % 2_000_000_000) + 1;
 }
 
-type StoredState = { progress: number; startedAt: number; version: 1 };
+type StoredState = {
+	progress: number;
+	startedAt: number;
+	// Android-only: raw Sensor.TYPE_STEP_COUNTER value when tracking began. The
+	// OS counter is cumulative since boot and keeps incrementing while the app
+	// is killed, so re-reading it on resume tells us exactly how many steps
+	// were taken in between. Absent on iOS — CMPedometer takes start/end dates
+	// directly and we query via getMeasurement({start, end}).
+	anchorCumulativeSteps?: number;
+	version: 1;
+};
 
 async function loadState() {
 	const { value } = await Preferences.get({ key: storageKey.value });
@@ -243,6 +270,8 @@ async function loadState() {
 		}
 		progress.value = parsed.progress;
 		startedAt.value = parsed.startedAt;
+		anchorCumulativeSteps.value =
+			typeof parsed.anchorCumulativeSteps === 'number' ? parsed.anchorCumulativeSteps : null;
 	} catch {
 		// Corrupt entry — wipe and start over.
 		await clearState();
@@ -256,14 +285,171 @@ async function persistState() {
 		startedAt: startedAt.value,
 		version: 1
 	};
+	if (anchorCumulativeSteps.value != null) {
+		payload.anchorCumulativeSteps = anchorCumulativeSteps.value;
+	}
 	await Preferences.set({ key: storageKey.value, value: JSON.stringify(payload) });
 }
 
 async function clearState() {
 	progress.value = 0;
 	startedAt.value = null;
+	anchorCumulativeSteps.value = null;
 	await Preferences.remove({ key: storageKey.value });
 	await cancelExpiryNotifications();
+}
+
+type RunnerSnapshot = {
+	tracking: boolean;
+	progress: number;
+	questId?: string;
+	stepIndex?: number;
+	altIndex?: number;
+	targetMeters?: number;
+	startedAt?: number;
+	lastUpdate?: number;
+};
+
+async function runnerStart(initialProgress: number, anchorStartedAt: number) {
+	if (!Capacitor.isNativePlatform()) return;
+	try {
+		// Seed the runner with current foreground progress and start timestamp so
+		// the first scheduled tick anchors from the right value. Geolocation is
+		// the only sensor the runner can reach, so accuracy in the background is
+		// best-effort and capped by the same 20 mph limit as foreground.
+		await BackgroundRunner.dispatchEvent({
+			label: RUNNER_LABEL,
+			event: 'start',
+			details: {
+				questId: props.questId,
+				stepIndex: props.stepIndex,
+				altIndex: props.altIndex ?? 0,
+				targetMeters: props.targetMeters,
+				startedAt: anchorStartedAt,
+				progress: initialProgress
+			}
+		});
+	} catch (e) {
+		console.error('[MDistance] failed to start background runner:', e);
+	}
+}
+
+async function runnerStop() {
+	if (!Capacitor.isNativePlatform()) return;
+	try {
+		await BackgroundRunner.dispatchEvent({
+			label: RUNNER_LABEL,
+			event: 'stop',
+			details: {}
+		});
+	} catch (e) {
+		console.error('[MDistance] failed to stop background runner:', e);
+	}
+}
+
+async function runnerGetProgress(): Promise<RunnerSnapshot | null> {
+	if (!Capacitor.isNativePlatform()) return null;
+	try {
+		return await BackgroundRunner.dispatchEvent<RunnerSnapshot>({
+			label: RUNNER_LABEL,
+			event: 'getProgress',
+			details: {}
+		});
+	} catch (e) {
+		console.error('[MDistance] failed to read runner progress:', e);
+		return null;
+	}
+}
+
+// Pull authoritative step/distance totals from the OS pedometer for the period
+// since tracking started, and merge the result into local progress. iOS exposes
+// historical queries directly; on Android we persist the cumulative counter at
+// the moment tracking began and compare against the current value. Used on
+// mount and whenever the app returns to the foreground — this is what closes
+// the gap that the background runner's coarse GPS sampling leaves open.
+async function reconcileHistoricalDistance(): Promise<void> {
+	if (!Capacitor.isNativePlatform()) return;
+	if (!startedAt.value || completed.value) return;
+	const platform = Capacitor.getPlatform();
+	try {
+		if (platform === 'ios') {
+			const m = await CapacitorPedometer.getMeasurement({
+				start: startedAt.value,
+				end: Date.now()
+			});
+			const distance = typeof m.distance === 'number' ? m.distance : null;
+			if (distance != null && Number.isFinite(distance) && distance > progress.value) {
+				progress.value = Math.min(props.targetMeters, distance);
+				await persistState();
+				void runnerSync(true);
+				if (progress.value >= props.targetMeters) {
+					void stopTracking();
+					void Toast.show({
+						text: 'Distance goal reached — tap submit to record it.',
+						duration: 'long'
+					});
+				}
+			}
+		} else if (platform === 'android') {
+			const anchor = anchorCumulativeSteps.value;
+			if (anchor == null) return;
+			const m = await CapacitorPedometer.getMeasurement();
+			const cur = typeof m.cumulativeSteps === 'number' ? m.cumulativeSteps : null;
+			if (cur == null) return;
+			if (cur < anchor) {
+				// TYPE_STEP_COUNTER resets to 0 on reboot. Re-anchor to the new value
+				// rather than discarding progress so we don't double-count post-reboot
+				// steps as historical.
+				anchorCumulativeSteps.value = cur;
+				await persistState();
+				return;
+			}
+			const reconstructedDistance = (cur - anchor) * DEFAULT_STRIDE_M;
+			if (reconstructedDistance > progress.value) {
+				progress.value = Math.min(props.targetMeters, reconstructedDistance);
+				await persistState();
+				void runnerSync(true);
+				if (progress.value >= props.targetMeters) {
+					void stopTracking();
+					void Toast.show({
+						text: 'Distance goal reached — tap submit to record it.',
+						duration: 'long'
+					});
+				}
+			}
+		}
+	} catch (e) {
+		console.error('[MDistance] historical reconciliation failed:', e);
+	}
+}
+
+async function runnerSync(force = false): Promise<void> {
+	if (!Capacitor.isNativePlatform()) return;
+	if (!tracking.value && !force) return;
+	const t = Date.now();
+	if (!force && t - lastRunnerSyncAt < RUNNER_SYNC_INTERVAL_MS) return;
+	lastRunnerSyncAt = t;
+	try {
+		const snap = await BackgroundRunner.dispatchEvent<RunnerSnapshot>({
+			label: RUNNER_LABEL,
+			event: 'syncForeground',
+			details: { progress: progress.value }
+		});
+		// Runner may have a higher value from background GPS deltas. Merge in.
+		if (snap && typeof snap.progress === 'number' && snap.progress > progress.value) {
+			progress.value = Math.min(props.targetMeters, snap.progress);
+			void persistState();
+			if (progress.value >= props.targetMeters && tracking.value) {
+				void stopTracking();
+				void Toast.show({
+					text: 'Distance goal reached — tap submit to record it.',
+					duration: 'long'
+				});
+			}
+		}
+	} catch (e) {
+		console.error('[MDistance] failed to sync runner progress:', e);
+	}
 }
 
 async function ensureNotificationPermission(): Promise<boolean> {
@@ -348,6 +534,9 @@ function addDistance(deltaMeters: number, elapsedMs: number) {
 	if (accepted <= 0) return;
 	progress.value = Math.min(props.targetMeters, progress.value + accepted);
 	void persistState();
+	// Mirror to the runner so its KV stays in sync with foreground accumulation.
+	// Throttled inside runnerSync() to avoid burning battery on every pedometer tick.
+	void runnerSync();
 	if (progress.value >= props.targetMeters) {
 		void stopTracking();
 		void Toast.show({
@@ -401,45 +590,22 @@ function onMotion(evt: AccelListenerEvent) {
 	updateRmsWindow(magnitude, Date.now());
 }
 
-async function startTracking() {
-	if (props.disabled) return;
-	if (!Capacitor.isNativePlatform()) {
-		await showErrorToast(new Error('Distance tracking requires the mobile app on a device.'), {
-			duration: 'long'
-		});
-		return;
-	}
-
-	const motionOk = await requirePermission('motion');
-	if (!motionOk) return;
-
-	if (!startedAt.value) {
-		startedAt.value = Date.now();
-		await persistState();
-		void scheduleExpiryNotifications();
-	}
-
+async function attachForegroundListeners() {
 	lastSteps.value = null;
 	lastPedDistance.value = null;
 	lastSampleAt.value = Date.now();
 	rmsSamples.value = [];
 
-	try {
-		pedListener.value = await CapacitorPedometer.addListener('measurement', onPedMeasurement);
-		await CapacitorPedometer.startMeasurementUpdates();
-		motionListener.value = await Motion.addListener('accel', onMotion);
-		tracking.value = true;
-	} catch (e) {
-		await showErrorToast(e, {
-			fallback: 'Failed to start distance tracking.',
-			duration: 'long'
-		});
-		await stopTracking();
-	}
+	pedListener.value = await CapacitorPedometer.addListener('measurement', onPedMeasurement);
+	await CapacitorPedometer.startMeasurementUpdates();
+	motionListener.value = await Motion.addListener('accel', onMotion);
+	tracking.value = true;
+	startRunnerSyncTimer();
 }
 
-async function stopTracking() {
+async function detachForegroundListeners() {
 	tracking.value = false;
+	stopRunnerSyncTimer();
 	try {
 		await CapacitorPedometer.stopMeasurementUpdates();
 	} catch {
@@ -461,7 +627,85 @@ async function stopTracking() {
 		}
 		motionListener.value = null;
 	}
+}
+
+function startRunnerSyncTimer() {
+	stopRunnerSyncTimer();
+	runnerSyncTimer = setInterval(() => {
+		void runnerSync();
+	}, RUNNER_SYNC_INTERVAL_MS);
+}
+
+function stopRunnerSyncTimer() {
+	if (runnerSyncTimer) {
+		clearInterval(runnerSyncTimer);
+		runnerSyncTimer = null;
+	}
+}
+
+async function startTracking() {
+	if (props.disabled) return;
+	if (!Capacitor.isNativePlatform()) {
+		await showErrorToast(new Error('Distance tracking requires the mobile app on a device.'), {
+			duration: 'long'
+		});
+		return;
+	}
+
+	const motionOk = await requirePermission('motion');
+	if (!motionOk) return;
+	// Background runner can only reach geolocation, so the location grant is
+	// what unlocks tracking when the app is in the background or killed.
+	const locationOk = await requirePermission('location');
+	if (!locationOk) return;
+
+	if (!startedAt.value) {
+		startedAt.value = Date.now();
+		// Anchor the Android cumulative step counter so we can reconstruct
+		// distance taken while the app is killed via getMeasurement on resume.
+		// iOS doesn't need an anchor — CMPedometer accepts arbitrary start/end
+		// dates and queries its own retained history.
+		if (Capacitor.getPlatform() === 'android') {
+			try {
+				const m = await CapacitorPedometer.getMeasurement();
+				if (typeof m.cumulativeSteps === 'number') {
+					anchorCumulativeSteps.value = m.cumulativeSteps;
+				}
+			} catch (e) {
+				console.error('[MDistance] failed to anchor cumulative steps:', e);
+			}
+		}
+		await persistState();
+		void scheduleExpiryNotifications();
+	}
+
+	try {
+		await attachForegroundListeners();
+	} catch (e) {
+		await showErrorToast(e, {
+			fallback: 'Failed to start distance tracking.',
+			duration: 'long'
+		});
+		await stopTracking();
+		return;
+	}
+
+	// Prime the runner with an anchor location so the next scheduled tick has
+	// something to subtract against. Failure here is non-fatal — foreground
+	// pedometer still works; we just won't accumulate background distance until
+	// the runner gets its first sample on a later tick.
+	try {
+		await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10_000 });
+	} catch (e) {
+		console.error('[MDistance] initial geolocation prime failed:', e);
+	}
+	await runnerStart(progress.value, startedAt.value);
+}
+
+async function stopTracking() {
+	await detachForegroundListeners();
 	await persistState();
+	await runnerStop();
 }
 
 async function toggleTracking() {
@@ -500,11 +744,105 @@ async function submit() {
 	}
 }
 
+async function reconnectIfRunnerActive() {
+	// If the runner has an active session for THIS step, fold its progress in
+	// and reconnect the foreground listeners so the UI shows live updates.
+	// Mismatched session (different step/quest) means the user navigated to a
+	// different distance step — leave their existing runner alone, this step
+	// is just idle.
+	const snap = await runnerGetProgress();
+	if (!snap || !snap.tracking) return;
+	const matches =
+		snap.questId === props.questId &&
+		snap.stepIndex === props.stepIndex &&
+		(snap.altIndex ?? 0) === (props.altIndex ?? 0);
+	if (!matches) return;
+	if (typeof snap.progress === 'number' && snap.progress > progress.value) {
+		progress.value = Math.min(props.targetMeters, snap.progress);
+		if (typeof snap.startedAt === 'number') startedAt.value = snap.startedAt;
+		await persistState();
+	}
+	// Pedometer history is more accurate than the runner's coarse GPS sampling —
+	// query it now to fill in everything that happened while the app was killed
+	// or backgrounded.
+	await reconcileHistoricalDistance();
+	if (completed.value || goalReached.value) return;
+	try {
+		await attachForegroundListeners();
+	} catch (e) {
+		console.error('[MDistance] failed to reattach foreground listeners:', e);
+	}
+}
+
+function onAppStateChange(state: AppState) {
+	// When the user returns to the app, the pedometer history holds the truth
+	// for whatever happened while we were backgrounded or killed. Foreground
+	// listeners alone can't see those steps, so reconcile every time.
+	if (!state.isActive) return;
+	if (!tracking.value && !startedAt.value) return;
+	void reconcileHistoricalDistance();
+}
+
+// cloud signals that the step we were tracking has been removed/changed — stop the runner,
+// wipe local state, and let the user see the migration banner on the next render.
+async function cancelTrackingFromMigration(reason: string) {
+	console.log(`[MDistance] cancelling tracking due to cloud migration: ${reason}`);
+	if (tracking.value) {
+		await detachForegroundListeners();
+		tracking.value = false;
+	}
+	await runnerStop();
+	await clearState();
+	completed.value = !!props.alreadyCompleted;
+	try {
+		await Toast.show({ text: 'This step was updated by the cloud — distance tracking stopped.' });
+	} catch {
+		// best-effort user toast
+	}
+}
+
+watch(
+	() => props.migrationSignals,
+	(signals) => {
+		if (!signals?.length) return;
+		const hit = signals.find(
+			(s) =>
+				s.action === 'cancel_distance_tracking' &&
+				s.questId === props.questId &&
+				s.stepIndex === props.stepIndex &&
+				(s.altIndex ?? 0) === (props.altIndex ?? 0)
+		);
+		if (hit) void cancelTrackingFromMigration(`signal for step ${hit.stepIndex}`);
+	},
+	{ immediate: true, deep: true }
+);
+
 onMounted(async () => {
 	nowTimer = setInterval(() => {
 		now.value = Date.now();
 	}, 30_000);
 	await loadState();
+	if (Capacitor.isNativePlatform() && !completed.value) {
+		// Pre-warm the CMPedometer (iOS) / ActivityRecognition (Android) prompt
+		// and the location prompt on step open so the OS dialogs appear up front
+		// rather than after the user taps Start Tracking. iOS DeviceMotion is
+		// not primed here — it requires a user gesture and is handled inside
+		// startTracking() instead.
+		if (!props.disabled) {
+			void primePermission('motion');
+			void primePermission('location');
+		}
+		await reconnectIfRunnerActive();
+		// Component may stay mounted across background/foreground cycles (Ionic
+		// keeps tab pages alive); reconcile pedometer history each time we
+		// return to the foreground so the gap left by background-runner GPS
+		// sampling gets closed.
+		try {
+			appStateListener = await App.addListener('appStateChange', onAppStateChange);
+		} catch (e) {
+			console.error('[MDistance] failed to register appStateChange listener:', e);
+		}
+	}
 });
 
 onBeforeUnmount(async () => {
@@ -512,7 +850,23 @@ onBeforeUnmount(async () => {
 		clearInterval(nowTimer);
 		nowTimer = null;
 	}
-	await stopTracking();
+	if (appStateListener) {
+		try {
+			await appStateListener.remove();
+		} catch {
+			// best-effort
+		}
+		appStateListener = null;
+	}
+	// Tear down foreground listeners but leave the runner session alone. The
+	// background runner keeps accumulating distance until the user explicitly
+	// pauses or submits — that's the whole point of moving tracking off the
+	// component lifecycle.
+	if (tracking.value) {
+		void runnerSync(true);
+	}
+	await detachForegroundListeners();
+	await persistState();
 });
 </script>
 

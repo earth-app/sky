@@ -1,0 +1,132 @@
+diff --git a/android/src/main/java/app/capgo/pedometer/CapacitorPedometerPlugin.java b/android/src/main/java/app/capgo/pedometer/CapacitorPedometerPlugin.java
+index 1294299c16855ac8ec6eed96d1cbe8ee792c512d..4efabb257d9a4f7a179b022c44587b65f1f35b64 100644
+--- a/android/src/main/java/app/capgo/pedometer/CapacitorPedometerPlugin.java
++++ b/android/src/main/java/app/capgo/pedometer/CapacitorPedometerPlugin.java
+@@ -8,7 +8,10 @@ import android.hardware.SensorEvent;
+ import android.hardware.SensorEventListener;
+ import android.hardware.SensorManager;
+ import android.os.Build;
++import android.os.Handler;
++import android.os.Looper;
+ import androidx.annotation.Nullable;
++import java.util.concurrent.atomic.AtomicBoolean;
+ import com.getcapacitor.JSObject;
+ import com.getcapacitor.PermissionState;
+ import com.getcapacitor.Plugin;
+@@ -38,10 +41,13 @@ public class CapacitorPedometerPlugin extends Plugin implements SensorEventListe
+ 
+     private int initialStepCount = -1;
+     private int currentStepCount = 0;
++    private int lastCumulativeSteps = -1;
+     private long measurementStartTime = 0;
+ 
+     private boolean updatesActive = false;
+ 
++    private static final long ONE_SHOT_TIMEOUT_MS = 3000;
++
+     @Override
+     public void load() {
+         Context context = getContext();
+@@ -63,8 +69,57 @@ public class CapacitorPedometerPlugin extends Plugin implements SensorEventListe
+             return;
+         }
+ 
+-        JSObject result = createMeasurementObject();
+-        call.resolve(result);
++        // Updates already running: onSensorChanged keeps lastCumulativeSteps fresh.
++        if (updatesActive && lastCumulativeSteps >= 0) {
++            call.resolve(createMeasurementObject());
++            return;
++        }
++
++        // Otherwise do a one-shot read. TYPE_STEP_COUNTER is an on-change sensor
++        // whose first delivery after registration is the cumulative value held by
++        // the OS — including steps taken while our process was dead — so a brief
++        // listener gives us the authoritative snapshot needed for reconciliation.
++        final AtomicBoolean done = new AtomicBoolean(false);
++        final SensorEventListener oneShot = new SensorEventListener() {
++            @Override
++            public void onSensorChanged(SensorEvent event) {
++                if (event.sensor.getType() != Sensor.TYPE_STEP_COUNTER) return;
++                if (!done.compareAndSet(false, true)) return;
++                int totalSteps = (int) event.values[0];
++                lastCumulativeSteps = totalSteps;
++                if (sensorManager != null) sensorManager.unregisterListener(this);
++                call.resolve(buildOneShotResult(totalSteps));
++            }
++
++            @Override
++            public void onAccuracyChanged(Sensor sensor, int accuracy) {}
++        };
++
++        if (sensorManager == null ||
++            !sensorManager.registerListener(oneShot, stepCounter, SensorManager.SENSOR_DELAY_FASTEST)) {
++            call.reject("Failed to register step counter listener.");
++            return;
++        }
++
++        // Quiet-device fallback: return cached value if the sensor never delivers.
++        new Handler(Looper.getMainLooper()).postDelayed(() -> {
++            if (!done.compareAndSet(false, true)) return;
++            if (sensorManager != null) sensorManager.unregisterListener(oneShot);
++            if (lastCumulativeSteps >= 0) {
++                call.resolve(buildOneShotResult(lastCumulativeSteps));
++            } else {
++                call.reject("Timed out waiting for step counter event.");
++            }
++        }, ONE_SHOT_TIMEOUT_MS);
++    }
++
++    private JSObject buildOneShotResult(int cumulativeSteps) {
++        JSObject result = new JSObject();
++        result.put("numberOfSteps", 0);
++        result.put("cumulativeSteps", cumulativeSteps);
++        result.put("startDate", 0);
++        result.put("endDate", System.currentTimeMillis());
++        return result;
+     }
+ 
+     @PluginMethod
+@@ -179,6 +234,7 @@ public class CapacitorPedometerPlugin extends Plugin implements SensorEventListe
+         }
+ 
+         int totalSteps = (int) event.values[0];
++        lastCumulativeSteps = totalSteps;
+ 
+         if (initialStepCount == -1) {
+             initialStepCount = totalSteps;
+@@ -199,6 +255,9 @@ public class CapacitorPedometerPlugin extends Plugin implements SensorEventListe
+     private JSObject createMeasurementObject() {
+         JSObject measurement = new JSObject();
+         measurement.put("numberOfSteps", currentStepCount);
++        if (lastCumulativeSteps >= 0) {
++            measurement.put("cumulativeSteps", lastCumulativeSteps);
++        }
+         measurement.put("startDate", measurementStartTime);
+         measurement.put("endDate", System.currentTimeMillis());
+         return measurement;
+diff --git a/dist/esm/definitions.d.ts b/dist/esm/definitions.d.ts
+index 94df61dba09b3a7033bb71428b48984e9f12043c..bbea03eff47368a13e0a377fb92afce1483f9f20 100644
+--- a/dist/esm/definitions.d.ts
++++ b/dist/esm/definitions.d.ts
+@@ -76,6 +76,20 @@ export interface Measurement {
+      * @since 0.0.1
+      */
+     numberOfSteps?: number;
++    /**
++     * The cumulative step counter since the device last booted.
++     *
++     * On **Android** this is the raw value of `Sensor.TYPE_STEP_COUNTER`, which
++     * the OS keeps incrementing even when the app is killed. Persist this value
++     * during tracking and read it again after the app resumes to reconcile any
++     * steps taken while the process was dead. The counter resets to 0 on reboot,
++     * so callers should detect `current < previous` as a reboot signal.
++     *
++     * Only available on **Android**.
++     *
++     * @since 0.0.1
++     */
++    cumulativeSteps?: number;
+     /**
+      * The estimated distance (in meters) traveled by the user.
+      *
