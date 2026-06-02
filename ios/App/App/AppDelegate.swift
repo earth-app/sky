@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import CapacitorBackgroundRunner
 import FirebaseCore
 import FirebaseMessaging
 
@@ -10,6 +11,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
        FirebaseApp.configure()
+       // Register the BGTaskScheduler identifier and re-arm pending tasks so the
+       // distance-tracker runner keeps firing across app restarts.
+       BackgroundRunnerPlugin.registerBackgroundTask()
+       BackgroundRunnerPlugin.handleApplicationDidFinishLaunching(launchOptions: launchOptions)
         return true
     }
 
