@@ -406,7 +406,7 @@ const openBadgesDrawer = () => {
 };
 
 provide(BADGES_DRAWER_CLOSE, () => {
-	badgesDrawerRef.value?.close();
+	return badgesDrawerRef.value?.close() ?? Promise.resolve();
 });
 
 const pointsDrawerRef = ref<InstanceType<typeof MContentDrawer>>();
