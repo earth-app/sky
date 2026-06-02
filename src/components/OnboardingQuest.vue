@@ -318,7 +318,7 @@ const steps: OnboardingQuestStep[] = [
 		type: 'scan_barcode',
 		title: 'Scan a Barcode',
 		description:
-			"Scan a UPC or EAN barcode from a product around you. It's a quick way to log books, music, or food you're enjoying — quests like this turn everyday items into part of your journey.",
+			"Scan a barcode from the world around you. Quests can ask for books, music, food, beauty or pet items, a household product, a vehicle's VIN, or a boarding pass — a quick way to turn everyday objects and trips into part of your journey.",
 		reward: 25
 	},
 	{

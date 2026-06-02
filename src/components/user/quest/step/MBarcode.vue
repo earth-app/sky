@@ -18,8 +18,8 @@
 				Scan {{ kindLabel }} Barcode
 			</p>
 			<p class="text-[0.72rem] text-neutral-500 leading-[1.65]">
-				Find a UPC or EAN barcode on the product packaging.<br />
-				Only retail barcodes (UPC-A, UPC-E, EAN-8, EAN-13) are accepted.
+				{{ kindInstructions }}<br />
+				{{ kindFormatNote }}
 			</p>
 			<p
 				v-if="keywordHint"
@@ -60,6 +60,25 @@
 				@click="startScan"
 			>
 				Retry
+			</button>
+		</div>
+
+		<div
+			v-else-if="stage === 'live'"
+			class="absolute inset-0 flex flex-col"
+		>
+			<div
+				:id="scannerElementId"
+				class="flex-1 w-full bg-black overflow-hidden rounded-xl"
+			></div>
+			<p class="mt-3! text-[0.7rem]! text-neutral-400! text-center tracking-wide">
+				{{ liveFrameLabel }}
+			</p>
+			<button
+				class="mt-3! mx-auto! px-6! py-2! rounded-xl! bg-neutral-800! text-white! text-sm! font-medium! tracking-wide cursor-pointer"
+				@click="cancelWebScan"
+			>
+				Cancel
 			</button>
 		</div>
 
@@ -164,14 +183,19 @@
 <script setup lang="ts">
 import {
 	CapacitorBarcodeScanner,
+	CapacitorBarcodeScannerAndroidScanningLibrary,
 	CapacitorBarcodeScannerTypeHint
 } from '@capacitor/barcode-scanner';
+import { Capacitor } from '@capacitor/core';
 import { Toast } from '@capacitor/toast';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+
+type BarcodeKind = 'food' | 'music' | 'book' | 'beauty' | 'pet' | 'product' | 'vehicle' | 'flight';
 
 const props = withDefaults(
 	defineProps<{
 		disabled?: boolean;
-		kind?: 'food' | 'music' | 'book';
+		kind?: BarcodeKind;
 		keyword?: string;
 		submit?: boolean;
 	}>(),
@@ -185,14 +209,27 @@ const emit = defineEmits<{
 	submitted: [];
 }>();
 
-const { require: requirePermission } = useQuestPermissions();
+const { require: requirePermission, prime: primePermission } = useQuestPermissions();
 
-type BarcodeStage = 'intro' | 'scanning' | 'preview' | 'error';
+// Pre-warm the camera prompt so the OS dialog appears the moment the step
+// opens rather than after the user taps Open Scanner. The require() call in
+// startScan() still runs as the source of truth; this just front-loads the
+// friction.
+onMounted(() => {
+	if (props.disabled) return;
+	void primePermission('camera');
+});
+
+type BarcodeStage = 'intro' | 'scanning' | 'live' | 'preview' | 'error';
 
 const stage = ref<BarcodeStage>('intro');
 const errorMsg = ref('');
 const scannedValue = ref('');
 const scannedFormat = ref<number>(-1);
+
+const isNative = Capacitor.isNativePlatform();
+const scannerElementId = `mbarcode-${useId()}`;
+const webScanner = shallowRef<Html5Qrcode | null>(null);
 
 const kindLabel = computed(() => {
 	switch (props.kind) {
@@ -202,27 +239,108 @@ const kindLabel = computed(() => {
 			return 'Music';
 		case 'book':
 			return 'Book';
+		case 'beauty':
+			return 'Beauty';
+		case 'pet':
+			return 'Pet';
+		case 'product':
+			return 'Product';
+		case 'vehicle':
+			return 'Vehicle (VIN)';
+		case 'flight':
+			return 'Flight';
 		default:
 			return 'Product';
 	}
 });
 
+// Retail kinds use UPC/EAN; vehicle is a VIN (17-char alphanumeric on the windshield or doorjamb);
+// flight is a boarding pass (PDF417 / Aztec / QR / Data Matrix).
+const kindInstructions = computed(() => {
+	switch (props.kind) {
+		case 'vehicle':
+			return 'Scan a VIN barcode — usually on the driver-side door jamb or under the windshield. 17 alphanumeric characters.';
+		case 'flight':
+			return 'Scan the barcode on a boarding pass (PDF417 stripe or QR-style square).';
+		case 'beauty':
+		case 'pet':
+		case 'product':
+		case 'food':
+		case 'music':
+		case 'book':
+		default:
+			return 'Find a UPC or EAN barcode on the product packaging.';
+	}
+});
+
+const liveFrameLabel = computed(() => {
+	switch (props.kind) {
+		case 'vehicle':
+			return 'Align the VIN barcode within the frame';
+		case 'flight':
+			return 'Align the boarding-pass barcode within the frame';
+		default:
+			return 'Align a UPC or EAN barcode within the frame';
+	}
+});
+
+const kindFormatNote = computed(() => {
+	switch (props.kind) {
+		case 'vehicle':
+			return 'Vehicle scans accept CODE-39, DATA MATRIX, or PDF417 VIN labels.';
+		case 'flight':
+			return 'Boarding pass scans accept PDF417, AZTEC, QR, or DATA MATRIX.';
+		default:
+			return 'Only retail barcodes (UPC-A, UPC-E, EAN-8, EAN-13) are accepted.';
+	}
+});
+
 const keywordHint = computed(() => props.keyword?.trim() || '');
 
-// Numeric format codes match Html5QrcodeSupportedFormats. Only the linear retail
-// formats below are accepted by the cloud validator; anything else (QR, Code-128,
-// etc.) is rejected server-side, so we surface a friendly error before submitting.
-const RETAIL_FORMATS: Record<number, string> = {
+const FORMAT_LABELS: Record<number, string> = {
+	0: 'QR',
+	1: 'AZTEC',
+	3: 'CODE-39',
+	6: 'DATA MATRIX',
 	9: 'EAN-13',
 	10: 'EAN-8',
+	11: 'PDF417',
 	14: 'UPC-A',
 	15: 'UPC-E'
 };
 
+const RETAIL_FORMAT_CODES = [9, 10, 14, 15] as const;
+const VIN_FORMAT_CODES = [3, 6, 11] as const;
+const BOARDING_PASS_FORMAT_CODES = [0, 1, 6, 11] as const;
+
+function allowedFormatsForKind(kind: BarcodeKind | undefined): Set<number> {
+	switch (kind) {
+		case 'vehicle':
+			return new Set<number>(VIN_FORMAT_CODES);
+		case 'flight':
+			return new Set<number>(BOARDING_PASS_FORMAT_CODES);
+		default:
+			return new Set<number>(RETAIL_FORMAT_CODES);
+	}
+}
+
+const allowedFormats = computed(() => allowedFormatsForKind(props.kind));
+
 const scannedFormatLabel = computed(() => {
 	const f = scannedFormat.value;
-	return RETAIL_FORMATS[f] ?? `Format ${f}`;
+	return FORMAT_LABELS[f] ?? `Format ${f}`;
 });
+
+function unsupportedFormatMessage(kind: BarcodeKind | undefined): string {
+	switch (kind) {
+		case 'vehicle':
+			return 'That barcode format is not a VIN label. Use the CODE-39, PDF417, or DATA MATRIX barcode on the doorjamb or windshield VIN sticker.';
+		case 'flight':
+			return 'That barcode format is not a boarding pass. Use the PDF417, AZTEC, QR, or DATA MATRIX code printed on the pass.';
+		default:
+			return 'That barcode format is not supported. Use a UPC or EAN retail barcode.';
+	}
+}
 
 async function startScan() {
 	if (props.disabled) {
@@ -242,11 +360,24 @@ async function startScan() {
 		return;
 	}
 
+	if (!isNative) {
+		await startWebScan();
+		return;
+	}
+
 	stage.value = 'scanning';
 	try {
+		// MLKit is much faster + more reliable than ZXing for UPC/EAN auto-detect;
+		// ZXing routinely fails to lock onto retail barcodes without near-perfect
+		// framing. MLKit is already a transitive dependency of the plugin (see its
+		// android/build.gradle), so this only flips which one runs at scan time.
+		// scanButton: false is the plugin default but pin it explicitly so the
+		// native UI never injects a manual capture button into the auto-detect flow.
 		const result = await CapacitorBarcodeScanner.scanBarcode({
 			hint: CapacitorBarcodeScannerTypeHint.ALL,
-			scanInstructions: 'Center the barcode within the frame'
+			scanInstructions: 'Center the barcode within the frame',
+			scanButton: false,
+			android: { scanningLibrary: CapacitorBarcodeScannerAndroidScanningLibrary.MLKIT }
 		});
 
 		const value = (result.ScanResult ?? '').trim();
@@ -258,9 +389,9 @@ async function startScan() {
 			return;
 		}
 
-		if (!Number.isFinite(format) || !(format in RETAIL_FORMATS)) {
+		if (!Number.isFinite(format) || !allowedFormats.value.has(format)) {
 			stage.value = 'error';
-			errorMsg.value = 'That barcode format is not supported. Use a UPC or EAN retail barcode.';
+			errorMsg.value = unsupportedFormatMessage(props.kind);
 			return;
 		}
 
@@ -279,6 +410,131 @@ async function startScan() {
 	}
 }
 
+// The bundled @capacitor/barcode-scanner web fallback locks ZXing to a small
+// square scan region (qrbox = width * 9/16), which fails to decode UPC/EAN
+// barcodes in practice. On web we drive html5-qrcode directly with a wide
+// rectangular qrbox and per-kind formats so the dev/browser flow actually works
+// end-to-end. Native iOS/Android keeps the plugin path above.
+function html5FormatsForKind(kind: BarcodeKind | undefined): Html5QrcodeSupportedFormats[] {
+	switch (kind) {
+		case 'vehicle':
+			return [
+				Html5QrcodeSupportedFormats.CODE_39,
+				Html5QrcodeSupportedFormats.DATA_MATRIX,
+				Html5QrcodeSupportedFormats.PDF_417
+			];
+		case 'flight':
+			return [
+				Html5QrcodeSupportedFormats.PDF_417,
+				Html5QrcodeSupportedFormats.AZTEC,
+				Html5QrcodeSupportedFormats.QR_CODE,
+				Html5QrcodeSupportedFormats.DATA_MATRIX
+			];
+		default:
+			return [
+				Html5QrcodeSupportedFormats.EAN_13,
+				Html5QrcodeSupportedFormats.EAN_8,
+				Html5QrcodeSupportedFormats.UPC_A,
+				Html5QrcodeSupportedFormats.UPC_E
+			];
+	}
+}
+
+async function startWebScan() {
+	await stopWebScan();
+	stage.value = 'live';
+	await nextTick();
+
+	const scanner = new Html5Qrcode(scannerElementId, {
+		formatsToSupport: html5FormatsForKind(props.kind),
+		verbose: false,
+		// Chrome/Edge ship a native BarcodeDetector that is dramatically more
+		// reliable than the pure-JS ZXing fallback html5-qrcode uses by default —
+		// especially for UPC/EAN under poor focus or laptop webcams. The library
+		// falls back to ZXing automatically where it isn't supported.
+		useBarCodeDetectorIfSupported: true
+	});
+	webScanner.value = scanner;
+
+	// 2D codes (boarding pass, data-matrix VIN) need a roughly square viewfinder;
+	// linear retail / VIN labels read best with a wide rectangle.
+	const isTwoDKind = props.kind === 'flight';
+
+	try {
+		await scanner.start(
+			{ facingMode: 'environment' },
+			{
+				// ZXing-JS misses barcodes when the camera image is blurry. Higher
+				// fps gives it more frames to lock onto, and a generous qrbox keeps
+				// the scan region forgiving for shaky hands and bad focus.
+				fps: 24,
+				qrbox: (vfWidth, vfHeight) =>
+					isTwoDKind
+						? {
+								width: Math.max(220, Math.floor(Math.min(vfWidth, vfHeight) * 0.8)),
+								height: Math.max(220, Math.floor(Math.min(vfWidth, vfHeight) * 0.8))
+							}
+						: {
+								width: Math.max(220, Math.floor(vfWidth * 0.92)),
+								height: Math.max(140, Math.floor(vfHeight * 0.55))
+							}
+			},
+			(decodedText, decodedResult) => {
+				const trimmed = decodedText.trim();
+				if (!trimmed) return;
+				const formatNum = decodedResult.result?.format?.format;
+				// Web scanners report format ordinals inconsistently across
+				// engines (ZXing-JS vs native BarcodeDetector vs Safari fallback).
+				// Accept any non-empty decoded value here and let the backend's
+				// format validation produce the friendly per-kind error. Better
+				// to surface the scan than to silently drop a valid barcode
+				// because we couldn't read its format metadata.
+				scannedValue.value = trimmed;
+				scannedFormat.value = typeof formatNum === 'number' ? formatNum : -1;
+				stage.value = 'preview';
+				emit('scan-taken');
+				void stopWebScan();
+			},
+			() => {
+				// per-frame "no code" errors are expected; swallow them
+			}
+		);
+	} catch (e) {
+		await stopWebScan();
+		if (isCancelError(e)) {
+			stage.value = 'intro';
+			return;
+		}
+		stage.value = 'error';
+		errorMsg.value =
+			'Unable to access the camera. Make sure camera permissions are granted and try again.';
+	}
+}
+
+async function stopWebScan() {
+	const scanner = webScanner.value;
+	webScanner.value = null;
+	if (!scanner) return;
+	try {
+		if (scanner.isScanning) await scanner.stop();
+		scanner.clear();
+	} catch {
+		// scanner may already be stopped; safe to ignore
+	}
+}
+
+async function cancelWebScan() {
+	await stopWebScan();
+	scannedValue.value = '';
+	scannedFormat.value = -1;
+	stage.value = 'intro';
+	emit('scan-rejected');
+}
+
+onUnmounted(() => {
+	void stopWebScan();
+});
+
 function isCancelError(err: unknown): boolean {
 	if (!err) return false;
 	const message = String((err as { message?: string }).message || err);
@@ -293,11 +549,14 @@ function rejectScan() {
 }
 
 function acceptScan() {
-	if (props.disabled || !scannedValue.value || scannedFormat.value < 0) return;
+	if (props.disabled || !scannedValue.value) return;
 	if (props.submit === false) {
 		emit('submitted');
 		return;
 	}
+	// Format ordinal can be -1 when the web scanner decoded a value but didn't
+	// expose a recognized format code (engine differences across browsers).
+	// Send what we have; backend validates and surfaces the friendly error.
 	emit('capture', { data: scannedValue.value, format: scannedFormat.value });
 }
 </script>
