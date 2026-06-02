@@ -3,6 +3,7 @@
 		:is-open="open"
 		:initial-breakpoint="0.75"
 		:breakpoints="[0, 0.25, 0.5, 0.75, 1]"
+		@did-dismiss="handleDidDismiss"
 	>
 		<div class="flex flex-col items-center overflow-y-auto overflow-x-hidden">
 			<h2 class="text-2xl font-bold p-4">
@@ -44,9 +45,19 @@ const emit = defineEmits<{
 const open = ref(false);
 const search = ref('');
 
+let dismissResolver: (() => void) | null = null;
+
+function handleDidDismiss() {
+	open.value = false;
+	if (dismissResolver) {
+		dismissResolver();
+		dismissResolver = null;
+	}
+}
+
 export interface ContentDrawerRef {
 	open: () => void;
-	close: () => void;
+	close: () => Promise<void>;
 	search: Ref<string>;
 }
 
@@ -55,7 +66,12 @@ defineExpose<ContentDrawerRef>({
 		open.value = true;
 	},
 	close: () => {
+		if (!open.value) return Promise.resolve();
+		const promise = new Promise<void>((resolve) => {
+			dismissResolver = resolve;
+		});
 		open.value = false;
+		return promise;
 	},
 	search: search
 });
