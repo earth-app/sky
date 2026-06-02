@@ -135,6 +135,20 @@
 								/>
 								Order the Items
 							</IonButton>
+
+							<IonButton
+								v-else-if="item.type === 'scan_barcode'"
+								color="secondary"
+								size="small"
+								:disabled="!isCurrentStep(index)"
+								@click="openStepModal(index)"
+							>
+								<UIcon
+									name="mdi:barcode-scan"
+									class="min-h-4 min-w-4 mr-2"
+								/>
+								Scan a Barcode
+							</IonButton>
 						</div>
 
 						<textarea
@@ -216,6 +230,12 @@
 							:submit="false"
 							@submitted="onModalSubmitted"
 						/>
+
+						<UserQuestStepMBarcode
+							v-else-if="activeStep.type === 'scan_barcode'"
+							:submit="false"
+							@submitted="onModalSubmitted"
+						/>
 					</template>
 				</div>
 			</IonContent>
@@ -292,6 +312,13 @@ const steps: OnboardingQuestStep[] = [
 		title: 'Take another Photo',
 		description:
 			"Now that you've explored a bit, take a photo of something that represents your journey so far!",
+		reward: 25
+	},
+	{
+		type: 'scan_barcode',
+		title: 'Scan a Barcode',
+		description:
+			"Scan a UPC or EAN barcode from a product around you. It's a quick way to log books, music, or food you're enjoying — quests like this turn everyday items into part of your journey.",
 		reward: 25
 	},
 	{

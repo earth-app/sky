@@ -168,16 +168,21 @@ import {
 } from '@capacitor/barcode-scanner';
 import { Toast } from '@capacitor/toast';
 
-const props = defineProps<{
-	disabled?: boolean;
-	kind?: 'food' | 'music' | 'book';
-	keyword?: string;
-}>();
+const props = withDefaults(
+	defineProps<{
+		disabled?: boolean;
+		kind?: 'food' | 'music' | 'book';
+		keyword?: string;
+		submit?: boolean;
+	}>(),
+	{ submit: true }
+);
 
 const emit = defineEmits<{
 	capture: [payload: { data: string; format: number }];
 	'scan-taken': [];
 	'scan-rejected': [];
+	submitted: [];
 }>();
 
 const { require: requirePermission } = useQuestPermissions();
@@ -289,6 +294,10 @@ function rejectScan() {
 
 function acceptScan() {
 	if (props.disabled || !scannedValue.value || scannedFormat.value < 0) return;
+	if (props.submit === false) {
+		emit('submitted');
+		return;
+	}
 	emit('capture', { data: scannedValue.value, format: scannedFormat.value });
 }
 </script>
