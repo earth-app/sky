@@ -97,6 +97,7 @@ export default defineNuxtConfig({
 				'@capacitor/toast',
 				'@capacitor/geolocation',
 				'@capacitor/motion',
+				'@capacitor/background-runner',
 				'@capgo/capacitor-pedometer',
 				'@capgo/capacitor-audio-recorder',
 				'@earth-app/ocean',
@@ -107,7 +108,8 @@ export default defineNuxtConfig({
 				'@vue/devtools-kit',
 				'luxon',
 				'piexifjs',
-				'zod'
+				'zod',
+				'html5-qrcode'
 			]
 		},
 		define: {
