@@ -757,7 +757,15 @@ function findTopVisibleIonicOverlay(): HTMLElement | null {
 	return null;
 }
 
+function isClippingContainer(element: HTMLElement): boolean {
+	if (!import.meta.client) return false;
+	const style = window.getComputedStyle(element);
+	const clips = (v: string) => v === 'hidden' || v === 'clip';
+	return clips(style.overflow) || clips(style.overflowX) || clips(style.overflowY);
+}
+
 function canTeleportToLayerContainer(layerContainer: HTMLElement): boolean {
+	if (isClippingContainer(layerContainer)) return false;
 	if (!layerContainer.matches(ionicOverlaySelector)) {
 		return true;
 	}
