@@ -13,7 +13,7 @@
 			>
 
 			<IonButton
-				v-else-if="hasOtherActiveQuest"
+				v-else-if="hasOtherActiveQuest && !completed"
 				id="quest-button"
 				color="warning"
 				:loading="loading"
@@ -315,6 +315,7 @@ async function confirmMasteryLock(message: string, okTitle: string): Promise<boo
 }
 
 async function handleEndClick() {
+	if (completed.value) return;
 	if (isCurrentQuest.value && isMasteryQuest.value) {
 		const badgeId = masteryBadgeIdFromQuestId(props.quest.id);
 		const ok = await confirmMasteryLock(
@@ -333,6 +334,8 @@ async function handleEndClick() {
 }
 
 async function handleReplaceClick() {
+	if (completed.value) return;
+
 	if (activeQuestIsMastery.value) {
 		const activeBadgeId = masteryBadgeIdFromQuestId(quest.value?.questId);
 		const activeTitle = quest.value?.quest?.title || 'this Badge Mastery';
@@ -350,6 +353,7 @@ async function handleReplaceClick() {
 }
 
 async function handleStart(override: boolean = false) {
+	if (completed.value) return;
 	loading.value = true;
 
 	try {
@@ -380,6 +384,7 @@ async function handleStart(override: boolean = false) {
 }
 
 async function handleEnd() {
+	if (completed.value) return;
 	loading.value = true;
 	try {
 		const res = await endQuest();

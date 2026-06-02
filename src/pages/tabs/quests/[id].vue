@@ -10,7 +10,7 @@
 		</IonHeader>
 
 		<IonContent :scroll-y="true">
-			<div class="flex flex-col px-4">
+			<div class="flex flex-col items-center px-4">
 				<UAlert
 					v-if="quest && isMasteryQuest && !isMasteryQuestCompleted"
 					color="warning"
@@ -19,6 +19,13 @@
 					title="Badge Mastery Quest"
 					description="Abandoning this quest or starting a different one will permanently lock this badge's mastery. Complete every step."
 					class="my-3"
+				/>
+
+				<UserBadgeMCard
+					v-if="isMasteryQuest && masteryBadge"
+					:badge="masteryBadge"
+					no-modal
+					class="my-4"
 				/>
 
 				<div class="flex items-center justify-center gap-2">
@@ -38,6 +45,7 @@
 						>{{ delayReductionLabel }}</UBadge
 					>
 				</div>
+
 				<UserQuestMTimeline
 					v-if="quest"
 					:quest="quest"
@@ -103,7 +111,7 @@
 const route = useRoute();
 const { user } = useAuth();
 const userId = computed(() => user.value?.id);
-const { quest: currentQuest, questHistory } = useUser(userId);
+const { quest: currentQuest, questHistory, badges } = useUser(userId);
 const { fetchQuest } = useQuests();
 
 const quest = ref<Quest | null>(null);
@@ -118,6 +126,13 @@ const progress = computed(() => {
 });
 
 const isMasteryQuest = computed(() => quest.value?.id?.startsWith('badge_mastery_') ?? false);
+const masteryBadge = computed(() => {
+	if (!isMasteryQuest.value) return null;
+	if (!quest.value) return null;
+
+	const badgeId = quest.value.id.substring(14, quest.value.id.length);
+	return badges.value.find((badge) => badge.id === badgeId) ?? null;
+});
 
 const accountType = computed(() => user.value?.account.account_type);
 const delayReduction = computed(() => getQuestDelayReduction(accountType.value));
@@ -155,10 +170,11 @@ watch(
 	() => user.value?.id,
 	(id) => {
 		if (!id) return;
-		const { fetchUserQuest, fetchQuestHistory, fetchQuestHistoryEntry } = useUser(id);
+		const { fetchUserQuest, fetchQuestHistory, fetchQuestHistoryEntry, fetchBadges } = useUser(id);
 
 		void fetchUserQuest(true);
 		void fetchQuestHistory();
+		void fetchBadges();
 
 		// pull the full entry for the currently-viewed quest so the timeline can show completion state
 		const viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);

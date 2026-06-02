@@ -1,11 +1,13 @@
 <template>
 	<UserBadgeDisplay
+		v-bind="$attrs"
 		:badge="badge"
 		:is-granted="isGranted"
 		:is-mastered="isMastered"
-		@clicked="showDetails = true"
+		@clicked="noModal || (showDetails = true)"
 	/>
 	<IonModal
+		v-if="!noModal"
 		:is-open="showDetails"
 		:backdrop-dismiss="!masteryLoading"
 		:can-dismiss="!masteryLoading"
@@ -108,7 +110,7 @@
 			</div>
 		</IonContent>
 
-		<ClientOnly v-if="canShowMastery">
+		<ClientOnly v-if="showDetails && canShowMastery">
 			<MSiteTour
 				:steps="masteryTour"
 				name="Badge Mastery Tour"
@@ -118,15 +120,25 @@
 	</IonModal>
 </template>
 <script setup lang="ts">
+defineOptions({
+	inheritAttrs: false
+});
+
 import { App as CapacitorApp } from '@capacitor/app';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { BadgeMasteryGenerationError } from 'types/user';
 import { BADGES_DRAWER_CLOSE } from '~/utils/injection';
 
-const props = defineProps<{
-	badge: Badge | UserBadge;
-}>();
+const props = withDefaults(
+	defineProps<{
+		badge: Badge | UserBadge;
+		noModal?: boolean;
+	}>(),
+	{
+		noModal: false
+	}
+);
 
 const userStore = useUserStore();
 const { user: authUser } = useAuth();
@@ -136,11 +148,14 @@ const router = useIonRouter();
 const showDetails = ref(false);
 
 // provided by MProfile's badges drawer; absent when MCard renders outside that drawer
-const closeBadgesDrawer = inject(BADGES_DRAWER_CLOSE, () => {});
+const closeBadgesDrawer = inject(BADGES_DRAWER_CLOSE, () => Promise.resolve());
 
-function dismissForNavigation() {
+// await the drawer's dismiss before letting the caller router.push — otherwise the
+// route change preempts the IonModal animation and the teleported drawer can orphan
+// onto the destination page (which reads as "the close fix doesn't work")
+async function dismissForNavigation() {
 	showDetails.value = false;
-	closeBadgesDrawer();
+	await closeBadgesDrawer();
 }
 
 const SKY_MASTERY_BUTTON_THEME = {
@@ -249,8 +264,7 @@ async function handleMasteryClick() {
 }
 
 async function openExistingMasteryQuest() {
-	dismissForNavigation();
-	await nextTick();
+	await dismissForNavigation();
 	router.push(`/tabs/quests/badge_mastery_${props.badge.id}`);
 }
 
@@ -262,8 +276,7 @@ async function generateAndOpen() {
 	try {
 		await userStore.generateMastery(userId, props.badge.id);
 		masteryQuestReady.value = true;
-		dismissForNavigation();
-		await nextTick();
+		await dismissForNavigation();
 		await showInfoToast('Your Badge Mastery quest is ready. Complete it without abandoning it!', {
 			duration: 'long'
 		});
@@ -289,8 +302,7 @@ async function generateAndOpen() {
 					await showInfoToast('Mastery already exists for this badge; opening it instead...', {
 						duration: 'short'
 					});
-					dismissForNavigation();
-					await nextTick();
+					await dismissForNavigation();
 					router.push(`/tabs/quests/badge_mastery_${props.badge.id}`);
 					break;
 				case 'cap_reached':
