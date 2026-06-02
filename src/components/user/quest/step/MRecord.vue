@@ -201,14 +201,19 @@ onMounted(async () => {
 		// listener attach failure is non-fatal; recording errors will surface via the catch in stopRecording instead.
 	}
 
+	// Fire the OS prompt as the step opens rather than gating it behind an
+	// "Enable Microphone" button — the user already opted in by entering the
+	// audio step, so the second tap is friction without benefit.
 	try {
 		const current = await CapacitorAudioRecorder.checkPermissions();
 		if (current.recordAudio === 'granted') {
 			stage.value = 'ready';
+			return;
 		}
 	} catch {
-		// Leave stage as 'permission' so the user can trigger an explicit request.
+		// Fall through to the explicit request below.
 	}
+	await requestPermission();
 });
 
 onBeforeUnmount(async () => {

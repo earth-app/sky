@@ -49,8 +49,21 @@
 					<span class="text-sm! opacity-90">{{ completedAt }}</span>
 				</div>
 
+				<!-- migrated stub: original submission data is gone because the quest definition changed.
+				     hide media/score/prompt rendering for migrated entries since none of those fields are reliable. -->
 				<div
-					v-if="progress"
+					v-if="progress?.migrated"
+					class="flex items-center gap-3 mt-3 mb-2 px-4 py-3 rounded-lg border border-amber-300/60 bg-amber-50 dark:bg-amber-950/40 max-w-md"
+				>
+					<UIcon
+						name="i-lucide-info"
+						class="size-5 text-amber-600 shrink-0"
+					/>
+					<span class="text-xs! opacity-90">{{ migratedMessage }}</span>
+				</div>
+
+				<div
+					v-else-if="progress"
 					class="flex m-2 mb-6"
 				>
 					<img
@@ -111,11 +124,11 @@
 				</div>
 
 				<Score
-					v-if="progress?.score"
+					v-if="!progress?.migrated && progress?.score"
 					:score="progress.score"
 				/>
 				<Quote
-					v-if="progress?.prompt"
+					v-if="!progress?.migrated && progress?.prompt"
 					:text="progress.prompt"
 				/>
 			</div>
@@ -295,6 +308,7 @@
 					:alt-index="step.altIndex"
 					:target-meters="distanceTargetMeters"
 					:disabled="!step.isCurrentQuest || !step.isUnlocked"
+					:migration-signals="migrationSignals"
 					@capture="submitDistance"
 				/>
 				<div
@@ -359,6 +373,8 @@ const props = defineProps<{
 		isCurrentQuest: boolean;
 		isUnlocked: boolean;
 	};
+	// passed through to MDistance so cloud-side cancel signals reach the background runner.
+	migrationSignals?: QuestMigrationSignal[];
 }>();
 
 const emit = defineEmits<{
@@ -473,10 +489,23 @@ const category = computed(() => {
 	}
 });
 
-const scanKind = computed<'food' | 'music' | 'book' | undefined>(() => {
+type ScanKind = 'food' | 'music' | 'book' | 'beauty' | 'pet' | 'product' | 'vehicle' | 'flight';
+
+const SCAN_KINDS: readonly ScanKind[] = [
+	'food',
+	'music',
+	'book',
+	'beauty',
+	'pet',
+	'product',
+	'vehicle',
+	'flight'
+];
+
+const scanKind = computed<ScanKind | undefined>(() => {
 	if (props.step.type !== 'scan_barcode') return undefined;
 	const raw = props.step.parameters?.[0];
-	return raw === 'food' || raw === 'music' || raw === 'book' ? raw : undefined;
+	return SCAN_KINDS.includes(raw as ScanKind) ? (raw as ScanKind) : undefined;
 });
 
 const scanKeyword = computed<string | undefined>(() => {
@@ -680,6 +709,20 @@ const completedAt = computed(() => {
 	return DateTime.fromMillis(props.step.completedAt).toLocaleString(DateTime.DATETIME_SHORT);
 });
 
+const migratedMessage = computed(() => {
+	const m = progress.value?.migrated;
+	if (!m) return null;
+	const at = DateTime.fromMillis(m.at).toLocaleString(DateTime.DATE_MED);
+	const reasonText: Record<string, string> = {
+		type_changed: `This step's requirements changed on ${at}; the original submission is no longer available.`,
+		params_changed: `This step was adjusted on ${at}; the original submission is no longer available.`,
+		step_removed: `This step was removed from the quest on ${at}.`,
+		alt_removed: `This alternative was removed from the quest on ${at}.`,
+		quest_deleted: `This quest is no longer available.`
+	};
+	return reasonText[m.reason] ?? `This step was migrated on ${at}.`;
+});
+
 const barcodeSubmission = computed<{ kind: string; title: string } | null>(() => {
 	if (props.step.type !== 'scan_barcode') return null;
 	const entry = progress.value as (QuestProgressEntry & { kind?: string; title?: string }) | null;
@@ -695,6 +738,16 @@ const barcodeKindIcon = computed(() => {
 			return 'mdi:music';
 		case 'book':
 			return 'mdi:book-open-page-variant';
+		case 'beauty':
+			return 'mdi:lipstick';
+		case 'pet':
+			return 'mdi:paw';
+		case 'product':
+			return 'mdi:package-variant-closed';
+		case 'vehicle':
+			return 'mdi:car';
+		case 'flight':
+			return 'mdi:airplane';
 		default:
 			return 'mdi:barcode';
 	}

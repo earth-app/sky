@@ -164,7 +164,18 @@ const emit = defineEmits<{
 	'photo-rejected': [];
 }>();
 
-const { require: requirePermission, ensure: ensurePermission } = useQuestPermissions();
+const {
+	require: requirePermission,
+	ensure: ensurePermission,
+	prime: primePermission
+} = useQuestPermissions();
+
+// Front-load the camera prompt so the OS dialog appears when the step opens
+// rather than after the user taps Open Camera.
+onMounted(() => {
+	if (props.disabled) return;
+	void primePermission('camera');
+});
 
 type CameraStage = 'permission' | 'capturing' | 'preview' | 'error';
 

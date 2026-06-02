@@ -105,9 +105,43 @@ export function useQuestPermissions() {
 		motion: ensureMotion
 	};
 
+	// Same as ensureMotion but skips DeviceMotionEvent.requestPermission(), which
+	// iOS 13+ refuses to fulfill outside of a user gesture. Used to pre-warm the
+	// native CMPedometer prompt on step open; the webview accelerometer grant has
+	// to wait for the actual Start Tracking tap.
+	async function primeMotion(): Promise<boolean> {
+		try {
+			const current = await CapacitorPedometer.checkPermissions();
+			if (current.activityRecognition === 'granted') return true;
+			const req = await CapacitorPedometer.requestPermissions();
+			return req.activityRecognition === 'granted';
+		} catch (e) {
+			console.error('Pedometer permission prime failed:', e);
+			return false;
+		}
+	}
+
+	const PRIMES: Record<QuestPermission, () => Promise<boolean>> = {
+		camera: ensureCamera,
+		location: ensureLocation,
+		record: ensureMicrophone,
+		motion: primeMotion
+	};
+
 	/** Check + request a single permission without surfacing any UI. */
 	async function ensure(permission: QuestPermission): Promise<boolean> {
 		return CHECKS[permission]();
+	}
+
+	/**
+	 * Pre-warm the OS prompt for a permission when a step opens, so the user
+	 * sees the dialog as soon as the step UI mounts instead of after they tap
+	 * the action button. Motion specifically uses a variant that defers the
+	 * iOS DeviceMotionEvent grant (which requires a user gesture) until the
+	 * actual Start Tracking tap.
+	 */
+	async function prime(permission: QuestPermission): Promise<boolean> {
+		return PRIMES[permission]();
 	}
 
 	/**
@@ -147,6 +181,7 @@ export function useQuestPermissions() {
 	return {
 		labels: PERMISSION_LABELS,
 		ensure,
+		prime,
 		require,
 		notifyDenied
 	};

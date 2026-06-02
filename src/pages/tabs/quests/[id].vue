@@ -99,6 +99,7 @@
 					:quest="quest"
 					:progress="progress"
 					:step="openStep"
+					:migration-signals="migrationSignals"
 					@submitted="stepOpen = false"
 				/>
 				<Loading v-else-if="stepOpen" />
@@ -123,6 +124,13 @@ const progress = computed(() => {
 	}
 
 	return questHistory.value.get(quest.value.id)?.progress;
+});
+
+// only pass through cloud cancel signals when the open quest matches the active one.
+// history quests can't have a live in-progress runner, so signals there are irrelevant.
+const migrationSignals = computed(() => {
+	if (!quest.value || currentQuest.value?.questId !== quest.value.id) return [];
+	return currentQuest.value?.migrationSignals ?? [];
 });
 
 const isMasteryQuest = computed(() => quest.value?.id?.startsWith('badge_mastery_') ?? false);
