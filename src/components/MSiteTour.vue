@@ -981,13 +981,29 @@ function updateBoxPosition() {
 			updateTicking = false;
 			return;
 		}
+
+		const rect = element.getBoundingClientRect();
+		const hasVisibleBounds = rect.width > 0 || rect.height > 0;
+		if (!hasVisibleBounds) {
+			if (missingElementWarningId !== currentElementId) {
+				console.warn(
+					`Element with id "${currentElementId}" has no visible bounds — falling back to centered tour tooltip.`
+				);
+				missingElementWarningId = currentElementId;
+			}
+			updateOverlayTeleportTarget();
+			applyLayerZIndex();
+			positionFallbackTooltip();
+			scrollToFallbackTooltip();
+			updateTicking = false;
+			return;
+		}
 		missingElementWarningId = null;
 
 		updateOverlayTeleportTarget(element);
 		ensureObserversForTarget(element);
 		applyLayerZIndex(element);
 
-		const rect = element.getBoundingClientRect();
 		const viewportWidth = window.innerWidth;
 		const viewportHeight = window.innerHeight;
 
