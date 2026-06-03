@@ -58,6 +58,7 @@
 				<IonButton
 					v-if="totalSlides > 1"
 					fill="clear"
+					aria-label="Previous slide"
 					:disabled="currentSlide === 0 && !loop"
 					@click="goToSlide(currentSlide - 1)"
 				>
@@ -85,6 +86,7 @@
 				<IonButton
 					v-if="totalSlides > 1"
 					fill="clear"
+					aria-label="Next slide"
 					:disabled="currentSlide === totalSlides - 1 && !loop"
 					@click="goToSlide(currentSlide + 1)"
 				>
@@ -321,11 +323,8 @@ watchEffect(() => {
 </script>
 
 <style>
-.light .info-card-group {
-	background-color: #ffffff;
-}
-
-.dark .info-card-group {
-	background-color: #212027;
+/* use ionic's card token so theme transitions stay consistent with the rest of the app */
+.info-card-group {
+	background-color: var(--ion-card-background, var(--ion-background-color, #ffffff));
 }
 </style>

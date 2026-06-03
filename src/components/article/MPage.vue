@@ -129,7 +129,7 @@
 		</div>
 		<h3
 			id="article-time"
-			class="text-xs! text-gray-400"
+			class="text-xs! text-gray-600 dark:text-gray-300"
 		>
 			{{ time }}
 		</h3>

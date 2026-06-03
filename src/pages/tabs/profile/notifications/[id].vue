@@ -23,10 +23,10 @@
 						:title="capitalizeFully(notification.type)"
 					>
 						<div
-							class="p-4 bg-gray-800 border-2 border-gray-200 light:border-gray-400 rounded-lg w-full max-w-3xl"
+							class="p-4 bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-200 light:border-gray-400 rounded-lg w-full max-w-3xl"
 						>
 							<p
-								class="text-gray-300 text-sm md:text-md lg:text-lg mb-4"
+								class="text-gray-800 dark:text-gray-200 text-sm md:text-md lg:text-lg mb-4"
 								v-html="message"
 							></p>
 
@@ -39,7 +39,7 @@
 								>Open Link</IonChip
 							>
 
-							<p class="text-gray-500 text-xs mt-2">
+							<p class="text-gray-600 dark:text-gray-400 text-xs mt-2">
 								From: {{ notification.source }} | Type: {{ capitalizeFully(notification.type) }} |
 								ID:
 								{{ notification.id }}

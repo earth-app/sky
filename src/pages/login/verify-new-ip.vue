@@ -116,9 +116,9 @@
 			>
 				<UIcon
 					name="mdi:login-variant"
-					class="size-12 text-gray-400"
+					class="size-12 text-gray-600 dark:text-gray-300"
 				/>
-				<p class="text-center text-gray-500">No pending login verification.</p>
+				<p class="text-center text-gray-700 dark:text-gray-200">No pending login verification.</p>
 				<IonButton
 					color="tertiary"
 					@click="backToLogin"

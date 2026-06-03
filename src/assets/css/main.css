@@ -108,4 +108,29 @@
 		--ion-text-color-step-500: #9b9aa0;
 		--ion-overlay-background-color: #1c1b24;
 	}
+
+	/* respect the in-app "animations" toggle (useAppSettings) AND the OS-level
+	   prefers-reduced-motion. covers the long-tail of components that don't
+	   gate their own CSS transitions on the setting. */
+	html.animations-disabled *,
+	html.animations-disabled *::before,
+	html.animations-disabled *::after {
+		animation-duration: 0.001ms !important;
+		animation-delay: 0ms !important;
+		transition-duration: 0.001ms !important;
+		transition-delay: 0ms !important;
+		scroll-behavior: auto !important;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.001ms !important;
+			animation-delay: 0ms !important;
+			transition-duration: 0.001ms !important;
+			transition-delay: 0ms !important;
+			scroll-behavior: auto !important;
+		}
+	}
 }
