@@ -248,6 +248,7 @@
 import { Toast } from '@capacitor/toast';
 import type { FormSubmitEvent } from '@nuxt/ui';
 import type { Event } from 'types/event';
+import { useMFormDraft } from '~/composables/useMFormDraft';
 
 const props = defineProps<{
 	mode: 'create' | 'edit';
@@ -317,6 +318,11 @@ const state = reactive<EventData>({
 	visibility: props.event?.visibility || 'PUBLIC',
 	fields: props.event?.fields || {}
 });
+
+// draft autosave for the create flow only — edit drafts get confusing
+const userId = computed(() => user.value?.id);
+const draft =
+	props.mode === 'create' ? useMFormDraft(state, { kind: 'event', userId, scope: 'create' }) : null;
 
 // Field validation
 const eventLink = ref(state.fields?.['link'] || '');
@@ -482,6 +488,7 @@ async function handleSubmit(event: FormSubmitEvent<EventData>) {
 			duration: 'long'
 		});
 
+		await draft?.clear();
 		emit('submitted');
 	} catch (err: any) {
 		if (emailGate.handleServerError(err, 'create events')) {

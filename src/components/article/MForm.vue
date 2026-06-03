@@ -168,6 +168,7 @@
 import { Toast } from '@capacitor/toast';
 import { articleSchema } from 'schemas';
 import type { Article } from 'types/article';
+import { useMFormDraft } from '~/composables/useMFormDraft';
 import ArticleMQuizEditor from './MQuizEditor.vue';
 
 const props = defineProps<{
@@ -210,6 +211,13 @@ watch(
 		state.color = parseInt(newHex.replace('#', ''), 16);
 	}
 );
+
+// draft autosave for the create flow — edit drafts get confusing so skip them
+const userId = computed(() => user.value?.id);
+const draft =
+	props.mode === 'create'
+		? useMFormDraft(state, { kind: 'article', userId, scope: 'create' })
+		: null;
 
 const tagInput = ref('');
 const addTag = () => {
@@ -265,6 +273,7 @@ async function handleSubmit() {
 				duration: 'long'
 			});
 
+			await draft?.clear();
 			router.push(`/articles/${res.data.id}`);
 		} else {
 			loading.value = false;

@@ -32,22 +32,23 @@ const { user, avatar128 } = useAuth();
 const router = useIonRouter();
 
 onMounted(async () => {
-	if (user.value) {
-		if (user.value.account.visibility !== 'PUBLIC') {
-			router.push(`/tabs/profile/@${user.value.username}`);
-			await Toast.show({
-				text: 'Your account must be public to create articles. Please change your account visibility in your profile settings.',
-				duration: 'long'
-			});
-		}
+	if (!user.value) return;
 
-		if (user.value.account.account_type === 'FREE' || user.value.account.account_type === 'PRO') {
-			router.push('/tabs/upgrade?highlighted=WRITER');
-			await Toast.show({
-				text: 'You need to upgrade to the Writer plan or above to create articles.',
-				duration: 'long'
-			});
-		}
+	if (user.value.account.visibility !== 'PUBLIC') {
+		await Toast.show({
+			text: 'Your account must be public to create articles. Update visibility in your profile, then try again.',
+			duration: 'long'
+		});
+		router.push(`/tabs/profile/@${user.value.username}`);
+		return;
+	}
+
+	if (user.value.account.account_type === 'FREE' || user.value.account.account_type === 'PRO') {
+		await Toast.show({
+			text: 'Article creation is a Writer-plan feature. Upgrade to continue.',
+			duration: 'long'
+		});
+		router.push('/tabs/upgrade?highlighted=WRITER');
 	}
 });
 </script>

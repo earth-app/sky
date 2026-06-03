@@ -76,6 +76,7 @@
 						<IonButton
 							fill="clear"
 							color="danger"
+							aria-label="Close upgrade prompt"
 							@click="premiumOpen = false"
 						>
 							<UIcon
@@ -99,6 +100,7 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { com } from '@earth-app/ocean';
+import { useMFormDraft } from '~/composables/useMFormDraft';
 
 const emit = defineEmits<{
 	(event: 'prompt-created', prompt: Prompt): void;
@@ -139,14 +141,22 @@ onMounted(async () => {
 
 const loading = ref(false);
 const disabled = ref(true);
-const prompt = ref<string>('');
 
-const visibility = ref<typeof com.earthapp.Visibility.prototype.name>(
-	com.earthapp.Visibility.PUBLIC.name
-);
+// single reactive state so draft autosave snapshots prompt + visibility together
+const state = reactive<{ prompt: string; visibility: string }>({
+	prompt: '',
+	visibility: com.earthapp.Visibility.PUBLIC.name
+});
+
+// individual refs preserved for v-model bindings below
+const prompt = toRef(state, 'prompt');
+const visibility = toRef(state, 'visibility') as Ref<typeof com.earthapp.Visibility.prototype.name>;
 const visibilityOptions = com.earthapp.Visibility.values();
 
 const error = ref('');
+
+const userId = computed(() => user.value?.id);
+const draft = useMFormDraft(state, { kind: 'prompt', userId, scope: 'create' });
 
 const emailGate = useEmailGate();
 
@@ -196,6 +206,7 @@ async function newPrompt() {
 				duration: 'long'
 			});
 
+			await draft.clear();
 			emit('prompt-created', res.data);
 		} else {
 			loading.value = false;
