@@ -21,12 +21,12 @@
 						v-if="offlineAuthBlocked"
 						class="space-y-3 text-center"
 					>
-						<p class="text-sm text-gray-600">
+						<p class="text-sm text-gray-600 dark:text-gray-300">
 							You are offline and logged out. Please come back online to log in.
 						</p>
 					</div>
 					<div
-						v-else-if="user === null"
+						v-else-if="showAuthCta"
 						class="space-y-3"
 					>
 						<IonButton
@@ -81,7 +81,7 @@
 					<div v-else>
 						<UIcon
 							name="mdi:loading"
-							class="animate-spin size-8 text-gray-500 mx-auto"
+							class="animate-spin size-8 text-gray-600 dark:text-gray-300 mx-auto"
 						/>
 					</div>
 				</div>
@@ -116,13 +116,19 @@ import { Preferences } from '@capacitor/preferences';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { OAUTH_PROVIDERS } from 'types/user';
 import slide from '~/animations/slide';
+import { theme } from '~/composables/useSettings';
 
-const { user, fetchUser } = useAuth();
-const { settings: appSettings, init: initSettings } = useAppSettings();
+const { user } = useAuth();
+const { settings: appSettings } = useAppSettings();
 const ionRouter = useIonRouter();
 const { fetchState: fetchOnboardingState } = useOnboarding();
 
 const offlineAuthBlocked = ref(false);
+
+// hydration latch — keep the loader spinning until we know whether the user is
+// authed or anon. Prevents the login/signup CTA flash before user resolves.
+const bootResolved = ref(false);
+const showAuthCta = computed(() => bootResolved.value && user.value === null);
 
 function isOfflineEntryMode() {
 	if (appSettings.value.offlineMode) return true;
@@ -143,12 +149,7 @@ function goToLogin() {
 }
 
 onMounted(async () => {
-	await SplashScreen.show({
-		autoHide: false
-	});
-
-	await initSettings();
-
+	// app.vue owns initSettings() and hydrateUser() — we just gate splash hide on user resolution
 	if (isOfflineEntryMode()) {
 		const cachedUser = await validateSessionAllowOffline();
 		if (cachedUser) {
@@ -157,42 +158,68 @@ onMounted(async () => {
 			}
 
 			await navigateTo('/tabs/downloads');
-			await SplashScreen.hide();
+			await SplashScreen.hide().catch(() => {});
 			return;
 		}
 
 		offlineAuthBlocked.value = true;
-		await SplashScreen.hide();
+		bootResolved.value = true;
+		await SplashScreen.hide().catch(() => {});
 		return;
 	}
 
-	await fetchUser();
-	await SplashScreen.hide();
+	// wait at most 5s for hydration before showing UI
+	await waitForUserResolution(5_000);
+	bootResolved.value = true;
+	await SplashScreen.hide().catch(() => {});
+
+	if (user.value === null) {
+		await maybeShowOnboarding();
+	}
 });
 
-watch(
-	user,
-	async (currentUser) => {
-		if (currentUser) {
-			const destination = isOfflineEntryMode() ? '/tabs/downloads' : '/tabs/dashboard';
-
-			if (appSettings.value.preloadContent) {
-				await preloadRouteComponents(destination);
+async function waitForUserResolution(timeoutMs: number) {
+	if (user.value !== undefined) return;
+	await new Promise<void>((resolve) => {
+		const stop = watch(user, (value) => {
+			if (value !== undefined) {
+				stop();
+				resolve();
 			}
+		});
+		setTimeout(() => {
+			stop();
+			resolve();
+		}, timeoutMs);
+	});
+}
 
-			await fetchOnboardingState();
-			await Preferences.set({ key: 'hasOpened', value: 'true' });
-			await navigateTo(destination);
-		} else {
-			const hasOpened = await Preferences.get({ key: 'hasOpened' });
-			if (!hasOpened.value) {
-				await Preferences.set({ key: 'hasOpened', value: 'true' });
-				onboarding();
-			}
-		}
-	},
-	{ immediate: true }
-);
+async function maybeShowOnboarding() {
+	let hasOpenedValue: string | null = null;
+	try {
+		const result = await Preferences.get({ key: 'hasOpened' });
+		hasOpenedValue = result.value;
+	} catch {
+		// treat read failure as already-opened so we don't loop the modal
+		hasOpenedValue = 'true';
+	}
+	if (!hasOpenedValue) {
+		await Preferences.set({ key: 'hasOpened', value: 'true' }).catch(() => {});
+		onboarding();
+	}
+}
+
+watch(user, async (currentUser) => {
+	if (!currentUser) return;
+
+	const destination = isOfflineEntryMode() ? '/tabs/downloads' : '/tabs/dashboard';
+	if (appSettings.value.preloadContent) {
+		await preloadRouteComponents(destination);
+	}
+	await fetchOnboardingState();
+	await Preferences.set({ key: 'hasOpened', value: 'true' }).catch(() => {});
+	await navigateTo(destination);
+});
 
 const onboardingOpen = ref(false);
 function onboarding() {
