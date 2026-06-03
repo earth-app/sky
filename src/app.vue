@@ -78,21 +78,13 @@ import { Preferences } from '@capacitor/preferences';
 import { Share } from '@capacitor/share';
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
 import slide from './animations/slide';
-import { initDailyNotifications } from './composables/useDailyNotifications';
-import {
-	initMOfflineQueue,
-	pendingMMutations,
-	registerMMutationDispatcher
-} from './composables/useMOfflineQueue';
+import { initQuestCelebrationListener } from './composables/useHaptics';
 import {
 	applyNetworkStatus,
 	isOffline,
 	setDataSaverModeEnabled,
 	setOfflineModeEnabled
 } from './composables/useNetwork';
-import { initPushNotifications } from './composables/usePushNotifications';
-import { initQuestCelebrationListener } from './composables/useQuestCelebrationListener';
-import { initWatchNotificationBridge } from './composables/useWatchNotifications';
 
 if (import.meta.client) {
 	defineCustomElements(window);

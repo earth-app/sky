@@ -38,3 +38,28 @@ export function useAppHaptics() {
 		notifyError
 	};
 }
+
+let activeQuestListenerStop: (() => void) | null = null;
+
+// fires native haptics + optional sfx in response to crust's celebration state
+export function initQuestCelebrationListener(): () => void {
+	if (activeQuestListenerStop) activeQuestListenerStop();
+
+	const { open } = useQuestCelebration();
+	const { notifySuccess, impactHeavy } = useAppHaptics();
+	const { play } = useSoundEffects();
+
+	const stop = watch(open, (value) => {
+		if (!value) return;
+		notifySuccess();
+		setTimeout(() => impactHeavy(), 80);
+		play('celebration');
+	});
+
+	const teardown = () => {
+		stop();
+		if (activeQuestListenerStop === teardown) activeQuestListenerStop = null;
+	};
+	activeQuestListenerStop = teardown;
+	return teardown;
+}
