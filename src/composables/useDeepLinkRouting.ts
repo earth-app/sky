@@ -173,7 +173,13 @@ export function useDeepLinkRouting() {
 			return { type: 'internal', target: `${pathname}${query}${hash}` };
 		}
 
-		if (pathname === '/login' || pathname === '/signup' || pathname === '/verify-email') {
+		if (
+			pathname === '/login' ||
+			pathname === '/signup' ||
+			pathname === '/verify-email' ||
+			pathname === '/forgot-password' ||
+			pathname === '/reset-password'
+		) {
 			return { type: 'internal', target: `${pathname}${query}${hash}` };
 		}
 
