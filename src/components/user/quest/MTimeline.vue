@@ -98,6 +98,11 @@
 									(isCurrentQuest && currentIndex >= 0 && index > currentIndex)
 							}
 						]"
+						:title="
+							!altStep.completed && item.some((s) => s.completed)
+								? 'Bonus step — optional, but earns extra reward'
+								: undefined
+						"
 						@click="onStepClick(altStep)"
 						hydrate-on-visible
 					/>
@@ -106,6 +111,12 @@
 						class="text-xs opacity-70"
 						>+{{ altStep.reward }}</span
 					>
+					<span
+						v-if="!altStep.completed && item.some((s) => s.completed)"
+						class="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-300"
+					>
+						Bonus
+					</span>
 				</div>
 				<div
 					v-else
@@ -367,7 +378,7 @@ async function handleStart(override: boolean = false) {
 
 		const perms = props.quest.permissions ?? [];
 		for (const perm of perms) {
-			const granted = await requirePermission(perm);
+			const granted = await requirePermission(perm, { prime: true });
 			if (!granted) return;
 		}
 
