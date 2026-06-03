@@ -182,7 +182,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		cta: {
 			label: 'Try Activities Now',
 			icon: 'mdi:run',
-			color: 'primary',
+			color: 'secondary',
 			advance: true,
 			handler: () => router.push('/tabs/discover?tab=activity', slide)
 		}
@@ -220,7 +220,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		cta: {
 			label: 'Sign Up Now',
 			icon: 'mdi:account-plus',
-			color: 'success',
+			color: 'tertiary',
 			advance: false,
 			closeOnSuccess: true,
 			handler: () => router.push('/signup', slide)
@@ -276,7 +276,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		cta: {
 			label: 'Open Profile Editor',
 			icon: 'mdi:account-edit-outline',
-			color: 'primary',
+			color: 'secondary',
 			advance: true,
 			handler: () => router.push('/tabs/profile/editor', slide)
 		}
@@ -292,7 +292,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		cta: {
 			label: 'Pick a Quest',
 			icon: 'mdi:map-marker-path',
-			color: 'primary',
+			color: 'tertiary',
 			advance: true,
 			handler: () => router.push('/tabs/quests', slide)
 		}
