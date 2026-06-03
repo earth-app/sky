@@ -62,7 +62,7 @@
 		<IonModal
 			v-if="openStep"
 			:is-open="stepOpen"
-			@did-dismiss="stepOpen = false"
+			@did-dismiss="closeStepModal"
 		>
 			<IonHeader>
 				<IonToolbar>
@@ -81,8 +81,9 @@
 					</IonTitle>
 					<IonButtons slot="end">
 						<IonButton
-							@click="stepOpen = false"
+							@click="closeStepModal"
 							color="danger"
+							aria-label="Close quest step"
 						>
 							<UIcon
 								name="mdi:close"
@@ -100,7 +101,7 @@
 					:progress="progress"
 					:step="openStep"
 					:migration-signals="migrationSignals"
-					@submitted="stepOpen = false"
+					@submitted="closeStepModal"
 				/>
 				<Loading v-else-if="stepOpen" />
 			</div>
@@ -133,12 +134,13 @@ const migrationSignals = computed(() => {
 	return currentQuest.value?.migrationSignals ?? [];
 });
 
-const isMasteryQuest = computed(() => quest.value?.id?.startsWith('badge_mastery_') ?? false);
+const MASTERY_PREFIX = 'badge_mastery_';
+const isMasteryQuest = computed(() => quest.value?.id?.startsWith(MASTERY_PREFIX) ?? false);
 const masteryBadge = computed(() => {
 	if (!isMasteryQuest.value) return null;
 	if (!quest.value) return null;
 
-	const badgeId = quest.value.id.substring(14, quest.value.id.length);
+	const badgeId = quest.value.id.slice(MASTERY_PREFIX.length);
 	return badges.value.find((badge) => badge.id === badgeId) ?? null;
 });
 
@@ -168,7 +170,10 @@ if (route.params.id) {
 	const id = route.params.id as string;
 	quest.value = await fetchQuest(id);
 
-	if (!quest.value && id.startsWith('badge_mastery_')) {
+	// Mastery quests are user-scoped. If auth hasn't hydrated yet, fetchQuest may
+	// legitimately return null even though the quest exists for the eventual user.
+	// Defer the 404 redirect to the auth watcher below.
+	if (!quest.value && id.startsWith(MASTERY_PREFIX) && user.value) {
 		await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
 		await navigateTo('/tabs/quests', { replace: true });
 	}
@@ -176,7 +181,7 @@ if (route.params.id) {
 
 watch(
 	() => user.value?.id,
-	(id) => {
+	async (id) => {
 		if (!id) return;
 		const { fetchUserQuest, fetchQuestHistory, fetchQuestHistoryEntry, fetchBadges } = useUser(id);
 
@@ -184,10 +189,21 @@ watch(
 		void fetchQuestHistory();
 		void fetchBadges();
 
-		// pull the full entry for the currently-viewed quest so the timeline can show completion state
 		const viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
 		if (viewedQuestId && currentQuest.value?.questId !== viewedQuestId) {
 			void fetchQuestHistoryEntry(viewedQuestId);
+		}
+
+		// retry the quest fetch now that auth is hydrated — covers the race where
+		// the page mounted before user.value resolved.
+		if (!quest.value && viewedQuestId) {
+			quest.value = await fetchQuest(viewedQuestId);
+			if (!quest.value && viewedQuestId.startsWith(MASTERY_PREFIX)) {
+				await showErrorToast(new Error('Badge mastery quest not found.'), {
+					duration: 'short'
+				});
+				await navigateTo('/tabs/quests', { replace: true });
+			}
 		}
 	},
 	{ immediate: true }
@@ -206,4 +222,12 @@ const openStep = ref<
 	| null
 >(null);
 const stepOpen = ref(false);
+
+// keep stepOpen + openStep in lockstep — iOS sheet-swipe-down fires did-dismiss
+// without going through the @click close, so a single source of truth here
+// prevents the "ref still true, modal hidden, can't reopen" desync.
+function closeStepModal() {
+	stepOpen.value = false;
+	openStep.value = null;
+}
 </script>
