@@ -72,7 +72,6 @@ import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
 import { DateTime } from 'luxon';
 import { trimString } from 'utils';
-import { runOrQueueM } from '~/composables/useMOfflineQueue';
 
 const props = defineProps<{
 	notification: UserNotification;

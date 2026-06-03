@@ -248,7 +248,6 @@
 import { Toast } from '@capacitor/toast';
 import type { FormSubmitEvent } from '@nuxt/ui';
 import type { Event } from 'types/event';
-import { useMFormDraft } from '~/composables/useMFormDraft';
 
 const props = defineProps<{
 	mode: 'create' | 'edit';

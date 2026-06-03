@@ -100,7 +100,6 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { com } from '@earth-app/ocean';
-import { useMFormDraft } from '~/composables/useMFormDraft';
 
 const emit = defineEmits<{
 	(event: 'prompt-created', prompt: Prompt): void;

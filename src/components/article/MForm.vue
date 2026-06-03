@@ -168,7 +168,6 @@
 import { Toast } from '@capacitor/toast';
 import { articleSchema } from 'schemas';
 import type { Article } from 'types/article';
-import { useMFormDraft } from '~/composables/useMFormDraft';
 import ArticleMQuizEditor from './MQuizEditor.vue';
 
 const props = defineProps<{
