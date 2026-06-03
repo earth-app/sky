@@ -56,6 +56,24 @@
 						<h2 class="mb-0!">All Quests</h2>
 						<span class="text-base opacity-90">{{ shownQuests.length }} shown</span>
 					</div>
+					<template v-if="isRefreshing && shownQuests.length === 0">
+						<MSkeleton
+							v-for="n in 3"
+							:key="n"
+							:height="120"
+							width="100%"
+						/>
+					</template>
+					<MEmptyState
+						v-else-if="!isRefreshing && shownQuests.length === 0"
+						icon="mdi:map-marker-path"
+						title="No quests yet"
+						description="Quests are guided journeys tied to your activities. Pick one to start your first."
+						cta-label="Explore Activities"
+						cta-icon="mdi:run"
+						cta-to="/tabs/discover?tab=activity"
+						variant="primary"
+					/>
 					<LazyUserQuestMThumbnail
 						v-for="quest in shownQuests"
 						:key="quest.id"

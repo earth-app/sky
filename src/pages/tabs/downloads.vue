@@ -22,16 +22,16 @@
 						<IonSpinner name="crescent" />
 					</div>
 
-					<div
+					<MEmptyState
 						v-else-if="allDownloads.length === 0"
-						class="w-full rounded-xl border border-black/20 light:border-gray-300 px-6 py-10 text-center"
-					>
-						<h2 class="text-lg! font-semibold m-0! mb-2!">No downloads yet</h2>
-						<p class="text-sm opacity-80 m-0!">
-							Download prompts, articles, or activities from their detail pages to access them
-							offline.
-						</p>
-					</div>
+						icon="material-symbols:download-for-offline-outline"
+						title="No downloads yet"
+						description="Save articles, prompts, or activities here from their detail pages — they'll stay readable without internet."
+						cta-label="Browse Articles"
+						cta-icon="mdi:book-open-page-variant-outline"
+						cta-to="/tabs/discover?tab=article"
+						variant="primary"
+					/>
 
 					<TransitionGroup
 						v-else
