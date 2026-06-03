@@ -473,6 +473,14 @@ const settingSections = computed<SettingSection[]>(() => [
 				description:
 					'Enable subtle vibrations for certain interactions to enhance the tactile experience',
 				placeholder: 'Enable haptic feedback'
+			},
+			{
+				kind: 'toggle',
+				key: 'soundEffects',
+				title: 'Sound Effects',
+				description:
+					'Play a short tone on quest completion and other key UI moments. Off by default.',
+				placeholder: 'Enable sound effects'
 			}
 		]
 	},
