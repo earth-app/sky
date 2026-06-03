@@ -150,7 +150,7 @@
 					</div>
 
 					<div
-						v-if="user?.activities"
+						v-if="user?.activities && user.activities?.length > 0"
 						class="w-full max-w-full my-4 px-4"
 					>
 						<h2 class="text-base! mt-0! mb-1! font-bold!">Your Activities</h2>
@@ -313,7 +313,10 @@
 						</IonInfiniteScroll>
 					</div>
 
-					<OnboardingMTextSizePrompt ref="textSizePromptRef" />
+					<OnboardingMTextSizePrompt
+						ref="textSizePromptRef"
+						@closed="handleTextSizePromptClosed"
+					/>
 				</ClientOnly>
 			</div>
 			<IonModal
@@ -431,6 +434,16 @@ async function loadResumeStep() {
 
 function startWelcomeTour() {
 	startTour('welcome');
+}
+
+let tourTriggeredFromTextSize = false;
+function handleTextSizePromptClosed() {
+	if (tourTriggeredFromTextSize) return;
+	tourTriggeredFromTextSize = true;
+	if (!user.value) return;
+	if (hasCompleted('welcome')) return;
+	if (resumeStep.value) return; // show the resume chip instead of auto-starting
+	startTourIfNew('welcome');
 }
 
 async function resumeWelcomeTour() {
@@ -863,13 +876,14 @@ onMounted(async () => {
 	await refreshFeed(0);
 
 	if (user.value && !hasCompleted('welcome')) {
-		// text-scale prompt fires first if the user hasn't seen it; if there's a
-		// saved resume step we show the chip rather than auto-starting the tour
+		// Text-size prompt fires first; the welcome tour only starts AFTER it
+		// closes (see handleTextSizePromptClosed). If the user has already seen
+		// the prompt, maybeOpen() emits `closed` immediately and the tour fires
+		// on the next tick — no UX regression for returning users.
 		await loadResumeStep();
 		setTimeout(() => {
 			if (!user.value) return;
 			textSizePromptRef.value?.maybeOpen();
-			if (!resumeStep.value) startTourIfNew('welcome');
 		}, 600);
 	}
 
