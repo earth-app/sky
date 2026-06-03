@@ -32,7 +32,10 @@ watch(
 		redirected.value = true;
 
 		if (currentUser === null) {
-			await navigateTo('/login', { replace: true });
+			const fullPath = route.fullPath;
+			const target =
+				fullPath && fullPath !== '/' ? `/login?redirect=${encodeURIComponent(fullPath)}` : '/login';
+			await navigateTo(target, { replace: true });
 			return;
 		}
 
