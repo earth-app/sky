@@ -261,7 +261,7 @@
 			</template>
 
 			<template v-else-if="category === 'describe_text'">
-				<UserQuestStepMText
+				<UserQuestStepText
 					:step="step"
 					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					:submit="true"

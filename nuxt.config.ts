@@ -80,7 +80,6 @@ export default defineNuxtConfig({
 			exclude: ['@earth-app/crust', 'stores', 'types', 'utils', 'schemas'],
 			include: [
 				'@capacitor-community/apple-sign-in',
-				'@capacitor-community/speech-recognition',
 				'@capacitor/app',
 				'@capacitor/barcode-scanner',
 				'@capacitor/browser',
