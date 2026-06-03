@@ -35,6 +35,18 @@
 			Complete previous steps to unlock this step.
 		</h2>
 
+		<div
+			v-if="step.tutorial_hint && !step.completed"
+			class="flex items-start gap-2 mt-2 mb-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-sm w-full"
+			role="note"
+		>
+			<UIcon
+				name="i-lucide-lightbulb"
+				class="size-5 shrink-0 text-primary"
+			/>
+			<span class="text-gray-700 dark:text-gray-200">{{ step.tutorial_hint }}</span>
+		</div>
+
 		<div class="flex flex-col items-center justify-center mt-6! w-full gap-4!">
 			<div
 				v-if="step.completed"
@@ -88,6 +100,14 @@
 							v-if="stepArticle"
 							:article="stepArticle"
 						/>
+						<MInlineError
+							v-else-if="stepArticleLoadFailed"
+							title="Article unavailable"
+							description="It may have been removed, or the network is flaky."
+							severity="warning"
+							icon="mdi:cloud-alert-outline"
+							@retry="retryStepArticleFetch"
+						/>
 						<Loading v-else />
 					</div>
 					<div
@@ -98,9 +118,11 @@
 							:name="barcodeKindIcon"
 							class="size-8 opacity-80"
 						/>
-						<span class="text-base! font-medium">{{ barcodeSubmission.title }}</span>
+						<span class="text-base! font-medium">{{
+							barcodeSubmission.title || 'Unknown product'
+						}}</span>
 						<span class="text-xs! opacity-60 uppercase tracking-wide">{{
-							barcodeSubmission.kind
+							barcodeSubmission.kind || 'unknown'
 						}}</span>
 					</div>
 					<div
@@ -239,7 +261,7 @@
 			</template>
 
 			<template v-else-if="category === 'describe_text'">
-				<UserQuestStepText
+				<UserQuestStepMText
 					:step="step"
 					:disabled="!step.isCurrentQuest || !step.isUnlocked"
 					:submit="true"
@@ -540,6 +562,17 @@ function stepCompleteMessage(questCompleted: boolean): string {
 
 function notifyStepComplete(questCompleted = false) {
 	void showInfoToast(stepCompleteMessage(questCompleted), { duration: 'short' });
+
+	if (questCompleted) {
+		// crust's celebration listener fires native haptics + the mobile overlay,
+		// keyed on this global state — see initQuestCelebrationListener() in app.vue
+		const { triggerCelebration } = useQuestCelebration();
+		triggerCelebration({
+			questTitle: props.quest.title,
+			points: props.quest.reward,
+			badgeIcon: props.quest.icon || 'mdi:trophy-award'
+		});
+	}
 }
 
 // match_terms / order_items / describe_text are completed inside their own crust child
@@ -570,7 +603,15 @@ async function submitPhoto(file: File) {
 
 	if (props.step.type === 'take_photo_location') {
 		const locationOk = await requirePermission('location');
-		if (!locationOk) return;
+		if (!locationOk) {
+			// requirePermission already shows a Dialog/Toast, but if both fail we
+			// still need to surface something — otherwise the user just sees the
+			// "Submit" tap dead-end with no feedback.
+			submitError.value =
+				'Location permission is required for this step. Enable it in settings to submit.';
+			await showErrorToast(submitError.value, { duration: 'long' });
+			return;
+		}
 		await fetchNativeLocation();
 	}
 
@@ -771,6 +812,7 @@ function formatDistance(meters: number): string {
 }
 
 const stepArticle = ref<Article | undefined | null>(null);
+const stepArticleLoadFailed = ref(false);
 
 const stepArticleId = computed(() => {
 	if (props.step.type !== 'article_quiz') return '';
@@ -787,18 +829,39 @@ const stepArticleId = computed(() => {
 	return articleId || '';
 });
 
-watch(
-	stepArticleId,
-	async (articleId) => {
-		if (!articleId) {
-			stepArticle.value = null;
-			return;
-		}
+const ARTICLE_FETCH_TIMEOUT_MS = 10_000;
 
-		const { article, fetch } = useArticle(articleId, makeMServerRequest);
-		await fetch();
-		stepArticle.value = article.value;
-	},
-	{ immediate: true }
-);
+async function fetchStepArticle(articleId: string) {
+	if (!articleId) {
+		stepArticle.value = null;
+		stepArticleLoadFailed.value = false;
+		return;
+	}
+
+	stepArticleLoadFailed.value = false;
+	stepArticle.value = null;
+	const { article, fetch } = useArticle(articleId, makeMServerRequest);
+	try {
+		await Promise.race([
+			fetch(),
+			new Promise((_, reject) =>
+				setTimeout(() => reject(new Error('article fetch timed out')), ARTICLE_FETCH_TIMEOUT_MS)
+			)
+		]);
+		if (article.value) {
+			stepArticle.value = article.value;
+		} else {
+			stepArticleLoadFailed.value = true;
+		}
+	} catch {
+		stepArticleLoadFailed.value = true;
+	}
+}
+
+function retryStepArticleFetch() {
+	const id = stepArticleId.value;
+	if (id) void fetchStepArticle(id);
+}
+
+watch(stepArticleId, (id) => void fetchStepArticle(id), { immediate: true });
 </script>
