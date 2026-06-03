@@ -68,7 +68,7 @@
 				class="size-5 shrink-0"
 			/>
 			<span>
-				Distance tracking only works in the mobile app — you'll see the Start button stay disabled
+				Distance tracking only works in the mobile app; you'll see the Start button stay disabled
 				here. Continue this quest on your phone.
 			</span>
 		</div>
@@ -168,14 +168,8 @@ const BIKE_RMS_THRESHOLD = 0.45; // m/s² rolling RMS that qualifies as "active"
 const BIKE_FALLBACK_SPEED_MPS = 4.0; // ≈ 14 km/h, conservative average bike pace
 const RMS_WINDOW_MS = 3000;
 
-// Background runner takes over when the app is backgrounded or killed. The
-// label/event names match the BackgroundRunner block in capacitor.config.ts —
-// keep them in sync.
 const RUNNER_LABEL = 'com.earthapp.sky.distance';
 const RUNNER_SYNC_INTERVAL_MS = 15_000;
-// Below this, a resume-time sync just looks like ambient noise (GPS drift,
-// pedometer rounding) and not worth surfacing. Above it, the progress bar
-// would visibly jump and the user deserves to know why.
 const BACKGROUND_SYNC_TOAST_THRESHOLD_M = 50;
 
 const storageKey = computed(
@@ -255,11 +249,6 @@ function notificationIdFor(offset: number): number {
 type StoredState = {
 	progress: number;
 	startedAt: number;
-	// Android-only: raw Sensor.TYPE_STEP_COUNTER value when tracking began. The
-	// OS counter is cumulative since boot and keeps incrementing while the app
-	// is killed, so re-reading it on resume tells us exactly how many steps
-	// were taken in between. Absent on iOS — CMPedometer takes start/end dates
-	// directly and we query via getMeasurement({start, end}).
 	anchorCumulativeSteps?: number;
 	version: 1;
 };
@@ -367,11 +356,6 @@ async function runnerGetProgress(): Promise<RunnerSnapshot | null> {
 	}
 }
 
-// Pull authoritative step/distance totals from the OS pedometer for the period
-// since tracking started. iOS exposes historical queries directly; on Android
-// we persist the cumulative counter at the moment tracking began and compare
-// against the current value. Returns the new progress candidate WITHOUT
-// applying it — the caller merges and decides whether to toast.
 async function readPedometerHistory(): Promise<number | null> {
 	if (!Capacitor.isNativePlatform()) return null;
 	if (!startedAt.value || completed.value) return null;
@@ -445,19 +429,11 @@ async function readHealthKitDistance(): Promise<number | null> {
 	return null;
 }
 
-// Resume-time merge: combine HealthKit, pedometer history, and runner GPS,
-// take whichever is highest above current progress, and announce the jump if
-// it's meaningful. Foreground continuous sync does NOT go through here — only
-// the paths where the user just returned to the step from another tab, the
-// background, or a kill.
 async function syncFromBackground(): Promise<void> {
 	if (!Capacitor.isNativePlatform()) return;
 	if (!startedAt.value || completed.value) return;
 	const before = progress.value;
 
-	// HealthKit first: Apple Watch workouts are the authoritative source for
-	// non-walking activities (skating, cycling, swimming) where the pedometer
-	// reports zero and the runner's coarse GPS undercounts curved routes.
 	const healthkit = await readHealthKitDistance();
 	const pedHistory = await readPedometerHistory();
 	const runner = await readRunnerProgress();
@@ -465,8 +441,6 @@ async function syncFromBackground(): Promise<void> {
 	if (candidate > progress.value) {
 		progress.value = Math.min(props.targetMeters, candidate);
 		await persistState();
-		// Push the merged value back to the runner so its next tick anchors
-		// from here. lastRunnerSyncAt is bumped to skip the next continuous tick.
 		lastRunnerSyncAt = Date.now();
 	}
 
@@ -593,17 +567,14 @@ function currentRms(): number {
 
 function addDistance(deltaMeters: number, elapsedMs: number) {
 	if (deltaMeters <= 0 || elapsedMs <= 0) return;
-	// 20 mph hard cap. Any per-tick contribution above maxV * dt is clamped to the
-	// cap; this both rejects bursty pedometer noise and stops vehicular GPS-like
-	// jumps from inflating distance.
+
 	const maxAllowed = MAX_SPEED_MPS * (elapsedMs / 1000);
 	const accepted = Math.min(deltaMeters, maxAllowed);
 	if (accepted <= 0) return;
 	progress.value = Math.min(props.targetMeters, progress.value + accepted);
 	void persistState();
-	// Mirror to the runner so its KV stays in sync with foreground accumulation.
-	// Throttled inside runnerSync() to avoid burning battery on every pedometer tick.
 	void runnerSync();
+
 	if (progress.value >= props.targetMeters) {
 		void stopTracking();
 		void Toast.show({
