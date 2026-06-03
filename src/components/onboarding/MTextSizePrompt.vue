@@ -2,7 +2,7 @@
 	<IonModal
 		:is-open="open"
 		:can-dismiss="canDismiss"
-		@did-dismiss="closePrompt"
+		@did-dismiss="handleDidDismiss"
 		:initial-breakpoint="1"
 		:breakpoints="[0, 1]"
 	>
@@ -12,7 +12,7 @@
 					name="mdi:format-size"
 					class="size-12 text-primary"
 				/>
-				<h2 class="text-xl font-semibold m-0! text-center">How does this look?</h2>
+				<h2 class="text-xl font-semibold m-0! text-center">How does this Look?</h2>
 				<p class="text-sm text-center text-gray-700 dark:text-gray-200">
 					Pick a text size that's comfortable for you. You can change this anytime in Settings.
 				</p>
@@ -27,12 +27,12 @@
 						:key="option.value"
 						type="button"
 						role="radio"
-						:aria-checked="String(selected === option.value)"
-						class="w-full text-left p-4 rounded-xl border-2 transition-colors"
+						:aria-checked="selected === option.value"
+						class="w-full text-left p-4! rounded-xl! border-2! transition-colors"
 						:class="
 							selected === option.value
-								? 'border-primary bg-primary/10'
-								: 'border-gray-300 dark:border-gray-600 active:bg-gray-100 dark:active:bg-gray-800'
+								? 'border-primary! bg-primary/10'
+								: 'border-gray-300! dark:border-gray-600! active:bg-gray-100! dark:active:bg-gray-800!'
 						"
 						@click="select(option.value)"
 					>
@@ -57,7 +57,11 @@
 					class="w-full mt-4"
 					@click="confirm"
 				>
-					Looks good
+					<UIcon
+						name="mdi:check"
+						class="size-5 mr-2"
+					/>
+					Looks Good
 				</IonButton>
 				<IonButton
 					expand="block"
@@ -66,7 +70,7 @@
 					size="small"
 					@click="skip"
 				>
-					Skip for now
+					Skip for Now
 				</IonButton>
 			</div>
 		</IonContent>
@@ -89,23 +93,28 @@ const emit = defineEmits<{
 const open = ref(false);
 const canDismiss = ref(true);
 
-const { settings, set: setAppSetting } = useAppSettings();
+const { settings, setValue: setAppSetting } = useAppSettings();
 
-type ScaleValue = '1.0' | '1.15' | '1.3';
+type ScaleValue = '0.8' | '1.0' | '1.2' | '1.5';
 
 const options: { value: ScaleValue; title: string; preview: string }[] = [
+	{
+		value: '0.8',
+		title: 'Small',
+		preview: 'Smaller text for a more compact view.'
+	},
 	{
 		value: '1.0',
 		title: 'Normal',
 		preview: 'Default size. Best for most users.'
 	},
 	{
-		value: '1.15',
+		value: '1.2',
 		title: 'Large',
-		preview: 'A bit bigger — easier on the eyes.'
+		preview: 'A bit bigger; easier on the eyes.'
 	},
 	{
-		value: '1.3',
+		value: '1.5',
 		title: 'Extra Large',
 		preview: 'Maximum readability.'
 	}
@@ -129,16 +138,19 @@ function select(value: ScaleValue) {
 
 async function confirm() {
 	await Preferences.set({ key: PREF_KEY, value: 'true' }).catch(() => {});
-	closePrompt();
+	open.value = false;
 }
 
 async function skip() {
 	await Preferences.set({ key: PREF_KEY, value: 'true' }).catch(() => {});
-	closePrompt();
+	open.value = false;
 }
 
-function closePrompt() {
+let closedEmitted = false;
+function handleDidDismiss() {
 	open.value = false;
+	if (closedEmitted) return;
+	closedEmitted = true;
 	emit('closed');
 }
 
@@ -155,8 +167,7 @@ async function maybeOpen() {
 
 	// seed with whatever the user already has (or normal)
 	const current = settings.value.scale;
-	if (current === '1.15' || current === '1.3') selected.value = current;
-	else selected.value = '1.0';
+	selected.value === current;
 
 	open.value = true;
 }
