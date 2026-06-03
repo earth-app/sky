@@ -10,7 +10,7 @@
 						Sign Up
 					</h1>
 					<IonButton
-						fill="clear"
+						fill="outline"
 						size="small"
 						color="secondary"
 						aria-label="Help"

@@ -11,7 +11,8 @@
 				/>
 				<IonButton
 					id="discover-help"
-					fill="clear"
+					fill="outline"
+					size="small"
 					color="secondary"
 					class="mt-12 mr-2"
 					aria-label="Help"
@@ -165,6 +166,7 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
+import { theme } from '~/composables/useSettings';
 
 const SEARCH_DEBOUNCE_MS = 450;
 const SEARCH_LIMIT = 25;
