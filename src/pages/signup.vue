@@ -80,18 +80,27 @@ if (typeof error === 'string') {
 	showSignupError(error);
 }
 
-onMounted(async () => {
-	await fetchUser();
-
-	if (user.value && !redirectingAfterSubmit.value) {
-		redirectingAfterSubmit.value = true;
-		await Toast.show({
-			text: 'You are already logged in.',
-			duration: 'short'
-		});
-		await navigateTo('/tabs/dashboard', { replace: true });
-	}
+onMounted(() => {
+	// kick off hydration, but don't await — the watcher below handles redirect.
+	fetchUser();
 });
+
+// Watcher (instead of one-shot onMounted) so a late hydration (deep-link OAuth
+// return, slow API) still redirects the user away from the signup form.
+watch(
+	() => user.value,
+	async (currentUser) => {
+		if (!currentUser || redirectingAfterSubmit.value) return;
+		redirectingAfterSubmit.value = true;
+		try {
+			await Toast.show({ text: 'You are already logged in.', duration: 'short' });
+		} catch (err) {
+			console.warn('[signup] toast failed:', err);
+		}
+		await navigateTo('/tabs/dashboard', { replace: true });
+	},
+	{ immediate: true }
+);
 
 async function showSignupError(errorType: string) {
 	let description = 'An unknown error occurred during sign up.';
@@ -114,10 +123,11 @@ async function showSignupError(errorType: string) {
 			break;
 	}
 
-	await Toast.show({
-		text: description,
-		duration: 'long'
-	});
+	try {
+		await Toast.show({ text: description, duration: 'long' });
+	} catch (err) {
+		console.warn('[signup] toast failed:', err);
+	}
 	notifyError();
 }
 
@@ -125,10 +135,14 @@ async function handleSignupSuccess(_: User, hasEmail: boolean) {
 	redirectingAfterSubmit.value = true;
 
 	if (hasEmail) {
-		await Toast.show({
-			text: 'Verification email sent. Please verify your account.',
-			duration: 'long'
-		});
+		try {
+			await Toast.show({
+				text: 'Verification email sent. Please verify your account.',
+				duration: 'long'
+			});
+		} catch (err) {
+			console.warn('[signup] toast failed:', err);
+		}
 		await navigateTo('/verify-email', { replace: true });
 	} else {
 		await navigateTo('/tabs/dashboard', { replace: true });

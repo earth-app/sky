@@ -67,7 +67,7 @@ import { Toast } from '@capacitor/toast';
 import { OAUTH_PROVIDERS } from 'types/user';
 import slide from '~/animations/slide';
 
-const { user } = useAuth();
+const { user, fetchUser } = useAuth();
 const { notifyError } = useAppHaptics();
 const ionRouter = useIonRouter();
 const route = useRoute();
@@ -87,10 +87,17 @@ if (typeof error === 'string') {
 	showLoginError(error);
 }
 
+onMounted(() => {
+	// hydrate from the stored session token on cold launch so an already-signed-in
+	// user doesn't see the login form for a beat before the watcher fires.
+	fetchUser();
+});
+
 watch(
 	() => user.value,
 	async (currentUser) => {
 		if (currentUser && !redirectingAfterSubmit.value) {
+			redirectingAfterSubmit.value = true;
 			await navigateTo(redirectPath.value, { replace: true });
 		}
 	},
@@ -121,10 +128,11 @@ async function showLoginError(errorType: string) {
 			break;
 	}
 
-	await Toast.show({
-		text: description,
-		duration: 'long'
-	});
+	try {
+		await Toast.show({ text: description, duration: 'long' });
+	} catch (err) {
+		console.warn('[login] toast failed:', err);
+	}
 	notifyError();
 }
 
