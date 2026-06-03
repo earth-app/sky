@@ -60,15 +60,17 @@
 
 		<div
 			v-if="!Capacitor.isNativePlatform()"
-			class="flex items-center gap-2 p-3 rounded-lg bg-neutral-500/10 border border-neutral-500/30 text-neutral-300 text-xs!"
+			class="flex items-center gap-2 p-3 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-900 dark:text-amber-200 text-sm"
+			role="alert"
 		>
 			<UIcon
-				name="i-lucide-info"
+				name="i-lucide-smartphone"
 				class="size-5 shrink-0"
 			/>
-			<span
-				>Distance tracking requires the mobile app. Open this quest on your phone to continue.</span
-			>
+			<span>
+				Distance tracking only works in the mobile app — you'll see the Start button stay disabled
+				here. Continue this quest on your phone.
+			</span>
 		</div>
 
 		<div class="flex flex-col gap-2">
