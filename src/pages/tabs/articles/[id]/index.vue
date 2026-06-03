@@ -67,6 +67,13 @@
 				v-if="currentArticle"
 				class="flex flex-col items-center w-full h-full"
 			>
+				<ContentTTLNotice
+					v-if="articleExpiresAt"
+					kind="article"
+					variant="countdown"
+					:expires-at="articleExpiresAt"
+					class="w-full max-w-2xl px-4 mt-2"
+				/>
 				<ArticleMPage :article="currentArticle" />
 				<div
 					v-if="!loadedFromOffline"
@@ -128,6 +135,12 @@ const relatedArticles = ref<Article[]>([]);
 const currentArticle = ref<Article | null>(null);
 const loadedFromOffline = ref(false);
 const unavailableOffline = ref(false);
+
+const articleExpiresAt = computed(() => {
+	const a = currentArticle.value;
+	if (!a?.created_at) return null;
+	return computeContentExpiry('article', Math.floor(Date.parse(a.created_at) / 1000));
+});
 
 const { article, fetch, fetchSimilar } = useArticle(route.params.id as string, makeMServerRequest);
 

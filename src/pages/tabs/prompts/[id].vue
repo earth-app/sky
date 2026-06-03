@@ -66,6 +66,13 @@
 			v-if="currentPrompt"
 			:scroll-y="true"
 		>
+			<ContentTTLNotice
+				v-if="promptExpiresAt"
+				kind="prompt"
+				variant="countdown"
+				:expires-at="promptExpiresAt"
+				class="w-full max-w-2xl mx-auto px-4 mt-2"
+			/>
 			<PromptMPage
 				:prompt="currentPrompt"
 				:offline-mode="loadedFromOffline"
@@ -103,6 +110,12 @@ const { prompt, fetch } = usePrompt(route.params.id as string);
 const currentPrompt = ref<Prompt | null>(null);
 const loadedFromOffline = ref(false);
 const unavailableOffline = ref(false);
+
+const promptExpiresAt = computed(() => {
+	const p = currentPrompt.value;
+	if (!p?.created_at) return null;
+	return computeContentExpiry('prompt', Math.floor(Date.parse(p.created_at) / 1000));
+});
 
 const downloads = useDownloads();
 const routeId = computed(() => route.params.id as string);

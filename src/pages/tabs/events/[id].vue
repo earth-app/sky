@@ -13,6 +13,13 @@
 				v-if="event"
 				class="flex flex-col items-center w-full h-full"
 			>
+				<ContentTTLNotice
+					v-if="eventExpiresAt"
+					kind="event"
+					variant="countdown"
+					:expires-at="eventExpiresAt"
+					class="w-full max-w-2xl px-4 mt-2"
+				/>
 				<EventMPage :event="event" />
 				<div class="flex items-center w-screen">
 					<MInfoCardGroup
@@ -68,6 +75,15 @@ const route = useRoute();
 const relatedLoaded = ref(false);
 const relatedEvents = ref<Event[]>([]);
 const unavailableOffline = ref(false);
+
+// event auto-deletion happens once the event has already ended — only show the
+// countdown after end_date has passed so we don't confuse "the event is over"
+// with "the event is starting soon."
+const eventExpiresAt = computed(() => {
+	const e = event.value;
+	if (!e?.end_date || !e.timing?.has_passed) return null;
+	return computeContentExpiry('event', Math.floor(e.end_date / 1000));
+});
 
 const { event, fetch, fetchSimilar } = useEvent(route.params.id as string, makeMServerRequest);
 onMounted(() => {
