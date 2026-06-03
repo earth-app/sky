@@ -5,7 +5,8 @@
 	>
 		<UForm
 			id="signup"
-			:state="{ fullName, email, username, password }"
+			:state="formState"
+			:schema="signupSchema"
 			@submit="handleSignup"
 			class="space-x-6 *:mb-4"
 		>
@@ -15,11 +16,13 @@
 			>
 				<IonInput
 					v-model="email"
+					:disabled="loading"
 					placeholder="me@example.com"
 					type="email"
 					class="min-w-60 w-2/5 max-w-120"
 					autocapitalize="off"
 					autocomplete="email"
+					inputmode="email"
 				/>
 			</UFormField>
 
@@ -29,6 +32,7 @@
 			>
 				<IonInput
 					v-model="fullName"
+					:disabled="loading"
 					placeholder="John Doe"
 					class="min-w-60 w-2/5 max-w-120"
 					autocapitalize="words"
@@ -40,13 +44,15 @@
 				label="Username"
 				name="username"
 				:required="true"
+				hint="Lowercase letters, numbers, _.- only"
 			>
 				<IonInput
 					v-model="username"
+					:disabled="loading"
 					placeholder="cooldude78"
 					class="min-w-60 w-2/5 max-w-120"
 					counter
-					:maxlength="20"
+					:maxlength="30"
 					autocapitalize="off"
 					autocomplete="username"
 				/>
@@ -59,6 +65,7 @@
 			>
 				<IonInput
 					v-model="password"
+					:disabled="loading"
 					placeholder="SuperSecretPassword_"
 					type="password"
 					class="min-w-60 w-2/5 max-w-120"
@@ -77,22 +84,33 @@
 					color="success"
 					fill="solid"
 					class="w-3/5 max-w-60 self-center"
-					:disabled="loading"
+					:disabled="loading || !canSubmit"
+					:aria-busy="loading"
 				>
-					<UIcon
-						name="mdi:account-plus"
-						class="mr-2"
-					/>
-					Sign Up
+					<template v-if="loading">
+						<IonSpinner
+							name="crescent"
+							class="mr-2"
+						/>
+						Signing up...
+					</template>
+					<template v-else>
+						<UIcon
+							name="mdi:account-plus"
+							class="mr-2"
+						/>
+						Sign Up
+					</template>
 				</IonButton>
 			</div>
 
-			<IonText
+			<UAlert
 				v-if="error"
-				color="danger"
-			>
-				<p class="text-sm text-center mt-2">{{ error }}</p>
-			</IonText>
+				icon="mdi:alert-box-outline"
+				:title="error"
+				color="error"
+				class="mt-6 w-full mx-2"
+			/>
 		</UForm>
 	</IonCard>
 </template>
@@ -101,6 +119,7 @@
 import { Toast } from '@capacitor/toast';
 import { emailSchema, fullNameSchema, passwordSchema, usernameSchema } from 'schemas';
 import type { User } from 'types/user';
+import z from 'zod';
 
 const fullName = ref('');
 const email = ref('');
@@ -110,11 +129,52 @@ const loading = ref(false);
 const error = ref('');
 
 const signup = useSignup();
-const { fetchUser } = useAuth();
+const { notifyError } = useAppHaptics();
 
 const emit = defineEmits<{
 	signupSuccess: [user: User, hasEmail: boolean];
 }>();
+
+// Mirror crust's web Form: zod validation lives on the UForm so per-field errors
+// render automatically. Local schemas re-wrap the shared ones so an empty
+// optional field (email/name) doesn't trip min-length errors.
+const signupSchema = z.object({
+	email: z
+		.string()
+		.transform((v) => v.trim())
+		.refine((v) => v.length === 0 || emailSchema.safeParse(v).success, {
+			message: 'Please enter a valid email address.'
+		})
+		.optional(),
+	fullName: z
+		.string()
+		.transform((v) => v.trim())
+		.refine((v) => v.length === 0 || fullNameSchema.safeParse(v).success, {
+			message: 'Please enter a valid full name.'
+		})
+		.optional(),
+	username: usernameSchema,
+	password: passwordSchema
+});
+
+const formState = computed(() => ({
+	email: email.value,
+	fullName: fullName.value,
+	username: username.value,
+	password: password.value
+}));
+
+const canSubmit = computed(() => username.value.trim().length > 0 && password.value.length > 0);
+
+async function safeToast(text: string, duration: 'short' | 'long' = 'long') {
+	// Capacitor's Toast.show can reject if the bridge isn't ready (e.g. during a
+	// hot route transition). Never let toast failure freeze the submit flow.
+	try {
+		await Toast.show({ text, duration });
+	} catch (err) {
+		console.warn('[signup] toast failed:', err);
+	}
+}
 
 async function handleSignup() {
 	if (loading.value) return;
@@ -122,26 +182,39 @@ async function handleSignup() {
 	error.value = '';
 	const normalizedEmail = email.value.trim();
 	const normalizedName = fullName.value.trim();
-	const normalizedUsername = username.value.trim();
+	// mantle2 lowercases on save; mirror that here so the user sees the same
+	// username everywhere (and we don't double-submit a uniqueness conflict
+	// against a case-only collision).
+	const normalizedUsername = username.value.trim().toLowerCase();
 
 	if (normalizedEmail.length > 0 && !emailSchema.safeParse(normalizedEmail).success) {
-		error.value = 'Please enter a valid email address.';
+		await reportValidationError('Please enter a valid email address.');
 		return;
 	}
 
 	if (normalizedName.length > 0 && !fullNameSchema.safeParse(normalizedName).success) {
-		error.value = 'Please enter a valid full name.';
+		await reportValidationError('Please enter a valid full name.');
 		return;
 	}
 
 	if (!usernameSchema.safeParse(normalizedUsername).success) {
-		error.value = 'Please enter a valid username.';
+		await reportValidationError(
+			'Username must be 3-30 characters and only contain letters, numbers, underscores, dashes, or periods.'
+		);
 		return;
 	}
 
 	if (!passwordSchema.safeParse(password.value).success) {
-		error.value = 'Please enter a valid password.';
+		await reportValidationError(
+			'Password must be 8-100 characters and only contain letters, numbers, or common symbols.'
+		);
 		return;
+	}
+
+	// reflect the normalized username back into the input so the user sees what
+	// will actually be created.
+	if (username.value !== normalizedUsername) {
+		username.value = normalizedUsername;
 	}
 
 	let firstName: string | undefined;
@@ -154,48 +227,53 @@ async function handleSignup() {
 
 	loading.value = true;
 
-	const result = await signup(
-		normalizedUsername,
-		password.value,
-		normalizedEmail.length > 0 ? normalizedEmail : undefined,
-		firstName,
-		lastName
-	);
+	try {
+		const result = await signup(
+			normalizedUsername,
+			password.value,
+			normalizedEmail.length > 0 ? normalizedEmail : undefined,
+			firstName,
+			lastName
+		);
 
-	if (result.success && result.user) {
-		await fetchUser();
+		if (result.success && result.user) {
+			error.value = '';
+			await safeToast('Sign up successful. Welcome to The Earth App.', 'short');
+			emit('signupSuccess', result.user, normalizedEmail.length > 0);
+			return;
+		}
 
-		await Toast.show({
-			text: 'Sign up successful. Welcome to The Earth App.',
-			duration: 'short'
-		});
+		const statusMatch = result.message?.match(/^(\d{3})\s*[:\-]\s*/);
+		const status = statusMatch ? Number(statusMatch[1]) : null;
 
+		if (status === 409) {
+			error.value = 'That username is already taken. Please choose another.';
+		} else if (status === 400 || status === 422) {
+			error.value = 'Some of the sign up details look invalid. Please review them and try again.';
+		} else if (status === 429) {
+			error.value = 'Too many sign up attempts. Please wait a moment and try again.';
+		} else if (status && status >= 500) {
+			error.value = 'The server is having trouble right now. Please try again shortly.';
+		} else {
+			error.value = formatApiError(result.message, 'Sign up failed. Please try again.');
+		}
+
+		await safeToast(error.value, 'long');
+		notifyError();
+	} catch (err) {
+		// network blip / unexpected throw — never leak it as raw JS to the user.
+		console.error('[signup] unexpected error:', err);
+		error.value = formatApiError(err, 'Sign up failed. Please try again.');
+		await safeToast(error.value, 'long');
+		notifyError();
+	} finally {
 		loading.value = false;
-
-		emit('signupSuccess', result.user, normalizedEmail.length > 0);
-		return;
 	}
+}
 
-	const statusMatch = result.message?.match(/^(\d{3})\s*[:\-]\s*/);
-	const status = statusMatch ? Number(statusMatch[1]) : null;
-
-	if (status === 409) {
-		error.value = 'That username is already taken. Please choose another.';
-	} else if (status === 400 || status === 422) {
-		error.value = 'Some of the sign up details look invalid. Please review them and try again.';
-	} else if (status === 429) {
-		error.value = 'Too many sign up attempts. Please wait a moment and try again.';
-	} else if (status && status >= 500) {
-		error.value = 'The server is having trouble right now. Please try again shortly.';
-	} else {
-		error.value = formatApiError(result.message, 'Sign up failed. Please try again.');
-	}
-
-	await Toast.show({
-		text: error.value,
-		duration: 'long'
-	});
-
-	loading.value = false;
+async function reportValidationError(message: string) {
+	error.value = message;
+	notifyError();
+	await safeToast(message, 'long');
 }
 </script>
