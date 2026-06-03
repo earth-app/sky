@@ -59,6 +59,48 @@
 					</ClientOnly>
 				</div>
 				<ClientOnly>
+					<UserMJourneyHero v-if="user" />
+					<UserMBadgeShowcase v-if="user" />
+					<div
+						v-if="user && resumeStep && !hasCompleted('welcome')"
+						class="w-full max-w-2xl mx-auto px-4 mb-3"
+					>
+						<IonCard
+							:color="theme"
+							class="m-0 px-3 py-2 flex items-center justify-between"
+						>
+							<div class="flex items-center gap-2 min-w-0">
+								<UIcon
+									name="mdi:compass-outline"
+									class="size-5 text-primary shrink-0"
+								/>
+								<span class="text-sm font-medium truncate">
+									Pick up your tour where you left off
+								</span>
+							</div>
+							<div class="flex items-center gap-1 shrink-0">
+								<IonButton
+									size="small"
+									color="primary"
+									@click="resumeWelcomeTour"
+								>
+									Resume
+								</IonButton>
+								<IonButton
+									size="small"
+									fill="clear"
+									color="medium"
+									aria-label="Dismiss tour resume"
+									@click="dismissResumeTour"
+								>
+									<UIcon
+										name="mdi:close"
+										class="size-4"
+									/>
+								</IonButton>
+							</div>
+						</IonCard>
+					</div>
 					<div
 						v-if="motd && motd.motd"
 						id="motd"
@@ -131,9 +173,14 @@
 
 					<div
 						v-if="feedItems.length === 0 && (isRefreshing || isLoadingMore || !hasInitialized)"
-						class="flex items-center justify-center w-full py-8"
+						class="flex flex-col gap-3 items-center w-full px-4 py-4"
 					>
-						<IonSpinner name="crescent" />
+						<MSkeleton
+							v-for="n in 4"
+							:key="n"
+							:height="100"
+							width="100%"
+						/>
 					</div>
 					<div
 						v-else
@@ -262,6 +309,8 @@
 							<IonInfiniteScrollContent />
 						</IonInfiniteScroll>
 					</div>
+
+					<OnboardingMTextSizePrompt ref="textSizePromptRef" />
 				</ClientOnly>
 			</div>
 			<IonModal
@@ -282,6 +331,7 @@
 </template>
 
 <script setup lang="ts">
+import { Preferences } from '@capacitor/preferences';
 import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
 
@@ -320,6 +370,7 @@ const motdColor = computed(() => {
 });
 
 const contentRef = ref<any>(null);
+const textSizePromptRef = ref<{ maybeOpen: () => void } | null>(null);
 const feedItems = ref<FeedItem[]>([]);
 const isLoadingMore = ref(false);
 const isRefreshing = ref(false);
@@ -357,8 +408,37 @@ function handleMotdLinkClick(link?: string) {
 	navigateTo(link, { external: link.startsWith('http') });
 }
 
+const WELCOME_TOUR_RESUME_KEY = 'sky:welcome-tour-resume-step';
+const resumeStep = ref<number | null>(null);
+
+async function loadResumeStep() {
+	if (hasCompleted('welcome')) {
+		resumeStep.value = null;
+		return;
+	}
+	try {
+		const { value } = await Preferences.get({ key: WELCOME_TOUR_RESUME_KEY });
+		const parsed = value ? Number(value) : null;
+		resumeStep.value = Number.isFinite(parsed) && parsed && parsed > 0 ? parsed : null;
+	} catch {
+		resumeStep.value = null;
+	}
+}
+
 function startWelcomeTour() {
 	startTour('welcome');
+}
+
+async function resumeWelcomeTour() {
+	const step = resumeStep.value ?? 0;
+	startTour('welcome', step);
+	resumeStep.value = null;
+	await Preferences.remove({ key: WELCOME_TOUR_RESUME_KEY }).catch(() => {});
+}
+
+async function dismissResumeTour() {
+	resumeStep.value = null;
+	await Preferences.remove({ key: WELCOME_TOUR_RESUME_KEY }).catch(() => {});
 }
 
 function getNextContentType(): ContentType {
@@ -779,9 +859,13 @@ onMounted(async () => {
 	await refreshFeed(0);
 
 	if (user.value && !hasCompleted('welcome')) {
-		// give the dashboard one more frame to settle so the highlight lands
+		// text-scale prompt fires first if the user hasn't seen it; if there's a
+		// saved resume step we show the chip rather than auto-starting the tour
+		await loadResumeStep();
 		setTimeout(() => {
-			if (user.value) startTourIfNew('welcome');
+			if (!user.value) return;
+			textSizePromptRef.value?.maybeOpen();
+			if (!resumeStep.value) startTourIfNew('welcome');
 		}, 600);
 	}
 
