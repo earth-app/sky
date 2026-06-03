@@ -81,6 +81,17 @@
 			color="error"
 			class="mt-6 w-full mx-2"
 		/>
+
+		<div class="flex justify-center mt-3">
+			<IonButton
+				fill="clear"
+				size="small"
+				color="secondary"
+				@click="goToForgotPassword"
+			>
+				Forgot your Password?
+			</IonButton>
+		</div>
 	</IonCard>
 </template>
 
@@ -120,6 +131,15 @@ const pendingLogin = useState<{
 const emit = defineEmits<{
 	loginSuccess: [];
 }>();
+
+function goToForgotPassword() {
+	const redirect = route.query.redirect;
+	const target =
+		typeof redirect === 'string' && redirect.startsWith('/')
+			? `/forgot-password?redirect=${encodeURIComponent(redirect)}`
+			: '/forgot-password';
+	ionRouter.push(target, slide);
+}
 
 async function safeToast(text: string, duration: 'short' | 'long' = 'long') {
 	try {
@@ -217,10 +237,25 @@ async function handleLogin() {
 			await safeToast(`Login Successful! Welcome back, ${identifier}!`, 'short');
 
 			await refreshNuxtData();
+
+			// honor ?redirect= so the user lands back where they were sent to login from
+			const redirect = route.query.redirect;
+			if (typeof redirect === 'string' && redirect.startsWith('/')) {
+				ionRouter.replace(redirect, slide);
+			}
 			return;
 		}
 
 		if (result.success && !result.verified) {
+			// guard against a partial 2FA payload — server should always return all three,
+			// but if it doesn't we'd push the user into a broken verify screen
+			if (!result.ticket || !result.email || typeof result.expiresIn !== 'number') {
+				error.value = 'Login response was incomplete. Please try again or contact support.';
+				notifyError();
+				await safeToast(error.value, 'long');
+				return;
+			}
+
 			pendingLogin.value = {
 				ticket: result.ticket,
 				email: result.email,
