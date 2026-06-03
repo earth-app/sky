@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+		android:shortcutId="start_quest"
+		android:enabled="true"
+		android:icon="@mipmap/ic_launcher"
+		android:shortcutShortLabel="@string/shortcut_quest_short"
+		android:shortcutLongLabel="@string/shortcut_quest_long"
+	>
+        <intent
+			android:action="android.intent.action.VIEW"
+			android:targetPackage="com.earthapp.sky"
+			android:targetClass="com.earthapp.sky.MainActivity"
+			android:data="com.earthapp.sky://tabs/quests"
+		/>
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+    <shortcut
+		android:shortcutId="notifications"
+		android:enabled="true"
+		android:icon="@mipmap/ic_launcher"
+		android:shortcutShortLabel="@string/shortcut_notifications_short"
+		android:shortcutLongLabel="@string/shortcut_notifications_long"
+	>
+        <intent
+			android:action="android.intent.action.VIEW"
+			android:targetPackage="com.earthapp.sky"
+			android:targetClass="com.earthapp.sky.MainActivity"
+			android:data="com.earthapp.sky://tabs/profile/notifications"
+		/>
+    </shortcut>
+    <shortcut
+		android:shortcutId="profile"
+		android:enabled="true"
+		android:icon="@mipmap/ic_launcher"
+		android:shortcutShortLabel="@string/shortcut_profile_short"
+		android:shortcutLongLabel="@string/shortcut_profile_long"
+	>
+        <intent
+			android:action="android.intent.action.VIEW"
+			android:targetPackage="com.earthapp.sky"
+			android:targetClass="com.earthapp.sky.MainActivity"
+			android:data="com.earthapp.sky://tabs/profile/editor"
+		/>
+    </shortcut>
+</shortcuts>

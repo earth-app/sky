@@ -4,4 +4,10 @@
     <string name="title_activity_main">sky</string>
     <string name="package_name">com.earthapp.sky</string>
     <string name="custom_url_scheme">com.earthapp.sky</string>
+    <string name="shortcut_quest_short">Quests</string>
+    <string name="shortcut_quest_long">Start a Quest</string>
+    <string name="shortcut_notifications_short">Bell</string>
+    <string name="shortcut_notifications_long">Open Notifications</string>
+    <string name="shortcut_profile_short">Profile</string>
+    <string name="shortcut_profile_long">Open My Profile</string>
 </resources>

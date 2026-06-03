@@ -44,6 +44,12 @@
                 <data android:pathPrefix="/auth/complete" />
                 <data android:pathPrefix="/auth/callback-mobile" />
             </intent-filter>
+
+            <!-- Adaptive shortcuts for long-press on the app icon (Android 7.1+). -->
+            <meta-data
+				android:name="android.app.shortcuts"
+				android:resource="@xml/shortcuts"
+			/>
         </activity>
 
         <provider

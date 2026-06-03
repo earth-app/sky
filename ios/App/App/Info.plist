@@ -96,6 +96,48 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeCompose</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Start a Quest</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.earthapp.sky.shortcut.quests</string>
+			<key>UIApplicationShortcutItemUserInfo</key>
+			<dict>
+				<key>route</key>
+				<string>/tabs/quests</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeAlarm</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Notifications</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.earthapp.sky.shortcut.notifications</string>
+			<key>UIApplicationShortcutItemUserInfo</key>
+			<dict>
+				<key>route</key>
+				<string>/tabs/profile/notifications</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeContact</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>My Profile</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.earthapp.sky.shortcut.profile</string>
+			<key>UIApplicationShortcutItemUserInfo</key>
+			<dict>
+				<key>route</key>
+				<string>/tabs/profile/editor</string>
+			</dict>
+		</dict>
+	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Automatic</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
