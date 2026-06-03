@@ -1,0 +1,95 @@
+// Wear OS-side listener template. Drop this into a separate Wear OS app module
+// when you add one (`File > New > Module > Wear OS app` in Android Studio).
+// Update the `package` line to match the Wear module's namespace.
+//
+// What this does:
+// 1. Listens on the `/notification/deliver` path used by the phone-side
+//    WearNotificationBridgePlugin (Java) in the main app module.
+// 2. Parses the incoming JSON payload (id, title, body, type, source, link).
+// 3. Posts a NotificationCompat notification on the watch, which raises the
+//    standard Wear OS notification with system haptics and bezel UI.
+// 4. Auto-creates the required NotificationChannel on Android 8+.
+//
+// Manifest entry needed in the Wear module's AndroidManifest.xml:
+//
+//   <service
+//       android:name=".NotificationListenerService"
+//       android:exported="true"
+//       tools:ignore="ExportedService">
+//       <intent-filter>
+//           <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+//           <data
+//               android:scheme="wear"
+//               android:host="*"
+//               android:pathPrefix="/notification" />
+//       </intent-filter>
+//   </service>
+//
+// Dependencies (Wear module's build.gradle):
+//   implementation 'com.google.android.gms:play-services-wearable:18.1.0'
+//   implementation 'androidx.core:core-ktx:1.13.1'
+//   implementation 'androidx.wear:wear:1.3.0'
+
+package com.earthapp.sky.wear
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import com.google.android.gms.wearable.MessageEvent
+import com.google.android.gms.wearable.WearableListenerService
+import org.json.JSONObject
+
+private const val NOTIFICATION_PATH = "/notification/deliver"
+private const val CHANNEL_ID = "earth_app_notifications"
+private const val CHANNEL_NAME = "Notifications"
+
+class NotificationListenerService : WearableListenerService() {
+
+    override fun onMessageReceived(event: MessageEvent) {
+        if (event.path != NOTIFICATION_PATH) return
+        val raw = String(event.data, Charsets.UTF_8)
+        val payload = try {
+            JSONObject(raw)
+        } catch (e: Exception) {
+            return
+        }
+        val id = payload.optString("id")
+        val title = payload.optString("title")
+        val body = payload.optString("body")
+        val link = payload.optString("link", "")
+
+        ensureChannel()
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+
+        if (link.isNotEmpty()) {
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(link))
+            val pending = PendingIntent.getActivity(
+                this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.setContentIntent(pending)
+        }
+
+        val notificationId = id.hashCode() and 0x7FFFFFFF
+        NotificationManagerCompat.from(this).notify(notificationId, builder.build())
+    }
+
+    private fun ensureChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (nm.getNotificationChannel(CHANNEL_ID) != null) return
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT)
+        )
+    }
+}

@@ -30,6 +30,7 @@ dependencies {
     implementation project(':capacitor-toast')
     implementation project(':capgo-capacitor-audio-recorder')
     implementation project(':capgo-capacitor-pedometer')
+    implementation project(':capgo-capacitor-watch')
 
 }
 
