@@ -1,10 +1,13 @@
 <template>
 	<IonApp>
 		<div
-			v-if="isOffline"
+			v-if="isOffline || pendingMutationCount > 0"
 			class="fixed top-12 left-1/2 -translate-x-1/2 z-1000 pointer-events-none"
+			role="status"
+			aria-live="polite"
 		>
 			<div
+				v-if="isOffline"
 				class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-600 text-white shadow-lg shadow-black/40"
 			>
 				<UIcon
@@ -12,6 +15,26 @@
 					class="size-5"
 				/>
 				<span class="font-medium text-sm">You're offline</span>
+				<span
+					v-if="pendingMutationCount > 0"
+					class="text-xs px-2 py-0.5 rounded-full bg-white/20 font-medium"
+				>
+					{{ pendingMutationCount }} pending
+				</span>
+			</div>
+			<div
+				v-else
+				class="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500 text-white shadow-lg shadow-black/40"
+			>
+				<UIcon
+					name="mdi:cloud-sync-outline"
+					class="size-5"
+				/>
+				<span class="font-medium text-sm"
+					>Syncing {{ pendingMutationCount }} change{{
+						pendingMutationCount === 1 ? '' : 's'
+					}}…</span
+				>
 			</div>
 		</div>
 		<IonRouterOutlet :animation="slide" />
@@ -25,6 +48,23 @@
 				@close-tour="handleWelcomeTourClosed"
 			/>
 			<UserEmailMGate />
+			<UserQuestCompletionOverlay
+				v-model:open="celebrationOpen"
+				:quest-title="celebrationPayload.questTitle"
+				:points="celebrationPayload.points"
+				:badge-icon="celebrationPayload.badgeIcon"
+			>
+				<template #actions>
+					<UButton
+						color="success"
+						variant="soft"
+						icon="mdi:share-variant"
+						@click="shareCelebration"
+					>
+						Share
+					</UButton>
+				</template>
+			</UserQuestCompletionOverlay>
 		</ClientOnly>
 	</IonApp>
 </template>
@@ -34,9 +74,16 @@ import { App, type URLOpenListenerEvent } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { Network, type ConnectionStatus } from '@capacitor/network';
+import { Preferences } from '@capacitor/preferences';
+import { Share } from '@capacitor/share';
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
 import slide from './animations/slide';
 import { initDailyNotifications } from './composables/useDailyNotifications';
+import {
+	initMOfflineQueue,
+	pendingMMutations,
+	registerMMutationDispatcher
+} from './composables/useMOfflineQueue';
 import {
 	applyNetworkStatus,
 	isOffline,
@@ -44,6 +91,7 @@ import {
 	setOfflineModeEnabled
 } from './composables/useNetwork';
 import { initPushNotifications } from './composables/usePushNotifications';
+import { initQuestCelebrationListener } from './composables/useQuestCelebrationListener';
 import { initWatchNotificationBridge } from './composables/useWatchNotifications';
 
 if (import.meta.client) {
@@ -57,16 +105,52 @@ const { resolveDeepLink } = useDeepLinkRouting();
 const { closeBrowser, clearFlow, refreshFlowState } = useMobileOAuth();
 const { notifySuccess, notifyWarning } = useAppHaptics();
 const { settings: appSettings, init: initSettings } = useAppSettings();
-const { markCompleted } = useSiteTour();
+const { activeStepIndex, hasCompleted: tourCompleted } = useSiteTour();
 const router = useIonRouter();
 const isNative = Capacitor.isNativePlatform();
 
-// any close path of the welcome tour (Finish, X, Esc, backdrop, hardware back) marks
-// it complete so the dashboard auto-trigger never fires it again on this device.
-// The manual dashboard "start tour" button still uses startTour() which bypasses
-// the completion check.
+const WELCOME_TOUR_RESUME_KEY = 'sky:welcome-tour-resume-step';
+
+// save the current step on close so the dashboard can offer a "Continue tour" chip;
+// MSiteTour already marks complete internally on the Finish path
 function handleWelcomeTourClosed() {
-	markCompleted('welcome');
+	if (tourCompleted('welcome')) {
+		void Preferences.remove({ key: WELCOME_TOUR_RESUME_KEY }).catch(() => {});
+		return;
+	}
+	const step = activeStepIndex.value;
+	if (step > 0) {
+		void Preferences.set({
+			key: WELCOME_TOUR_RESUME_KEY,
+			value: String(step)
+		}).catch(() => {});
+	}
+}
+
+const pendingMutationCount = computed(() => pendingMMutations.value.length);
+
+const {
+	open: celebrationOpen,
+	payload: celebrationPayload,
+	closeCelebration
+} = useQuestCelebration();
+
+async function shareCelebration() {
+	const title = celebrationPayload.value?.questTitle || 'a quest';
+	const points = celebrationPayload.value?.points;
+	const text = points
+		? `I just completed "${title}" on The Earth App — earned ${points} Impact Points!`
+		: `I just completed "${title}" on The Earth App!`;
+	try {
+		await Share.share({
+			title: 'Quest Complete',
+			text,
+			dialogTitle: 'Share your quest win'
+		});
+	} catch {
+		// user cancelled or plugin unavailable — silently swallow
+	}
+	closeCelebration();
 }
 
 const profilePath = computed(() =>
@@ -102,7 +186,14 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		footer: 'Tip: pick a few activities on your profile to get personalized recommendations.',
 		icon: 'mdi:run',
 		prerendered: true,
-		highlightPadding: 12
+		highlightPadding: 12,
+		cta: {
+			label: 'Try Activities Now',
+			icon: 'mdi:run',
+			color: 'primary',
+			advance: true,
+			handler: () => router.push('/tabs/discover?tab=activity', slide)
+		}
 	},
 	{
 		url: '/tabs/discover?tab=article',
@@ -189,7 +280,14 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 			'The profile editor is where you update your info, bio, interests, and visibility. Tap the help button there for a full walkthrough of every field.',
 		footer: 'Keep your profile fresh to get the best recommendations.',
 		anonymous: false,
-		icon: 'mdi:account-edit-outline'
+		icon: 'mdi:account-edit-outline',
+		cta: {
+			label: 'Open Profile Editor',
+			icon: 'mdi:account-edit-outline',
+			color: 'primary',
+			advance: true,
+			handler: () => router.push('/tabs/profile/editor', slide)
+		}
 	},
 	{
 		url: '/tabs/quests',
@@ -198,7 +296,14 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 			'Quests are guided journeys that turn an activity into a structured adventure with steps, rewards, and a satisfying finish. Start with one tied to an activity you already love.',
 		footer: 'You can only have one active quest at a time — choose wisely!',
 		anonymous: false,
-		icon: 'mdi:map-marker-path'
+		icon: 'mdi:map-marker-path',
+		cta: {
+			label: 'Pick a Quest',
+			icon: 'mdi:map-marker-path',
+			color: 'primary',
+			advance: true,
+			handler: () => router.push('/tabs/quests', slide)
+		}
 	},
 	{
 		url: profilePath.value,
@@ -265,6 +370,8 @@ let stopDataSaverSettingWatch: (() => void) | null = null;
 let pushTeardown: (() => Promise<void>) | null = null;
 let dailyNotificationTeardown: (() => void) | null = null;
 let watchBridgeTeardown: (() => void) | null = null;
+let questCelebrationTeardown: (() => void) | null = null;
+let offlineQueueTeardown: (() => void) | null = null;
 
 const handledDeepLinkTimestamps = new Map<string, number>();
 const MAX_DEEP_LINK_HISTORY = 64;
@@ -340,11 +447,14 @@ async function handleIncomingDeepLink(url: string) {
 		await closeBrowser();
 		clearFlow();
 
-		authStore.setSessionToken(resolved.sessionToken);
-
-		if (!isOffline.value) {
-			await hydrateUser();
+		// offline check before persisting the token — otherwise we land "logged in but no user"
+		if (isOffline.value) {
+			await showErrorToast('You appear to be offline. Reconnect and try signing in again.');
+			return;
 		}
+
+		authStore.setSessionToken(resolved.sessionToken);
+		await safeHydrateUser();
 
 		const effectiveContext = resolved.context || flowState.context;
 		const destination =
@@ -361,7 +471,7 @@ async function handleIncomingDeepLink(url: string) {
 		await closeBrowser();
 		clearFlow();
 		if (!isOffline.value) {
-			await hydrateUser();
+			await safeHydrateUser();
 		}
 	}
 
@@ -383,6 +493,14 @@ async function hydrateUser() {
 	const hasToken = Boolean(authStore.sessionToken);
 	const shouldForce = !hasToken;
 	await fetchUser(shouldForce);
+}
+
+async function safeHydrateUser() {
+	try {
+		await hydrateUser();
+	} catch (error) {
+		console.warn('User hydration failed:', error);
+	}
 }
 
 onMounted(async () => {
@@ -419,7 +537,39 @@ onMounted(async () => {
 	}
 
 	if (!isOffline.value) {
-		await hydrateUser();
+		await safeHydrateUser();
+	}
+
+	if (import.meta.client && !questCelebrationTeardown) {
+		questCelebrationTeardown = initQuestCelebrationListener();
+	}
+
+	if (import.meta.client && !offlineQueueTeardown) {
+		// register dispatchers before init so any persisted queue can replay
+		// immediately when the network comes back
+		const { markNotificationRead, markAllNotificationsRead } = useNotifications();
+		const notificationStore = useNotificationStore();
+
+		registerMMutationDispatcher('mark-read', async (m) => {
+			const id = typeof m.payload?.id === 'string' ? m.payload.id : null;
+			if (!id) return true; // malformed entry — drop it
+			const res = await markNotificationRead(id);
+			return res.success === true;
+		});
+
+		registerMMutationDispatcher('mark-all-read', async () => {
+			const res = await markAllNotificationsRead();
+			return res.success === true;
+		});
+
+		registerMMutationDispatcher('mark-notification-delete', async (m) => {
+			const id = typeof m.payload?.id === 'string' ? m.payload.id : null;
+			if (!id) return true;
+			const res = await notificationStore.deleteNotification(id);
+			return res.success === true;
+		});
+
+		offlineQueueTeardown = await initMOfflineQueue();
 	}
 
 	// on client persist authenticated user for offline fallback whenever it changes
@@ -454,7 +604,7 @@ onMounted(async () => {
 
 			clearFlow();
 			if (!isOffline.value) {
-				await hydrateUser();
+				await safeHydrateUser();
 			}
 		});
 
@@ -538,9 +688,26 @@ onBeforeUnmount(() => {
 		dailyNotificationTeardown();
 		dailyNotificationTeardown = null;
 	}
+
+	if (questCelebrationTeardown) {
+		questCelebrationTeardown();
+		questCelebrationTeardown = null;
+	}
+
+	if (offlineQueueTeardown) {
+		offlineQueueTeardown();
+		offlineQueueTeardown = null;
+	}
 });
 
 useBackButton(10, () => {
-	router.back(slide);
+	if (router.canGoBack()) {
+		router.back(slide);
+		return;
+	}
+	// no history — let the OS minimize the app instead of nav stack pop
+	if (isNative) {
+		void App.minimizeApp().catch(() => App.exitApp());
+	}
 });
 </script>
