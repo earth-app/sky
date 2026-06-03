@@ -4,6 +4,7 @@ import { LocalNotifications, type LocalNotificationSchema } from '@capacitor/loc
 import {
 	LOCAL_NOTIF,
 	LOCAL_NOTIF_CHANNELS,
+	cancelAllStepUnlockNotifications,
 	createLocalNotificationChannels,
 	ensureLocalNotificationPermission,
 	initLocalNotificationRouting
@@ -300,10 +301,6 @@ async function clearDailyNotifications(): Promise<void> {
 	}
 }
 
-/**
- * Wires up daily content notifications: schedules on login, refreshes on every app foreground,
- * clears on logout, and routes taps. Returns a teardown that removes all listeners.
- */
 export function initDailyNotifications(): () => void {
 	if (!Capacitor.isNativePlatform()) return () => {};
 	if (activeTeardown) activeTeardown();
@@ -327,7 +324,12 @@ export function initDailyNotifications(): () => void {
 		() => authStore.sessionToken,
 		(token) => {
 			if (token) void scheduleDailyNotifications(true);
-			else void clearDailyNotifications();
+			else {
+				void clearDailyNotifications();
+				// orphaned step-unlock reminders should die with the session — otherwise
+				// they fire after logout and route taps land on a 401 page.
+				void cancelAllStepUnlockNotifications();
+			}
 		},
 		{ immediate: true }
 	);

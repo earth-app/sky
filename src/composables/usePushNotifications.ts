@@ -15,6 +15,8 @@ interface CachedToken {
 const TOKEN_CACHE_KEY = 'push:token-v1';
 const UPLOAD_DEDUPE_MS = 60_000;
 const RESUME_REGISTER_TTL_MS = 4 * 60 * 60 * 1000;
+const RESUME_SYNC_THROTTLE_MS = 60_000;
+const UPLOAD_RETRY_DELAYS_MS = [0, 2_000, 8_000, 30_000] as const;
 
 let activeTeardown: PushTeardown | null = null;
 let cachedToken: CachedToken | null = null;
@@ -22,6 +24,18 @@ let cacheLoaded = false;
 let lastUploadKey: string | null = null;
 let lastUploadAt = 0;
 let lastResumeRegisterAt = 0;
+let lastResumeSyncAt = 0;
+let pendingUpload: Promise<boolean> | null = null;
+
+function isTransientUploadError(error: unknown): boolean {
+	const status =
+		(error as { status?: number; statusCode?: number } | null)?.status ??
+		(error as { status?: number; statusCode?: number } | null)?.statusCode;
+	if (status && status >= 500 && status < 600) return true;
+	if (status && status === 429) return true;
+	// no status = network error
+	return !status;
+}
 
 async function loadCachedToken(): Promise<CachedToken | null> {
 	if (cacheLoaded) return cachedToken;
@@ -74,6 +88,16 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 
 	await loadCachedToken();
 
+	const uploadTokenOnce = async (token: string, sessionToken: string): Promise<void> => {
+		await $fetch(`${config.public.apiBaseUrl}/v2/users/current/notifications/push`, {
+			method: 'POST',
+			body: { token, platform: platform as PushPlatform },
+			headers: {
+				Authorization: `Bearer ${sessionToken}`
+			}
+		});
+	};
+
 	const uploadToken = async (token: string): Promise<boolean> => {
 		const sessionToken = authStore.sessionToken;
 		if (!sessionToken) return false;
@@ -84,26 +108,46 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 			return true;
 		}
 
-		try {
-			await $fetch(`${config.public.apiBaseUrl}/v2/users/current/notifications/push`, {
-				method: 'POST',
-				body: { token, platform: platform as PushPlatform },
-				headers: {
-					Authorization: `Bearer ${sessionToken}`
+		// Coalesce concurrent uploads — session watch + registration listener can fire
+		// near-simultaneously on first install; we only want one in-flight POST.
+		if (pendingUpload) return pendingUpload;
+
+		pendingUpload = (async () => {
+			for (let attempt = 0; attempt < UPLOAD_RETRY_DELAYS_MS.length; attempt++) {
+				const delay = UPLOAD_RETRY_DELAYS_MS[attempt] ?? 0;
+				if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+				if (!authStore.sessionToken) return false;
+				try {
+					await uploadTokenOnce(token, authStore.sessionToken);
+					lastUploadKey = key;
+					lastUploadAt = Date.now();
+					return true;
+				} catch (error) {
+					const transient = isTransientUploadError(error);
+					if (!transient || attempt === UPLOAD_RETRY_DELAYS_MS.length - 1) {
+						console.error('[push] failed to upload token:', error);
+						return false;
+					}
+					console.warn('[push] upload retry pending:', error);
 				}
-			});
-			lastUploadKey = key;
-			lastUploadAt = Date.now();
-			return true;
-		} catch (error) {
-			console.error('[push] failed to upload token:', error);
+			}
 			return false;
+		})();
+
+		try {
+			return await pendingUpload;
+		} finally {
+			pendingUpload = null;
 		}
 	};
 
-	const syncCachedToken = async (): Promise<void> => {
+	const syncCachedToken = async (opts?: { fromResume?: boolean }): Promise<void> => {
 		if (!cachedToken) return;
 		if (!authStore.sessionToken) return;
+		if (opts?.fromResume) {
+			if (Date.now() - lastResumeSyncAt < RESUME_SYNC_THROTTLE_MS) return;
+			lastResumeSyncAt = Date.now();
+		}
 		await uploadToken(cachedToken.token);
 	};
 
@@ -241,7 +285,7 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 	// while backgrounded gets picked up without waiting for a full cold start.
 	const appStateHandle = await App.addListener('appStateChange', async ({ isActive }) => {
 		if (!isActive) return;
-		await syncCachedToken();
+		await syncCachedToken({ fromResume: true });
 		if (Date.now() - lastResumeRegisterAt > RESUME_REGISTER_TTL_MS) {
 			lastResumeRegisterAt = Date.now();
 			await triggerRegister();

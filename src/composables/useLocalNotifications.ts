@@ -109,6 +109,23 @@ export async function cancelStepUnlockNotification(
 	}
 }
 
+export async function cancelAllStepUnlockNotifications(): Promise<void> {
+	if (!Capacitor.isNativePlatform()) return;
+	try {
+		const { notifications } = await LocalNotifications.getPending();
+		const ids = notifications
+			.filter((n) => {
+				const id = typeof n.id === 'number' ? n.id : Number(n.id);
+				return id >= LOCAL_NOTIF.STEP_UNLOCK_BASE && id < LOCAL_NOTIF.DAILY_BASE;
+			})
+			.map((n) => ({ id: typeof n.id === 'number' ? n.id : Number(n.id) }));
+		if (ids.length === 0) return;
+		await LocalNotifications.cancel({ notifications: ids });
+	} catch {
+		// best-effort
+	}
+}
+
 export function initLocalNotificationRouting(): () => void {
 	if (!Capacitor.isNativePlatform()) return () => {};
 
