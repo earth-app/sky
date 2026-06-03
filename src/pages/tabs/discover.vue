@@ -28,6 +28,12 @@
 			ref="contentRef"
 			:scroll-y="true"
 		>
+			<IonRefresher
+				slot="fixed"
+				@ionRefresh="onRefresh"
+			>
+				<IonRefresherContent />
+			</IonRefresher>
 			<div class="flex flex-col items-center my-8 px-4">
 				<IonSegment
 					v-if="showSegmentSelector"
@@ -564,6 +570,18 @@ async function applySearch(rawSearch: string) {
 	resetPaginationState();
 
 	await loadMore();
+}
+
+async function onRefresh(event: CustomEvent) {
+	queryGeneration.value += 1;
+	loadingGeneration.value = null;
+	isLoading.value = false;
+	resetPaginationState();
+	try {
+		await loadMore();
+	} finally {
+		(event.target as HTMLIonRefresherElement | null)?.complete();
+	}
 }
 
 async function loadSearchResults(generation: number) {
