@@ -24,6 +24,7 @@ export type AppSettings = {
 	animations: boolean;
 	pushNotifications: boolean;
 	hapticFeedback: boolean;
+	soundEffects: boolean;
 	dataSaverMode: boolean;
 	preloadContent: boolean;
 	offlineMode: boolean;
@@ -39,6 +40,7 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
 	animations: true,
 	pushNotifications: true,
 	hapticFeedback: true,
+	soundEffects: false,
 	dataSaverMode: false,
 	preloadContent: true,
 	offlineMode: false
@@ -138,6 +140,23 @@ export function applyAppSettingsToDocument(settings: AppSettings) {
 		localStorage.setItem('nuxt-color-mode', settings.theme);
 	} catch {
 		// Ignore storage errors.
+	}
+
+	// Sync the native status bar — without this iOS shows a white-on-white status
+	// bar in dark mode (or vice versa) until the next app launch.
+	void syncStatusBarStyle(appliedTheme);
+}
+
+async function syncStatusBarStyle(appliedTheme: 'light' | 'dark') {
+	const { Capacitor } = await import('@capacitor/core');
+	if (!Capacitor.isNativePlatform()) return;
+	try {
+		const { StatusBar, Style } = await import('@capacitor/status-bar');
+		await StatusBar.setStyle({
+			style: appliedTheme === 'dark' ? Style.Dark : Style.Light
+		});
+	} catch {
+		// status bar plugin may not be available on this build — ignore
 	}
 }
 
