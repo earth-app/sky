@@ -100,6 +100,7 @@ import { Toast } from '@capacitor/toast';
 import { passwordSchema } from 'schemas';
 import z from 'zod';
 import slide from '~/animations/slide';
+import { theme } from '~/composables/useSettings';
 
 const userOrEmailSchema = z
 	.string()

@@ -324,6 +324,7 @@ import {
 import { DateTime } from 'luxon';
 import type { Event } from 'types/event';
 import type { User } from 'types/user';
+import { comma } from 'utils';
 import { h } from 'vue';
 import MContentDrawer from '~/components/MContentDrawer.vue';
 import { BADGES_DRAWER_CLOSE } from '~/utils/injection';
