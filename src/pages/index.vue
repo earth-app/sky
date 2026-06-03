@@ -153,10 +153,7 @@ onMounted(async () => {
 	if (isOfflineEntryMode()) {
 		const cachedUser = await validateSessionAllowOffline();
 		if (cachedUser) {
-			if (appSettings.value.preloadContent) {
-				await preloadRouteComponents('/tabs/downloads');
-			}
-
+			void preloadHome('/tabs/downloads');
 			await navigateTo('/tabs/downloads');
 			await SplashScreen.hide().catch(() => {});
 			return;
@@ -173,7 +170,9 @@ onMounted(async () => {
 	bootResolved.value = true;
 	await SplashScreen.hide().catch(() => {});
 
-	if (user.value === null) {
+	if (user.value) {
+		await navigateHome();
+	} else {
 		await maybeShowOnboarding();
 	}
 });
@@ -209,16 +208,36 @@ async function maybeShowOnboarding() {
 	}
 }
 
-watch(user, async (currentUser) => {
-	if (!currentUser) return;
+// non-blocking preload — never let a slow chunk fetch keep the user on index
+function preloadHome(destination: string) {
+	if (!appSettings.value.preloadContent) return;
+	void Promise.race([
+		preloadRouteComponents(destination),
+		new Promise((r) => setTimeout(r, 1500))
+	]).catch(() => {});
+}
 
+let navigatingHome = false;
+async function navigateHome() {
+	if (navigatingHome) return;
+	navigatingHome = true;
 	const destination = isOfflineEntryMode() ? '/tabs/downloads' : '/tabs/dashboard';
-	if (appSettings.value.preloadContent) {
-		await preloadRouteComponents(destination);
+	preloadHome(destination);
+	void fetchOnboardingState().catch(() => {}); // best-effort; never block navigation
+	void Preferences.set({ key: 'hasOpened', value: 'true' }).catch(() => {});
+	try {
+		await navigateTo(destination);
+	} catch (err) {
+		console.error('Home navigation failed, releasing latch:', err);
+		navigatingHome = false;
 	}
-	await fetchOnboardingState();
-	await Preferences.set({ key: 'hasOpened', value: 'true' }).catch(() => {});
-	await navigateTo(destination);
+}
+
+// safety net for late hydration (anon → authed mid-page, or token refresh)
+watch(user, async (next, prev) => {
+	if (next && !prev) {
+		await navigateHome();
+	}
 });
 
 const onboardingOpen = ref(false);
