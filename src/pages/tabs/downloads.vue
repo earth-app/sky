@@ -128,6 +128,7 @@
 <script setup lang="ts">
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
+import { comma } from 'utils';
 
 const downloads = useDownloads();
 const { settings: appSettings } = useAppSettings();
