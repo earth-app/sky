@@ -1,11 +1,13 @@
 <template>
 	<div class="min-w-90 w-full h-full overflow-y-auto p-4 border border-gray-700">
-		<div
+		<MEmptyState
 			v-if="notifications.length === 0"
-			class="text-gray-400 light:text-gray-600"
-		>
-			No notifications
-		</div>
+			icon="mdi:bell-check-outline"
+			title="You're all caught up"
+			description="No new notifications. We'll ping you when something needs your attention."
+			variant="success"
+			dense
+		/>
 		<div
 			v-else
 			class="flex flex-col"
@@ -62,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import { Dialog } from '@capacitor/dialog';
 const props = defineProps<{
 	additional?: boolean;
 }>();
@@ -83,6 +86,14 @@ const displayed = computed(() => {
 });
 
 async function clearAll() {
+	const { value } = await Dialog.confirm({
+		title: 'Clear All Notifications?',
+		message: 'This permanently removes every notification on this account. You cannot undo this.',
+		okButtonTitle: 'Clear All',
+		cancelButtonTitle: 'Cancel'
+	});
+	if (!value) return;
+
 	const res = await clearAllNotifications();
 	if (!res.success) {
 		await showErrorToast(res.message, {

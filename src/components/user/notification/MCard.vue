@@ -68,9 +68,11 @@
 </template>
 
 <script setup lang="ts">
+import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
 import { DateTime } from 'luxon';
 import { trimString } from 'utils';
+import { runOrQueueM } from '~/composables/useMOfflineQueue';
 
 const props = defineProps<{
 	notification: UserNotification;
@@ -109,7 +111,33 @@ async function markAsRead() {
 }
 
 async function removeNotification() {
-	const res = await deleteNotification(props.notification.id);
+	const { value } = await Dialog.confirm({
+		title: 'Delete Notification?',
+		message: "This notification will be removed permanently. You can't undo this.",
+		okButtonTitle: 'Delete',
+		cancelButtonTitle: 'Cancel'
+	});
+	if (!value) return;
+
+	// queue the delete if offline so the dispatch happens on reconnect — the UI
+	// emits 'deleted' immediately either way for optimistic feel
+	const queued = await runOrQueueM('mark-notification-delete', { id: props.notification.id }, () =>
+		deleteNotification(props.notification.id)
+	);
+
+	if (queued.queued) {
+		emit('deleted', props.notification);
+		await Toast.show({
+			text: "Will delete once you're back online.",
+			duration: 'short'
+		});
+		return;
+	}
+
+	const res = (queued.result as { success: boolean; message?: string }) ?? {
+		success: false,
+		message: 'Failed to delete notification.'
+	};
 
 	if (res.success) {
 		emit('deleted', props.notification);
