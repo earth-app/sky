@@ -34,8 +34,10 @@ const config: CapacitorConfig = {
 		},
 		SplashScreen: {
 			launchShowDuration: 3000,
-			launchAutoHide: true,
-			launchFadeOutDuration: 3000,
+			// js controls hide so the splash stays up until hydration finishes
+			// (prevents the white flash on fast networks)
+			launchAutoHide: false,
+			launchFadeOutDuration: 600,
 			backgroundColor: '#174f96ee',
 			androidSplashResourceName: 'splash',
 			androidScaleType: 'FIT_CENTER',
