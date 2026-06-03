@@ -8,7 +8,7 @@
 			:state="{ userOrEmail, password }"
 			@submit="handleLogin"
 			class="space-x-6 *:mb-4"
-			:schema="z.object({ userOrEmail: userOrEmailSchema, password: passwordSchema })"
+			:schema="loginSchema"
 		>
 			<UFormField
 				label="Username or Email"
@@ -22,6 +22,7 @@
 					class="min-w-60 w-2/5 max-w-120"
 					counter
 					:maxlength="100"
+					autocapitalize="off"
 					autocomplete="username"
 				/>
 			</UFormField>
@@ -39,6 +40,7 @@
 					class="min-w-60 w-2/5 max-w-120"
 					counter
 					:maxlength="100"
+					autocomplete="current-password"
 				>
 					<IonInputPasswordToggle slot="end" />
 				</IonInput>
@@ -93,6 +95,8 @@ const userOrEmailSchema = z
 	.min(3, 'Must be at least 3 characters')
 	.max(100, 'Must be at most 100 characters');
 
+const loginSchema = z.object({ userOrEmail: userOrEmailSchema, password: passwordSchema });
+
 const userOrEmail = ref('');
 const password = ref('');
 const isSubmitting = ref(false);
@@ -102,6 +106,7 @@ const error = ref('');
 const login = useLogin();
 const { fetchUser } = useAuth();
 const authStore = useAuthStore();
+const { notifyError } = useAppHaptics();
 const ionRouter = useIonRouter();
 const route = useRoute();
 const pendingLogin = useState<{
@@ -115,6 +120,14 @@ const pendingLogin = useState<{
 const emit = defineEmits<{
 	loginSuccess: [];
 }>();
+
+async function safeToast(text: string, duration: 'short' | 'long' = 'long') {
+	try {
+		await Toast.show({ text, duration });
+	} catch (err) {
+		console.warn('[login] toast failed:', err);
+	}
+}
 
 function setLoginError(message?: string) {
 	// crust's useLogin prefixes the status code (e.g. "401: Invalid credentials").
@@ -136,10 +149,29 @@ function setLoginError(message?: string) {
 		return;
 	}
 
+	if (status === 400 && /oauth/i.test(message ?? '')) {
+		error.value =
+			'This account was created with an OAuth provider. Sign in with that provider, then set a password from your profile.';
+		return;
+	}
+
+	if (status && status >= 500) {
+		error.value = 'The server is having trouble right now. Please try again shortly.';
+		return;
+	}
+
 	error.value = formatApiError(
 		message,
 		'Login failed. Please check your credentials and try again.'
 	);
+}
+
+function normalizeIdentifier(raw: string): string {
+	const trimmed = raw.trim();
+	// Emails are case-insensitive in practice; usernames are stored lowercase
+	// by mantle2. Lowercase both so the Basic auth header matches the stored
+	// canonical form.
+	return trimmed.toLowerCase();
 }
 
 async function handleLogin() {
@@ -148,8 +180,22 @@ async function handleLogin() {
 	isSubmitting.value = true;
 	error.value = '';
 
+	const identifier = normalizeIdentifier(userOrEmail.value);
+	if (identifier !== userOrEmail.value) {
+		// reflect normalization back so a retry uses the same string.
+		userOrEmail.value = identifier;
+	}
+
+	if (!userOrEmailSchema.safeParse(identifier).success) {
+		error.value = 'Please enter a valid username or email.';
+		notifyError();
+		await safeToast(error.value, 'long');
+		isSubmitting.value = false;
+		return;
+	}
+
 	try {
-		const result = await login(userOrEmail.value, password.value);
+		const result = await login(identifier, password.value);
 
 		if (result.success && result.verified) {
 			// Avoid force=true when a token already exists; forcing can clear a valid token on native.
@@ -159,6 +205,8 @@ async function handleLogin() {
 
 			if (!authStore.currentUser) {
 				error.value = 'Unable to load account data. Please try again.';
+				notifyError();
+				await safeToast(error.value, 'long');
 				return;
 			}
 
@@ -166,10 +214,7 @@ async function handleLogin() {
 
 			emit('loginSuccess');
 
-			await Toast.show({
-				text: `Login Successful! Welcome back, ${userOrEmail.value}!`,
-				duration: 'short'
-			});
+			await safeToast(`Login Successful! Welcome back, ${identifier}!`, 'short');
 
 			await refreshNuxtData();
 			return;
@@ -180,7 +225,7 @@ async function handleLogin() {
 				ticket: result.ticket,
 				email: result.email,
 				expiresAt: Date.now() + result.expiresIn * 1000,
-				userOrEmail: userOrEmail.value,
+				userOrEmail: identifier,
 				password: password.value
 			};
 
@@ -194,6 +239,13 @@ async function handleLogin() {
 		}
 
 		setLoginError(result.message);
+		notifyError();
+		await safeToast(error.value, 'long');
+	} catch (err) {
+		console.error('[login] unexpected error:', err);
+		error.value = formatApiError(err, 'Login failed. Please try again.');
+		notifyError();
+		await safeToast(error.value, 'long');
 	} finally {
 		isSubmitting.value = false;
 	}
