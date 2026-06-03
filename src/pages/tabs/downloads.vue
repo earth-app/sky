@@ -6,6 +6,26 @@
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
 				<IonTitle>Downloads</IonTitle>
+				<IonButtons slot="end">
+					<IonButton
+						color="danger"
+						:disabled="!canDeleteAll"
+						aria-label="Delete all downloads"
+						@click="deleteAllDownloads"
+					>
+						<IonSpinner
+							v-if="clearingAll"
+							slot="icon-only"
+							name="crescent"
+						/>
+						<UIcon
+							v-else
+							slot="icon-only"
+							name="mdi:delete-sweep-outline"
+							class="size-6"
+						/>
+					</IonButton>
+				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
 		<IonContent :scroll-y="true">
@@ -115,13 +135,13 @@ const { settings: appSettings } = useAppSettings();
 const allDownloads = ref<DownloadedItem[]>([]);
 const usedSpace = ref('0B');
 const loading = ref(true);
+const clearingAll = ref(false);
 const deleting = reactive<Record<string, boolean>>({});
 
-onMounted(async () => {
-	usedSpace.value = await downloads.usedSpace();
-});
-
 const offlineEntryMode = computed(() => isOffline.value);
+const canDeleteAll = computed(
+	() => !isOffline.value && !clearingAll.value && allDownloads.value.length > 0
+);
 const animationsEnabled = computed(() => appSettings.value.animations);
 const downloadSignature = computed(() =>
 	Object.entries(downloads.downloaded.value)
@@ -158,9 +178,18 @@ function sortDownloads(items: DownloadedItem[]) {
 	return [...items].sort((a, b) => itemDate(b) - itemDate(a));
 }
 
+async function refreshUsedSpace() {
+	try {
+		usedSpace.value = await downloads.usedSpace();
+	} catch {
+		// best-effort — leave the previous value visible
+	}
+}
+
 async function refreshDownloads() {
 	try {
 		allDownloads.value = sortDownloads(await downloads.all());
+		await refreshUsedSpace();
 	} catch (error: any) {
 		await Toast.show({
 			text: error?.message || 'Failed to load downloads',
@@ -194,6 +223,7 @@ async function deleteDownload(item: DownloadedItem) {
 	try {
 		await downloads.remove(item.type, item.id);
 		allDownloads.value = allDownloads.value.filter((candidate) => itemKey(candidate) !== key);
+		await refreshUsedSpace();
 
 		await Toast.show({
 			text: 'Removed download',
@@ -206,6 +236,52 @@ async function deleteDownload(item: DownloadedItem) {
 		});
 	} finally {
 		deleting[key] = false;
+	}
+}
+
+async function deleteAllDownloads() {
+	if (!canDeleteAll.value) return;
+
+	const total = allDownloads.value.length;
+	const confirm = await Dialog.confirm({
+		title: 'Delete All Downloads',
+		message: `This permanently removes all ${total} downloaded item${total === 1 ? '' : 's'}. You cannot undo this.`,
+		okButtonTitle: 'Delete All',
+		cancelButtonTitle: 'Cancel'
+	});
+	if (!confirm.value) return;
+
+	clearingAll.value = true;
+	const targets = [...allDownloads.value];
+	const failures: DownloadedItem[] = [];
+
+	try {
+		await Promise.all(
+			targets.map(async (item) => {
+				try {
+					await downloads.remove(item.type, item.id);
+				} catch {
+					failures.push(item);
+				}
+			})
+		);
+
+		allDownloads.value = failures;
+		await refreshUsedSpace();
+
+		await Toast.show({
+			text: failures.length
+				? `Cleared ${total - failures.length} of ${total} downloads (${failures.length} failed)`
+				: `Cleared ${total} downloads`,
+			duration: 'short'
+		});
+	} catch (error: any) {
+		await Toast.show({
+			text: error?.message || 'Failed to clear downloads',
+			duration: 'short'
+		});
+	} finally {
+		clearingAll.value = false;
 	}
 }
 
