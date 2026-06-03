@@ -104,9 +104,7 @@ watch(
 );
 
 async function onEmailVerified() {
-	if (user.value) {
-		user.value.account.email_verified = true;
-	}
+	await fetchUser(true).catch(() => {});
 
 	notifySuccess();
 	await Toast.show({
