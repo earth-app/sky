@@ -5,8 +5,9 @@
 	>
 		<UForm
 			id="login"
-			:state="{ userOrEmail, password }"
+			:state="formState"
 			@submit="handleLogin"
+			@error="handleFormError"
 			class="space-x-6 *:mb-4"
 			:schema="loginSchema"
 		>
@@ -49,7 +50,6 @@
 			<div class="flex w-full justify-center">
 				<IonButton
 					type="submit"
-					form="login"
 					color="success"
 					fill="solid"
 					:disabled="isSubmitting || !canSubmit"
@@ -86,7 +86,7 @@
 			<IonButton
 				fill="clear"
 				size="small"
-				color="secondary"
+				color="tertiary"
 				@click="goToForgotPassword"
 			>
 				Forgot your Password?
@@ -114,6 +114,11 @@ const password = ref('');
 const isSubmitting = ref(false);
 const canSubmit = computed(() => userOrEmail.value.trim().length > 0 && password.value.length > 0);
 const error = ref('');
+
+const formState = computed(() => ({
+	userOrEmail: userOrEmail.value,
+	password: password.value
+}));
 
 const login = useLogin();
 const { fetchUser } = useAuth();
@@ -148,6 +153,16 @@ async function safeToast(text: string, duration: 'short' | 'long' = 'long') {
 	} catch (err) {
 		console.warn('[login] toast failed:', err);
 	}
+}
+
+async function handleFormError(event: any) {
+	const firstMessage =
+		event?.errors?.[0]?.message ??
+		event?.children?.[0]?.message ??
+		'Please fix the highlighted fields and try again.';
+	error.value = firstMessage;
+	notifyError();
+	await safeToast(firstMessage, 'long');
 }
 
 function setLoginError(message?: string) {
@@ -219,16 +234,18 @@ async function handleLogin() {
 		const result = await login(identifier, password.value);
 
 		if (result.success && result.verified) {
-			// Avoid force=true when a token already exists; forcing can clear a valid token on native.
-			if (!authStore.currentUser && authStore.sessionToken) {
-				await fetchUser();
-			}
-
-			if (!authStore.currentUser) {
-				error.value = 'Unable to load account data. Please try again.';
+			if (!authStore.sessionToken) {
+				error.value = 'Login response was missing a session token. Please try again.';
 				notifyError();
 				await safeToast(error.value, 'long');
 				return;
+			}
+
+			if (!authStore.currentUser) {
+				// best-effort
+				fetchUser(true).catch((err) => {
+					console.warn('[login] background currentUser refresh failed:', err);
+				});
 			}
 
 			error.value = '';
@@ -236,7 +253,6 @@ async function handleLogin() {
 			emit('loginSuccess');
 
 			await safeToast(`Login Successful! Welcome back, ${identifier}!`, 'short');
-
 			await refreshNuxtData();
 
 			// honor ?redirect= so the user lands back where they were sent to login from

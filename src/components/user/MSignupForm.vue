@@ -8,6 +8,7 @@
 			:state="formState"
 			:schema="signupSchema"
 			@submit="handleSignup"
+			@error="handleFormError"
 			class="space-x-6 *:mb-4"
 		>
 			<UFormField
@@ -80,7 +81,6 @@
 			<div class="flex w-full justify-center">
 				<IonButton
 					type="submit"
-					form="signup"
 					color="success"
 					fill="solid"
 					class="w-3/5 max-w-60 self-center"
@@ -120,6 +120,7 @@ import { Toast } from '@capacitor/toast';
 import { emailSchema, fullNameSchema, passwordSchema, usernameSchema } from 'schemas';
 import type { User } from 'types/user';
 import z from 'zod';
+import { theme } from '~/composables/useSettings';
 
 const fullName = ref('');
 const email = ref('');
@@ -174,6 +175,16 @@ async function safeToast(text: string, duration: 'short' | 'long' = 'long') {
 	} catch (err) {
 		console.warn('[signup] toast failed:', err);
 	}
+}
+
+async function handleFormError(event: any) {
+	const firstMessage =
+		event?.errors?.[0]?.message ??
+		event?.children?.[0]?.message ??
+		'Please fix the highlighted fields and try again.';
+	error.value = firstMessage;
+	notifyError();
+	await safeToast(firstMessage, 'long');
 }
 
 async function handleSignup() {
