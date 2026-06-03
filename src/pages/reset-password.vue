@@ -128,7 +128,7 @@ import slide from '~/animations/slide';
 
 const route = useRoute();
 const ionRouter = useIonRouter();
-const { resetPassword } = useUser();
+const { resetPassword } = useAuth();
 
 const uid = computed(() => (typeof route.query.uid === 'string' ? route.query.uid : ''));
 const token = computed(() => (typeof route.query.token === 'string' ? route.query.token : ''));

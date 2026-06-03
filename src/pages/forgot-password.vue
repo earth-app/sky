@@ -78,7 +78,7 @@ import { Toast } from '@capacitor/toast';
 import { emailSchema } from 'schemas';
 import z from 'zod';
 
-const { sendResetPasswordEmail } = useUser();
+const { sendResetPasswordEmail } = useAuth();
 const ionRouter = useIonRouter();
 
 const formSchema = z.object({ email: emailSchema });
