@@ -70,6 +70,7 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 	const config = useRuntimeConfig();
 	const authStore = useAuthStore();
 	const { addLiveNotification } = useNotifications();
+	const { forward: forwardToWatch } = useWatchNotifications();
 
 	await loadCachedToken();
 
@@ -77,9 +78,6 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 		const sessionToken = authStore.sessionToken;
 		if (!sessionToken) return false;
 
-		// Dedupe rapid duplicate uploads from overlapping triggers (registration listener
-		// firing right after a session-watch upload, etc). Server is idempotent but a
-		// new user_id or a new token always needs to get through.
 		const userId = authStore.currentUser?.id ?? '__pending__';
 		const key = `${userId}:${token}`;
 		if (key === lastUploadKey && Date.now() - lastUploadAt < UPLOAD_DEDUPE_MS) {
@@ -155,17 +153,26 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 				? (rawType as UserNotification['type'])
 				: 'info';
 
+			const title = notification.title ?? '';
+			const body = notification.body ?? '';
+			const link = typeof data.link === 'string' ? data.link : undefined;
+			const source = typeof data.source === 'string' ? data.source : 'system';
+			const createdAt = Math.floor(Date.now() / 1000);
+
 			addLiveNotification({
 				id,
 				user_id: userId,
-				title: notification.title ?? '',
-				message: notification.body ?? '',
-				link: typeof data.link === 'string' ? data.link : undefined,
+				title,
+				message: body,
+				link,
 				type,
-				source: typeof data.source === 'string' ? data.source : 'system',
+				source,
 				read: false,
-				created_at: Math.floor(Date.now() / 1000)
+				created_at: createdAt
 			});
+
+			// forward push notification to watch
+			void forwardToWatch({ id, title, body, type, source, link, createdAt });
 		})
 	);
 

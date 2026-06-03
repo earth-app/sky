@@ -1,23 +1,26 @@
 import { Camera } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { Geolocation } from '@capacitor/geolocation';
 import { Toast } from '@capacitor/toast';
 import { CapacitorPedometer } from '@capgo/capacitor-pedometer';
 
-export type QuestPermission = 'camera' | 'location' | 'record' | 'motion';
+export type QuestPermission = 'camera' | 'location' | 'record' | 'motion' | 'healthkit';
 
 const PERMISSION_LABELS: Record<QuestPermission, string> = {
 	camera: 'Camera',
 	location: 'Location',
 	record: 'Microphone',
-	motion: 'Motion & Fitness'
+	motion: 'Motion & Fitness',
+	healthkit: 'Apple Health'
 };
 
 const PERMISSION_REASONS: Record<QuestPermission, string> = {
 	camera: 'take photos for this quest step',
 	location: 'verify your location for this quest step',
 	record: 'record audio for this quest step',
-	motion: 'measure the distance you cover for this quest step'
+	motion: 'measure the distance you cover for this quest step',
+	healthkit: 'read your workout distance from Apple Health'
 };
 
 type DeviceMotionEventStatic = {
@@ -98,11 +101,26 @@ export function useQuestPermissions() {
 		return ensureDeviceMotion();
 	}
 
+	// HealthKit is iOS-only. On other platforms we resolve `true` so the calling
+	// flow doesn't gate on it — Android/web simply skips the HealthKit-backed
+	// distance source and falls back to pedometer + runner GPS like before.
+	async function ensureHealthKit(): Promise<boolean> {
+		if (Capacitor.getPlatform() !== 'ios') return true;
+		try {
+			const { requestAuthorization } = useHealthKit();
+			return await requestAuthorization();
+		} catch (e) {
+			console.error('HealthKit authorization request failed:', e);
+			return false;
+		}
+	}
+
 	const CHECKS: Record<QuestPermission, () => Promise<boolean>> = {
 		camera: ensureCamera,
 		location: ensureLocation,
 		record: ensureMicrophone,
-		motion: ensureMotion
+		motion: ensureMotion,
+		healthkit: ensureHealthKit
 	};
 
 	// Same as ensureMotion but skips DeviceMotionEvent.requestPermission(), which
@@ -125,7 +143,8 @@ export function useQuestPermissions() {
 		camera: ensureCamera,
 		location: ensureLocation,
 		record: ensureMicrophone,
-		motion: primeMotion
+		motion: primeMotion,
+		healthkit: ensureHealthKit
 	};
 
 	/** Check + request a single permission without surfacing any UI. */

@@ -1,6 +1,12 @@
 const SESSION_KEY = 'distance_tracker_session';
 const MAX_SPEED_MPS = 8.9408;
-const MIN_DELTA_METERS = 5;
+// Lowered from 5 to 3 so iOS Significant Location Changes (which fire roughly
+// every 500m of movement) and short bursts of movement still contribute.
+// The MAX_SPEED_MPS clamp prevents bursts from inflating the result.
+const MIN_DELTA_METERS = 3;
+// Bound the polyline so a long session doesn't grow unbounded in KV. We only
+// keep it for diagnostics — distance is summed leg-by-leg, not from the track.
+const MAX_TRACK_POINTS = 200;
 const NOTIFICATION_ID = 9007199; // arbitrary stable id for the goal-reached toast
 
 function readSession() {
@@ -66,7 +72,8 @@ addEventListener('start', (resolve, reject, args) => {
 			startedAt: args.startedAt || Date.now(),
 			progress: typeof args.progress === 'number' ? args.progress : 0,
 			lastLocation: null,
-			lastUpdate: Date.now()
+			lastUpdate: Date.now(),
+			track: []
 		};
 		writeSession(next);
 		resolve({ progress: next.progress });
@@ -127,8 +134,14 @@ addEventListener('syncForeground', (resolve, reject, args) => {
 });
 
 // The configured scheduled event — fires when the OS decides (≥15 min on
-// Android, OS-determined on iOS). Sample location, fold it in, persist.
-addEventListener('distanceTick', async (resolve, reject) => {
+// Android, OS-determined on iOS). Also fired from AppDelegate.swift when iOS
+// Significant Location Changes deliver a new position, which is much denser
+// than the BGTaskScheduler cadence and survives app termination.
+//
+// args.latitude / args.longitude (optional): when the caller already has a
+// fresh position (e.g. SLC delegate) it can hand it in and skip the cold
+// CapacitorGeolocation.getCurrentPosition() roundtrip.
+addEventListener('distanceTick', async (resolve, reject, args) => {
 	try {
 		const s = readSession();
 		if (!s || !s.tracking) {
@@ -137,12 +150,16 @@ addEventListener('distanceTick', async (resolve, reject) => {
 		}
 
 		let location;
-		try {
-			location = await CapacitorGeolocation.getCurrentPosition();
-		} catch (e) {
-			console.error('[distance-runner] geolocation failed', e);
-			resolve();
-			return;
+		if (args && typeof args.latitude === 'number' && typeof args.longitude === 'number') {
+			location = { latitude: args.latitude, longitude: args.longitude };
+		} else {
+			try {
+				location = await CapacitorGeolocation.getCurrentPosition();
+			} catch (e) {
+				console.error('[distance-runner] geolocation failed', e);
+				resolve();
+				return;
+			}
 		}
 
 		const nowMs = Date.now();
@@ -165,6 +182,11 @@ addEventListener('distanceTick', async (resolve, reject) => {
 
 		s.lastLocation = { latitude: location.latitude, longitude: location.longitude };
 		s.lastUpdate = nowMs;
+		if (!Array.isArray(s.track)) s.track = [];
+		s.track.push({ lat: location.latitude, lon: location.longitude, t: nowMs });
+		if (s.track.length > MAX_TRACK_POINTS) {
+			s.track.splice(0, s.track.length - MAX_TRACK_POINTS);
+		}
 		writeSession(s);
 		resolve();
 	} catch (e) {

@@ -32,7 +32,8 @@ let package = Package(
         .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar"),
         .package(name: "CapacitorToast", path: "../../../node_modules/@capacitor/toast"),
         .package(name: "CapgoCapacitorAudioRecorder", path: "../../../node_modules/@capgo/capacitor-audio-recorder"),
-        .package(name: "CapgoCapacitorPedometer", path: "../../../node_modules/@capgo/capacitor-pedometer")
+        .package(name: "CapgoCapacitorPedometer", path: "../../../node_modules/@capgo/capacitor-pedometer"),
+        .package(name: "CapgoCapacitorWatch", path: "../../../node_modules/@capgo/capacitor-watch")
     ],
     targets: [
         .target(
@@ -60,7 +61,8 @@ let package = Package(
                 .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
                 .product(name: "CapacitorToast", package: "CapacitorToast"),
                 .product(name: "CapgoCapacitorAudioRecorder", package: "CapgoCapacitorAudioRecorder"),
-                .product(name: "CapgoCapacitorPedometer", package: "CapgoCapacitorPedometer")
+                .product(name: "CapgoCapacitorPedometer", package: "CapgoCapacitorPedometer"),
+                .product(name: "CapgoCapacitorWatch", package: "CapgoCapacitorWatch")
             ]
         )
     ]

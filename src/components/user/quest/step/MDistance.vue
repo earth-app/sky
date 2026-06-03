@@ -171,6 +171,10 @@ const RMS_WINDOW_MS = 3000;
 // keep them in sync.
 const RUNNER_LABEL = 'com.earthapp.sky.distance';
 const RUNNER_SYNC_INTERVAL_MS = 15_000;
+// Below this, a resume-time sync just looks like ambient noise (GPS drift,
+// pedometer rounding) and not worth surfacing. Above it, the progress bar
+// would visibly jump and the user deserves to know why.
+const BACKGROUND_SYNC_TOAST_THRESHOLD_M = 50;
 
 const storageKey = computed(
 	() => `quest_distance:${props.questId}:${props.stepIndex}:${props.altIndex ?? 0}`
@@ -362,14 +366,13 @@ async function runnerGetProgress(): Promise<RunnerSnapshot | null> {
 }
 
 // Pull authoritative step/distance totals from the OS pedometer for the period
-// since tracking started, and merge the result into local progress. iOS exposes
-// historical queries directly; on Android we persist the cumulative counter at
-// the moment tracking began and compare against the current value. Used on
-// mount and whenever the app returns to the foreground — this is what closes
-// the gap that the background runner's coarse GPS sampling leaves open.
-async function reconcileHistoricalDistance(): Promise<void> {
-	if (!Capacitor.isNativePlatform()) return;
-	if (!startedAt.value || completed.value) return;
+// since tracking started. iOS exposes historical queries directly; on Android
+// we persist the cumulative counter at the moment tracking began and compare
+// against the current value. Returns the new progress candidate WITHOUT
+// applying it — the caller merges and decides whether to toast.
+async function readPedometerHistory(): Promise<number | null> {
+	if (!Capacitor.isNativePlatform()) return null;
+	if (!startedAt.value || completed.value) return null;
 	const platform = Capacitor.getPlatform();
 	try {
 		if (platform === 'ios') {
@@ -378,48 +381,110 @@ async function reconcileHistoricalDistance(): Promise<void> {
 				end: Date.now()
 			});
 			const distance = typeof m.distance === 'number' ? m.distance : null;
-			if (distance != null && Number.isFinite(distance) && distance > progress.value) {
-				progress.value = Math.min(props.targetMeters, distance);
-				await persistState();
-				void runnerSync(true);
-				if (progress.value >= props.targetMeters) {
-					void stopTracking();
-					void Toast.show({
-						text: 'Distance goal reached — tap submit to record it.',
-						duration: 'long'
-					});
-				}
-			}
-		} else if (platform === 'android') {
+			return distance != null && Number.isFinite(distance) ? distance : null;
+		}
+		if (platform === 'android') {
 			const anchor = anchorCumulativeSteps.value;
-			if (anchor == null) return;
+			if (anchor == null) return null;
 			const m = await CapacitorPedometer.getMeasurement();
 			const cur = typeof m.cumulativeSteps === 'number' ? m.cumulativeSteps : null;
-			if (cur == null) return;
+			if (cur == null) return null;
 			if (cur < anchor) {
-				// TYPE_STEP_COUNTER resets to 0 on reboot. Re-anchor to the new value
-				// rather than discarding progress so we don't double-count post-reboot
-				// steps as historical.
+				// TYPE_STEP_COUNTER resets to 0 on reboot. Re-anchor to the new
+				// value rather than discarding progress so we don't double-count
+				// post-reboot steps as historical.
 				anchorCumulativeSteps.value = cur;
 				await persistState();
-				return;
+				return null;
 			}
-			const reconstructedDistance = (cur - anchor) * DEFAULT_STRIDE_M;
-			if (reconstructedDistance > progress.value) {
-				progress.value = Math.min(props.targetMeters, reconstructedDistance);
-				await persistState();
-				void runnerSync(true);
-				if (progress.value >= props.targetMeters) {
-					void stopTracking();
-					void Toast.show({
-						text: 'Distance goal reached — tap submit to record it.',
-						duration: 'long'
-					});
-				}
-			}
+			return (cur - anchor) * DEFAULT_STRIDE_M;
 		}
 	} catch (e) {
-		console.error('[MDistance] historical reconciliation failed:', e);
+		console.error('[MDistance] pedometer history read failed:', e);
+	}
+	return null;
+}
+
+async function readRunnerProgress(): Promise<number | null> {
+	if (!Capacitor.isNativePlatform()) return null;
+	try {
+		const snap = await BackgroundRunner.dispatchEvent<RunnerSnapshot>({
+			label: RUNNER_LABEL,
+			event: 'syncForeground',
+			details: { progress: progress.value }
+		});
+		return snap && typeof snap.progress === 'number' ? snap.progress : null;
+	} catch (e) {
+		console.error('[MDistance] runner snapshot read failed:', e);
+		return null;
+	}
+}
+
+async function readHealthKitDistance(): Promise<number | null> {
+	if (Capacitor.getPlatform() !== 'ios') return null;
+	if (!startedAt.value) return null;
+	try {
+		const { isSupported, getActivityDistance } = useHealthKit();
+		if (!isSupported) return null;
+		const result = await getActivityDistance(startedAt.value, Date.now());
+		if (!result) return null;
+		// Source string lets us log which path won the merge in development.
+		// Production users won't see this; it just keeps the diagnostic in console.
+		if (typeof result.distance === 'number' && Number.isFinite(result.distance)) {
+			console.log(
+				`[MDistance] HealthKit distance: ${result.distance.toFixed(1)}m via ${result.source}` +
+					(result.workoutCount ? ` (${result.workoutCount} workouts)` : '')
+			);
+			return result.distance;
+		}
+	} catch (e) {
+		console.error('[MDistance] HealthKit query failed:', e);
+	}
+	return null;
+}
+
+// Resume-time merge: combine HealthKit, pedometer history, and runner GPS,
+// take whichever is highest above current progress, and announce the jump if
+// it's meaningful. Foreground continuous sync does NOT go through here — only
+// the paths where the user just returned to the step from another tab, the
+// background, or a kill.
+async function syncFromBackground(): Promise<void> {
+	if (!Capacitor.isNativePlatform()) return;
+	if (!startedAt.value || completed.value) return;
+	const before = progress.value;
+
+	// HealthKit first: Apple Watch workouts are the authoritative source for
+	// non-walking activities (skating, cycling, swimming) where the pedometer
+	// reports zero and the runner's coarse GPS undercounts curved routes.
+	const healthkit = await readHealthKitDistance();
+	const pedHistory = await readPedometerHistory();
+	const runner = await readRunnerProgress();
+	const candidate = Math.max(healthkit ?? 0, pedHistory ?? 0, runner ?? 0);
+	if (candidate > progress.value) {
+		progress.value = Math.min(props.targetMeters, candidate);
+		await persistState();
+		// Push the merged value back to the runner so its next tick anchors
+		// from here. lastRunnerSyncAt is bumped to skip the next continuous tick.
+		lastRunnerSyncAt = Date.now();
+	}
+
+	const delta = progress.value - before;
+	if (delta <= 0) return;
+
+	if (progress.value >= props.targetMeters) {
+		void stopTracking();
+		void Toast.show({
+			text: `Background tracking added ${formatDistance(delta)} — goal reached, tap submit.`,
+			duration: 'long'
+		});
+		return;
+	}
+
+	if (delta >= BACKGROUND_SYNC_TOAST_THRESHOLD_M) {
+		void Toast.show({
+			text: `Synced ${formatDistance(delta)} from background tracking.`,
+			duration: 'long'
+		});
 	}
 }
 
@@ -658,6 +723,10 @@ async function startTracking() {
 	// what unlocks tracking when the app is in the background or killed.
 	const locationOk = await requirePermission('location');
 	if (!locationOk) return;
+	// HealthKit is best-effort: a denial doesn't block tracking, it just means
+	// we lose access to Apple Watch workout distance for the merge. Ask without
+	// notifying — the user gets a single OS prompt and we move on.
+	void requirePermission('healthkit', { notify: false });
 
 	if (!startedAt.value) {
 		startedAt.value = Date.now();
@@ -757,15 +826,15 @@ async function reconnectIfRunnerActive() {
 		snap.stepIndex === props.stepIndex &&
 		(snap.altIndex ?? 0) === (props.altIndex ?? 0);
 	if (!matches) return;
-	if (typeof snap.progress === 'number' && snap.progress > progress.value) {
-		progress.value = Math.min(props.targetMeters, snap.progress);
-		if (typeof snap.startedAt === 'number') startedAt.value = snap.startedAt;
+	// Restore the start timestamp from the runner if local state lost it (e.g.
+	// component remounting after a cold app launch with no Preferences hit).
+	if (typeof snap.startedAt === 'number' && !startedAt.value) {
+		startedAt.value = snap.startedAt;
 		await persistState();
 	}
-	// Pedometer history is more accurate than the runner's coarse GPS sampling —
-	// query it now to fill in everything that happened while the app was killed
-	// or backgrounded.
-	await reconcileHistoricalDistance();
+	// Merge pedometer history + runner GPS in one pass and toast the user if
+	// the jump is meaningful — the progress bar would otherwise visibly leap.
+	await syncFromBackground();
 	if (completed.value || goalReached.value) return;
 	try {
 		await attachForegroundListeners();
@@ -775,12 +844,12 @@ async function reconnectIfRunnerActive() {
 }
 
 function onAppStateChange(state: AppState) {
-	// When the user returns to the app, the pedometer history holds the truth
-	// for whatever happened while we were backgrounded or killed. Foreground
-	// listeners alone can't see those steps, so reconcile every time.
+	// When the user returns to the app, both pedometer history and runner GPS
+	// may hold steps/distance the foreground listeners never saw. syncFromBackground
+	// merges them and toasts if the jump is significant.
 	if (!state.isActive) return;
 	if (!tracking.value && !startedAt.value) return;
-	void reconcileHistoricalDistance();
+	void syncFromBackground();
 }
 
 // cloud signals that the step we were tracking has been removed/changed — stop the runner,
@@ -831,6 +900,10 @@ onMounted(async () => {
 		if (!props.disabled) {
 			void primePermission('motion');
 			void primePermission('location');
+			// HealthKit is iOS-only and silently no-ops elsewhere; priming here
+			// lets the user hit Allow once at step open instead of after we'd
+			// otherwise wait for them to tap Start Tracking.
+			void primePermission('healthkit');
 		}
 		await reconnectIfRunnerActive();
 		// Component may stay mounted across background/foreground cycles (Ionic

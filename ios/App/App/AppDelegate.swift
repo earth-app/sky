@@ -1,13 +1,28 @@
 import UIKit
 import Capacitor
 import CapacitorBackgroundRunner
+import CoreLocation
 import FirebaseCore
 import FirebaseMessaging
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
 
     var window: UIWindow?
+
+    // Significant Location Changes wake the app whenever the device moves ~500m,
+    // including from a terminated state. SLC events get translated into
+    // `distanceTick` events on the background runner, which gives the distance
+    // tracker far denser sampling than BGTaskScheduler's ~15-min cadence alone.
+    // The runner itself no-ops if there's no active tracking session, so this
+    // is cheap when no quest distance step is running.
+    private lazy var slcManager: CLLocationManager = {
+        let m = CLLocationManager()
+        m.delegate = self
+        m.allowsBackgroundLocationUpdates = true
+        m.pausesLocationUpdatesAutomatically = false
+        return m
+    }()
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
        FirebaseApp.configure()
@@ -15,7 +30,58 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
        // distance-tracker runner keeps firing across app restarts.
        BackgroundRunnerPlugin.registerBackgroundTask()
        BackgroundRunnerPlugin.handleApplicationDidFinishLaunching(launchOptions: launchOptions)
+
+       startSignificantLocationMonitoring()
+
+       // If iOS relaunched us via an SLC delivery (app was terminated), the
+       // launchOptions dict carries the location key — start monitoring again
+       // and the delegate will be called with the queued positions.
+       if launchOptions?[.location] != nil {
+           startSignificantLocationMonitoring()
+       }
         return true
+    }
+
+    private func startSignificantLocationMonitoring() {
+        guard CLLocationManager.significantLocationChangeMonitoringAvailable() else { return }
+        // SLC works with either alwaysAuth or whenInUseAuth (with background mode).
+        // We rely on whichever the user already granted — don't escalate the prompt
+        // from here; the quest step UI owns that flow.
+        let status: CLAuthorizationStatus
+        if #available(iOS 14.0, *) {
+            status = slcManager.authorizationStatus
+        } else {
+            status = CLLocationManager.authorizationStatus()
+        }
+        guard status == .authorizedAlways || status == .authorizedWhenInUse else { return }
+        slcManager.startMonitoringSignificantLocationChanges()
+    }
+
+    public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        // Hand the position to the background runner so it folds the SLC sample
+        // into the same session state that BGTaskScheduler ticks write. Passing
+        // lat/lon in eventArgs avoids the cold getCurrentPosition() roundtrip
+        // inside the runner.
+        let args: [String: Any] = [
+            "latitude": location.coordinate.latitude,
+            "longitude": location.coordinate.longitude,
+            "source": "slc"
+        ]
+        BackgroundRunnerPlugin.dispatchEvent(event: "distanceTick", eventArgs: args) { _ in }
+    }
+
+    public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        // Non-fatal — the runner still has BGTaskScheduler ticks and the user's
+        // foreground pedometer. Just log so the issue is visible in console.
+        NSLog("[AppDelegate] SLC error: \(error.localizedDescription)")
+    }
+
+    public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        // Authorization can land asynchronously after the user accepts the OS
+        // prompt from the distance step flow. Kick monitoring on as soon as
+        // it's available rather than waiting for the next app launch.
+        startSignificantLocationMonitoring()
     }
 
 	func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

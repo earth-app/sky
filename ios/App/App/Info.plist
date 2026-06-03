@@ -48,6 +48,11 @@
 	<true />
 	<key>NSCameraUsageDescription</key>
 	<string>The Earth App needs your camera so you can take photos of the outside world!</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string
+		>The Earth App reads workout distance from Apple Health so your quest progress reflects what your Apple Watch already tracks.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>The Earth App does not write to Apple Health.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 The Earth App</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
