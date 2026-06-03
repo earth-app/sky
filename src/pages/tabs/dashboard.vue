@@ -59,8 +59,6 @@
 					</ClientOnly>
 				</div>
 				<ClientOnly>
-					<UserMJourneyHero v-if="user" />
-					<UserMBadgeShowcase v-if="user" />
 					<div
 						v-if="user && resumeStep && !hasCompleted('welcome')"
 						class="w-full max-w-2xl mx-auto px-4 mb-3"
@@ -104,7 +102,7 @@
 					<div
 						v-if="motd && motd.motd"
 						id="motd"
-						class="w-full px-4"
+						class="w-full px-4 mb-4"
 					>
 						<IonCard
 							:color="motdColor"
@@ -140,6 +138,9 @@
 						</IonCard>
 					</div>
 
+					<UserMJourneyHero v-if="user" />
+					<UserMBadgeShowcase v-if="user" />
+
 					<div
 						v-if="user"
 						class="w-full px-3"
@@ -170,6 +171,8 @@
 							</div>
 						</div>
 					</div>
+
+					<h2 class="self-start text-base! mt-0! mb-1! ml-4! font-bold!">Your Feed</h2>
 
 					<div
 						v-if="feedItems.length === 0 && (isRefreshing || isLoadingMore || !hasInitialized)"
@@ -334,6 +337,7 @@
 import { Preferences } from '@capacitor/preferences';
 import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
+import { theme } from '~/composables/useSettings';
 
 const onboardingOpen = ref(false);
 const personaOpen = ref(false);

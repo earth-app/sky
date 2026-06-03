@@ -7,21 +7,21 @@
 			:color="theme"
 			class="m-0 px-3 pt-3 pb-2"
 		>
-			<div class="flex items-center gap-2 mb-2">
+			<div class="flex items-center gap-2 mb-4">
 				<UIcon
 					name="mdi:shield-star-outline"
 					class="size-5 text-warning"
 				/>
-				<h3 class="text-sm font-semibold m-0! uppercase tracking-wide opacity-80">Recent Badges</h3>
+				<h3 class="text-sm font-semibold m-0! tracking-wide opacity-80">Recent Badges</h3>
 				<span class="text-xs opacity-60 ml-auto">last 7 days</span>
 			</div>
-			<div class="flex gap-3 overflow-x-auto -mx-1 px-1 pb-1 scroll-smooth">
+			<div class="flex gap-6 overflow-x-auto -mx-1 px-1 pb-1 scroll-smooth">
 				<UserBadgeMCard
 					v-for="badge in recentBadges"
 					:key="badge.id"
 					:badge="badge"
 					no-modal
-					class="shrink-0 min-w-32 max-w-40"
+					class="shrink-0"
 				/>
 			</div>
 		</IonCard>

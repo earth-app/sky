@@ -7,15 +7,13 @@
 			:color="theme"
 			class="m-0 p-0"
 		>
-			<div class="flex items-center justify-between px-4 pt-3 pb-2">
-				<div class="flex items-center gap-2">
+			<div class="flex items-center justify-between px-4 py-3">
+				<div class="flex items-center">
 					<UIcon
 						name="mdi:fire"
-						class="size-5 text-warning"
+						class="size-6 text-warning"
 					/>
-					<h3 class="text-sm font-semibold m-0! uppercase tracking-wide opacity-80">
-						Your Journeys
-					</h3>
+					<h3 class="text-sm font-semibold m-0! tracking-wide opacity-80">Your Journeys</h3>
 				</div>
 				<span class="text-xs opacity-60">resets after 48h of inactivity</span>
 			</div>
