@@ -68,6 +68,15 @@
 				</IonButton>
 			</div>
 
+			<p
+				v-if="user?.account.email && codeCountdownLabel"
+				class="text-xs text-gray-600 dark:text-gray-300"
+				:class="codeExpired ? 'text-red-500 dark:text-red-400 font-medium' : ''"
+				aria-live="polite"
+			>
+				{{ codeCountdownLabel }}
+			</p>
+
 			<IonText
 				v-if="errorMessage"
 				color="danger"
@@ -87,6 +96,39 @@ const { impactLight, notifySuccess, notifyWarning, notifyError } = useAppHaptics
 const codeInput = ref('');
 const errorMessage = ref('');
 const loading = ref(false);
+
+// server TTL is 15min — we only show the countdown after a successful resend,
+// since we don't know the original send time on first mount
+const CODE_TTL_MS = 15 * 60 * 1000;
+const codeExpiresAt = ref<number | null>(null);
+const now = ref(Date.now());
+let tickHandle: ReturnType<typeof setInterval> | null = null;
+
+const codeExpired = computed(
+	() => codeExpiresAt.value !== null && now.value >= codeExpiresAt.value
+);
+const codeCountdownLabel = computed(() => {
+	if (codeExpiresAt.value === null) return '';
+	const remainingMs = codeExpiresAt.value - now.value;
+	if (remainingMs <= 0) return 'This code expired — request a new one.';
+	const total = Math.floor(remainingMs / 1000);
+	const m = Math.floor(total / 60)
+		.toString()
+		.padStart(1, '0');
+	const s = (total % 60).toString().padStart(2, '0');
+	return `Code expires in ${m}:${s}`;
+});
+
+onMounted(() => {
+	tickHandle = setInterval(() => {
+		now.value = Date.now();
+	}, 1000);
+});
+
+onBeforeUnmount(() => {
+	if (tickHandle) clearInterval(tickHandle);
+	tickHandle = null;
+});
 
 const emit = defineEmits<{
 	verified: [];
@@ -108,6 +150,8 @@ async function resendVerification() {
 	try {
 		const res = await sendVerificationEmail();
 		if (res.success) {
+			codeExpiresAt.value = Date.now() + CODE_TTL_MS;
+			now.value = Date.now();
 			notifySuccess();
 			await Toast.show({
 				text: 'Verification email sent.',
