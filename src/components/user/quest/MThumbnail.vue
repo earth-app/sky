@@ -76,6 +76,7 @@
 						<IonButton
 							fill="clear"
 							color="danger"
+							aria-label="Close upgrade prompt"
 							@click="premiumOpen = false"
 						>
 							<UIcon

@@ -6,6 +6,7 @@
 			:router-link="`/tabs/activities/${activity.id}`"
 			fill="clear"
 			class="rounded-full w-8 h-8 flex items-center justify-center"
+			:aria-label="`View ${activity.name}`"
 		>
 			<UIcon
 				:name="activity.fields['icon'] || 'mdi:earth'"

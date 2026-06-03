@@ -13,6 +13,7 @@
 						color="danger"
 						size="small"
 						:disabled="disabled"
+						:aria-label="`Remove question ${i + 1}`"
 						@click="removeQuestion(i)"
 					>
 						<UIcon
@@ -100,6 +101,7 @@
 							color="danger"
 							size="small"
 							:disabled="disabled"
+							aria-label="Remove option"
 							@click="removeOption(i, j)"
 						>
 							<UIcon
