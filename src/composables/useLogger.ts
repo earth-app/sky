@@ -432,7 +432,7 @@ export async function attachAppLifecycle(): Promise<() => void> {
 	if (!isClient() || !isNative()) return () => {};
 	try {
 		const handle = await CapApp.addListener('appStateChange', (state) => {
-			info('app.lifecycle', state.isActive ? 'resume' : 'pause', { isActive: state.isActive });
+			logInfo('app.lifecycle', state.isActive ? 'resume' : 'pause', { isActive: state.isActive });
 		});
 		return () => {
 			void handle.remove().catch(() => {});

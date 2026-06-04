@@ -101,6 +101,7 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { com } from '@earth-app/ocean';
+import { capitalizeFully } from 'utils';
 
 const emit = defineEmits<{
 	(event: 'prompt-created', prompt: Prompt): void;

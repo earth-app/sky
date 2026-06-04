@@ -199,7 +199,7 @@ async function loadPromptForView() {
 
 	loadedFromOffline.value = false;
 	await fetch();
-	currentPrompt.value = prompt.value;
+	currentPrompt.value = prompt.value || null;
 }
 
 watch(

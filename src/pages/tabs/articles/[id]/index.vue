@@ -231,7 +231,7 @@ async function loadArticleForView() {
 	loadedFromOffline.value = false;
 	relatedLoaded.value = false;
 	await fetch();
-	currentArticle.value = article.value;
+	currentArticle.value = article.value || null;
 }
 
 watch(
