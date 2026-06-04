@@ -72,7 +72,7 @@
 					kind="article"
 					variant="countdown"
 					:expires-at="articleExpiresAt"
-					class="w-full max-w-2xl px-4 mt-2"
+					class="w-full max-w-2xl px-4 mt-2 min-h-24"
 				/>
 				<ArticleMPage :article="currentArticle" />
 				<!-- per-article mood bucket; MoodSpark is the safest detail-page widget (no activity context needed) -->

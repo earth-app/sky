@@ -5,6 +5,7 @@
 				kind="prompt"
 				variant="banner"
 				color="warning"
+				class="min-h-24"
 			/>
 			<IonTextarea
 				label="Prompt"

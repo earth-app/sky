@@ -5,6 +5,7 @@
 			kind="event"
 			variant="banner"
 			color="info"
+			class="min-h-24"
 		/>
 		<UForm
 			:state="state"

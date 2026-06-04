@@ -71,7 +71,7 @@
 				kind="prompt"
 				variant="countdown"
 				:expires-at="promptExpiresAt"
-				class="w-full max-w-2xl mx-auto px-4 mt-2"
+				class="w-full max-w-2xl mx-auto px-4 mt-2 min-h-24"
 			/>
 			<PromptMPage
 				:prompt="currentPrompt"
