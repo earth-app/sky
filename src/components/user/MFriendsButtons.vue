@@ -1,6 +1,5 @@
 <template>
 	<div
-		v-if="user"
 		id="friends-buttons"
 		class="flex flex-col items-center p-4 min-w-full space-y-2"
 	>
@@ -24,7 +23,7 @@
 			color="primary"
 			fill="solid"
 			size="small"
-			:disabled="friendsLoading"
+			:disabled="friendsLoading || atMaxCircle"
 			class="w-full"
 			@click="addCurrentToCircle"
 		>
@@ -76,18 +75,19 @@ const props = defineProps<{
 	user: User;
 }>();
 
-const { user } = useAuth();
+// `user` in template refers to props.user (the profile being viewed); auth user is `currentUser`
+const { user: currentUser } = useAuth();
 const { addFriend, removeFriend, addToCircle, removeFromCircle } = useFriends();
 const { notifyError } = useAppHaptics();
 
 const friendsLoading = ref(false);
 const circleLoading = ref(false);
 const isThisUser = computed(() => {
-	return user.value?.id === props.user.id;
+	return currentUser.value?.id === props.user.id;
 });
 const atMaxCircle = computed(() => {
-	const count = user.value?.circle_count || 0;
-	const max = user.value?.max_circle_count || 0;
+	const count = currentUser.value?.circle_count || 0;
+	const max = currentUser.value?.max_circle_count || 0;
 
 	return count >= max;
 });
@@ -175,9 +175,9 @@ async function removeCurrentFriend() {
 async function addCurrentToCircle() {
 	if (isThisUser.value) return;
 
-	if (atMaxCircle) {
+	if (atMaxCircle.value) {
 		await Toast.show({
-			text: `You have reached the maximum circle size of ${user.value?.max_circle_count}. Remove someone from your circle to add a new friend.`,
+			text: `You have reached the maximum circle size of ${currentUser.value?.max_circle_count}. Remove someone from your circle to add a new friend.`,
 			duration: 'long'
 		});
 		return;
