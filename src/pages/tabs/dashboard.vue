@@ -339,6 +339,8 @@
 				</IonContent>
 			</IonModal>
 		</IonContent>
+
+		<MScrollCue :scroll-container="scrollContainerEl" />
 	</IonPage>
 </template>
 
@@ -384,6 +386,8 @@ const motdColor = computed(() => {
 });
 
 const contentRef = ref<any>(null);
+// IonContent's inner scroll element resolved post-mount; MScrollCue attaches its listener to it
+const scrollContainerEl = ref<HTMLElement | null>(null);
 const textSizePromptRef = ref<{ maybeOpen: () => void } | null>(null);
 const feedItems = ref<FeedItem[]>([]);
 // data can transiently empty during refetch, outer filter + inner v-if guards belt-and-suspenders
@@ -889,6 +893,20 @@ onMounted(async () => {
 
 	await nextTick();
 	await refreshFeed(0);
+
+	// resolve IonContent's inner scroll element so MScrollCue can listen for scroll dismissal
+	try {
+		const rawRef = contentRef.value as {
+			getScrollElement?: () => Promise<HTMLElement | null>;
+			$el?: { getScrollElement?: () => Promise<HTMLElement | null> };
+		} | null;
+		const target = rawRef?.getScrollElement ? rawRef : rawRef?.$el;
+		if (target?.getScrollElement) {
+			scrollContainerEl.value = await target.getScrollElement();
+		}
+	} catch {
+		// fall back to window scroll inside MScrollCue
+	}
 
 	if (user.value && !hasCompleted('welcome')) {
 		// Text-size prompt fires first; the welcome tour only starts AFTER it
