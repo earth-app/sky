@@ -11,19 +11,25 @@
 		"
 	>
 		<div class="flex flex-col items-center gap-1 w-full">
-			<div class="relative inline-flex items-center justify-center">
-				<IonSkeletonText
-					v-if="previewLoading"
-					animated
-					class="size-16 rounded-full m-0!"
-				/>
-				<UAvatar
-					v-else
-					:src="url"
-					:alt="props.cosmeticKey"
-					size="xl"
-					:class="props.animated && !prefersReducedMotion ? 'cosmetic-animated' : ''"
-				/>
+			<div class="relative inline-flex items-center justify-center size-10">
+				<Transition
+					name="cosmetic-preview"
+					mode="out-in"
+				>
+					<IonSkeletonText
+						v-if="previewLoading"
+						animated
+						class="size-10 rounded-full m-0!"
+					/>
+					<UAvatar
+						v-else
+						:key="url"
+						:src="url"
+						:alt="props.cosmeticKey"
+						size="xl"
+						:class="props.animated && !prefersReducedMotion ? 'cosmetic-animated' : ''"
+					/>
+				</Transition>
 			</div>
 			<h3 class="font-semibold text-xs! m-0! text-center line-clamp-2 min-h-8">
 				{{ cosmeticName }}
@@ -198,9 +204,25 @@ onUnmounted(() => {
 	}
 }
 
+/* smooth swap when preview swaps in (skeleton -> generic -> self preview) */
+.cosmetic-preview-enter-active,
+.cosmetic-preview-leave-active {
+	transition: opacity 200ms ease;
+}
+
+.cosmetic-preview-enter-from,
+.cosmetic-preview-leave-to {
+	opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.cosmetic-animated {
 		animation: none;
+	}
+
+	.cosmetic-preview-enter-active,
+	.cosmetic-preview-leave-active {
+		transition: none;
 	}
 }
 </style>
