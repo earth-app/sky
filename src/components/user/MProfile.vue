@@ -192,7 +192,7 @@
 			<div
 				v-if="friends.length > 0"
 				id="user-friends"
-				class="flex flex-col items-center"
+				class="flex flex-col items-center w-full"
 			>
 				<h2 class="text-lg! my-0! mb-2">Friends</h2>
 				<MInfoCardGroup
@@ -214,7 +214,7 @@
 
 			<div
 				v-if="prompts.length > 0"
-				class="flex flex-col m-2"
+				class="flex flex-col items-center m-2 w-full"
 			>
 				<h2 class="text-lg! my-0! mb-2">Prompts Created</h2>
 
@@ -234,7 +234,10 @@
 				</MInfoCardGroup>
 			</div>
 
-			<div v-if="articles.length > 0">
+			<div
+				v-if="articles.length > 0"
+				class="flex flex-col items-center w-full"
+			>
 				<h2 class="text-lg! my-0! mb-2">Articles Created</h2>
 
 				<MInfoCardGroup
@@ -260,7 +263,7 @@
 			>
 				<h2 class="text-lg! my-0! mb-2">Events Calendar</h2>
 
-				<IonCard class="mt-8">
+				<IonCard class="mt-8 w-full min-w-0 border-2! border-gray-300! light:border-gray-600!">
 					<div class="flex flex-col items-center mt-4 w-full">
 						<UCalendar
 							v-model="selectedDate"
