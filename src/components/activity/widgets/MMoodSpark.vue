@@ -13,19 +13,22 @@
 		<IonCardContent class="pt-2 pb-3">
 			<div
 				v-if="!hasVoted"
-				class="grid grid-cols-6 gap-1"
+				class="grid grid-cols-3 gap-2"
 			>
-				<IonButton
+				<button
 					v-for="emoji in EMOJIS"
 					:key="emoji"
-					fill="clear"
-					size="default"
+					type="button"
 					:disabled="loading"
-					class="text-2xl aspect-square m-0"
+					:aria-label="`Vote ${MOOD_LABELS[emoji]}`"
+					class="flex flex-col items-center gap-1 py-2 rounded-lg border border-medium/30 bg-medium/5 active:scale-95 transition-transform disabled:opacity-50"
 					@click="onVote(emoji)"
 				>
-					{{ emoji }}
-				</IonButton>
+					<span class="text-3xl">{{ emoji }}</span>
+					<span class="text-[10px] uppercase tracking-wide text-medium">{{
+						MOOD_LABELS[emoji]
+					}}</span>
+				</button>
 			</div>
 
 			<div
@@ -69,7 +72,6 @@
 
 <script setup lang="ts">
 import {
-	IonButton,
 	IonCard,
 	IonCardContent,
 	IonCardHeader,
@@ -98,6 +100,15 @@ const emit = defineEmits<{
 const { snapshot, hasVoted, vote, fetchSnapshot, EMOJIS } = useMood(() => props.topic);
 const haptics = useAppHaptics();
 const { showInfoToast, showErrorToast } = useNotify();
+
+const MOOD_LABELS: Record<MoodEmoji, string> = {
+	'😍': 'Love',
+	'😊': 'Good',
+	'🤔': 'Curious',
+	'😐': 'Meh',
+	'😟': 'Worried',
+	'😤': 'Frustrated'
+};
 
 const myVote = ref<MoodEmoji | null>(null);
 const loading = ref(false);
