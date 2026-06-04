@@ -11,16 +11,25 @@
 		"
 	>
 		<div class="flex flex-col items-center gap-1 w-full">
-			<UAvatar
-				:src="url"
-				:alt="props.cosmeticKey"
-				size="xl"
-			/>
+			<div class="relative inline-flex items-center justify-center">
+				<IonSkeletonText
+					v-if="previewLoading"
+					animated
+					class="size-16 rounded-full m-0!"
+				/>
+				<UAvatar
+					v-else
+					:src="url"
+					:alt="props.cosmeticKey"
+					size="xl"
+					:class="props.animated && !prefersReducedMotion ? 'cosmetic-animated' : ''"
+				/>
+			</div>
 			<h3 class="font-semibold text-xs! m-0! text-center line-clamp-2 min-h-8">
 				{{ cosmeticName }}
 			</h3>
 		</div>
-		<div class="flex justify-center gap-2">
+		<div class="flex justify-center gap-1 flex-wrap">
 			<UBadge
 				v-if="props.rarity"
 				:color="rarityColor"
@@ -28,6 +37,16 @@
 				size="sm"
 			>
 				{{ capitalizeFully(props.rarity) }}
+			</UBadge>
+
+			<UBadge
+				v-if="props.animated"
+				color="warning"
+				variant="soft"
+				icon="mdi:auto-fix"
+				size="sm"
+			>
+				Animated
 			</UBadge>
 
 			<UBadge
@@ -62,6 +81,7 @@
 </template>
 
 <script setup lang="ts">
+import { IonSkeletonText } from '@ionic/vue';
 import { capitalizeFully } from 'utils';
 
 const props = withDefaults(
@@ -70,15 +90,21 @@ const props = withDefaults(
 		price?: number;
 		rarity?: AvatarCosmetic['rarity'];
 		state?: 'selected' | 'available' | 'locked';
+		animated?: boolean;
+		withSelf?: boolean;
 	}>(),
 	{
 		price: 0,
-		state: 'locked'
+		state: 'locked',
+		animated: false,
+		withSelf: false
 	}
 );
 
 const avatarStore = useAvatarStore();
 const url = ref<string>('/earth-app.png');
+const previewLoading = ref(false);
+const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
 const numberFormatter = new Intl.NumberFormat();
 
@@ -101,8 +127,33 @@ const rarityColor = computed(() => {
 });
 
 async function updatePreview(cosmeticKey: AvatarCosmetic['key']) {
-	const preview = await avatarStore.previewCosmetic(cosmeticKey);
-	url.value = preview || '/earth-app.png';
+	if (!cosmeticKey) return;
+
+	// belt-and-suspenders: never let the skeleton hang if either call throws
+	previewLoading.value = true;
+	try {
+		const tasks: Promise<string | undefined>[] = [avatarStore.previewCosmetic(cosmeticKey)];
+
+		if (props.withSelf) {
+			tasks.push(avatarStore.previewCosmeticWithSelf(cosmeticKey));
+		}
+
+		const results = await Promise.allSettled(tasks);
+
+		const selfResult = props.withSelf
+			? results[1]?.status === 'fulfilled'
+				? results[1].value
+				: undefined
+			: undefined;
+		const baseResult = results[0]?.status === 'fulfilled' ? results[0].value : undefined;
+
+		url.value = selfResult || baseResult || '/earth-app.png';
+	} catch (error) {
+		console.warn(`Failed to preview cosmetic ${cosmeticKey}:`, error);
+		url.value = '/earth-app.png';
+	} finally {
+		previewLoading.value = false;
+	}
 }
 
 onMounted(() => {
@@ -116,9 +167,40 @@ watch(
 	}
 );
 
+watch(
+	() => props.withSelf,
+	() => {
+		// re-resolve when the parent flips withSelf on after mount
+		void updatePreview(props.cosmeticKey);
+	}
+);
+
 onUnmounted(() => {
 	if (url.value && url.value.startsWith('blob:')) {
 		URL.revokeObjectURL(url.value);
 	}
 });
 </script>
+
+<style scoped>
+.cosmetic-animated {
+	animation: cosmetic-spin 8s linear infinite;
+	transform-origin: center;
+	will-change: transform;
+}
+
+@keyframes cosmetic-spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cosmetic-animated {
+		animation: none;
+	}
+}
+</style>

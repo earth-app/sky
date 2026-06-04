@@ -327,6 +327,7 @@
 									:state="cosmetic.state"
 									:rarity="cosmetic.rarity"
 									:price="cosmetic.price"
+									:animated="cosmetic.animated"
 								/>
 							</button>
 						</div>
@@ -574,6 +575,8 @@
 						state="available"
 						:rarity="selectedCosmeticForPurchase.rarity"
 						:price="selectedCosmeticForPurchase.price"
+						:animated="selectedCosmeticForPurchase.animated"
+						:with-self="hasOwnAvatar"
 					/>
 					<p class="text-sm text-gray-500">
 						{{ formatPoints(selectedCosmeticForPurchase.price) }} points
@@ -880,6 +883,13 @@ const isCosmeticsCollapsed = ref(false);
 const selectedCosmeticForPurchase = computed(() => {
 	if (!selectedCosmeticKey.value) return null;
 	return cosmetics.value.find((cosmetic) => cosmetic.key === selectedCosmeticKey.value) || null;
+});
+
+// gate the "your photo + this cosmetic" modal preview on having a remote avatar
+// to combine against; otherwise the card falls back to the generic preview
+const hasOwnAvatar = computed(() => {
+	const url = props.user?.account?.avatar_url;
+	return !!url && (url.startsWith('http://') || url.startsWith('https://'));
 });
 
 const selectedPurchaseLoading = computed(() => {
@@ -1455,11 +1465,8 @@ async function handlePurchaseClick(cosmeticKey: AvatarCosmetic['key']) {
 
 		if (res.success) {
 			await Promise.all([fetchPoints(), avatarStore.fetchCosmeticsForUser(props.user.id)]);
-			notifySuccess();
-			await Toast.show({
-				text: `${capitalizeFully(cosmeticKey.replaceAll('_', ' '))} purchased successfully.`,
-				duration: 'short'
-			});
+			await notifySuccess();
+			await showInfoToast('Cosmetic purchased.');
 			closeCosmeticModal();
 			return;
 		}
@@ -1491,17 +1498,17 @@ async function handleSelectClick(cosmeticKey: AvatarCosmetic['key']) {
 		if (res.success) {
 			avatarOverride.value = null;
 
+			// belt-and-suspenders: local cache clear + cache-bust preload; mantle2
+			// redis is already flushed by the store after a successful set
 			const avatarUrl = props.user.account.avatar_url;
 			if (avatarUrl && avatarUrl.startsWith('http')) {
 				avatarStore.clear(avatarUrl);
+				avatarStore.preloadAvatar(avatarStore.buildAvatarCacheBust(avatarUrl));
 			}
 
 			await Promise.all([fetchUser(true), fetchAvatar(), fetchPoints()]);
-			notifySuccess();
-			await Toast.show({
-				text: 'Profile cosmetic updated.',
-				duration: 'short'
-			});
+			await notifySuccess();
+			await showInfoToast('Cosmetic equipped.');
 			closeCosmeticModal();
 			return;
 		}
