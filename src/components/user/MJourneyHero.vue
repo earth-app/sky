@@ -7,6 +7,25 @@
 			:color="theme"
 			class="m-0 p-0"
 		>
+			<div
+				v-if="dailyQuest"
+				class="px-3 pt-3"
+			>
+				<IonChip
+					:class="[
+						'm-0 daily-quest-chip',
+						!dailyQuestTapped && !prefersReducedMotion ? 'daily-quest-pulse' : ''
+					]"
+					color="primary"
+					@click="openDailyQuest"
+				>
+					<UIcon
+						name="ion:flash-outline"
+						class="size-4 mr-1"
+					/>
+					<IonLabel class="text-xs font-semibold"> Today's Quest: {{ truncatedTitle }} </IonLabel>
+				</IonChip>
+			</div>
 			<div class="flex items-center justify-between px-4 py-3">
 				<div class="flex items-center">
 					<UIcon
@@ -23,7 +42,7 @@
 					:key="row.type"
 					type="button"
 					class="flex flex-col items-center gap-1 py-3 rounded-lg transition-colors active:bg-primary/10"
-					:class="row.count > 0 ? 'bg-primary/5' : 'opacity-60'"
+					:class="cellClass(row)"
 					:aria-label="`${row.label} journey: ${row.count}. Tap to continue.`"
 					@click="onTap(row)"
 				>
@@ -34,8 +53,25 @@
 					/>
 					<span class="text-xl font-bold tabular-nums leading-none">{{ row.count }}</span>
 					<span class="text-xs opacity-80">{{ row.label }}</span>
+					<span
+						v-if="row.expiringSoon"
+						class="text-[10px] font-semibold text-red-500"
+						>Expires Soon</span
+					>
 				</button>
 			</div>
+			<button
+				v-if="showQuestCta"
+				type="button"
+				class="mx-3 mb-3 flex items-center justify-center gap-2 py-2 rounded-lg bg-primary/10 active:bg-primary/20 text-primary text-sm font-medium"
+				@click="onTapQuestCta"
+			>
+				<UIcon
+					name="mdi:flag-checkered"
+					class="size-4"
+				/>
+				<span>Try a Quest to Keep Your Streak Alive</span>
+			</button>
 		</IonCard>
 	</div>
 </template>
@@ -63,10 +99,60 @@ const ROWS: { type: JourneyType; label: string; icon: string; cta: string }[] = 
 
 const { user, fetchCurrentJourney } = useAuth(makeMServerRequest);
 const ionRouter = useIonRouter();
+const { selection } = useAppHaptics();
+const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
+
+// today's quest chip — deterministic per-day, shared with crust NavBar
+const {
+	quest: dailyQuest,
+	isTapped: dailyQuestTapped,
+	markTapped: markDailyQuestTapped
+} = useDailyQuest();
+
+const truncatedTitle = computed(() => {
+	const t = dailyQuest.value?.title ?? '';
+	return t.length > 30 ? `${t.slice(0, 27).trimEnd()}…` : t;
+});
+
+function openDailyQuest() {
+	if (!dailyQuest.value) return;
+	void selection();
+	markDailyQuestTapped();
+	ionRouter.navigate(`/tabs/quests/${dailyQuest.value.id}`, 'forward', 'push');
+}
+
+const STREAK_TTL_MS = 172800000;
+const WARN_THRESHOLD_MS = 12 * 60 * 60 * 1000;
 
 const counts = ref<Record<JourneyType, number>>({ article: 0, prompt: 0, event: 0 });
+const lastWrites = ref<Record<JourneyType, number>>({ article: 0, prompt: 0, event: 0 });
+const now = ref(Date.now());
+let tickHandle: ReturnType<typeof setInterval> | null = null;
 
-const rows = computed(() => ROWS.map((r) => ({ ...r, count: counts.value[r.type] })));
+const rows = computed(() =>
+	ROWS.map((r) => {
+		const lw = lastWrites.value[r.type];
+		const remaining = lw ? lw + STREAK_TTL_MS - now.value : 0;
+		const expiringSoon = counts.value[r.type] > 0 && remaining > 0 && remaining < WARN_THRESHOLD_MS;
+		return { ...r, count: counts.value[r.type], expiringSoon };
+	})
+);
+
+const showQuestCta = computed(() => {
+	const anyExpiring = rows.value.some((r) => r.expiringSoon);
+	const allZero = rows.value.every((r) => r.count === 0);
+	return anyExpiring || allZero;
+});
+
+function cellClass(row: { count: number; expiringSoon: boolean }) {
+	if (row.expiringSoon) return 'bg-red-500/10';
+	if (row.count > 0) return 'bg-primary/5';
+	return 'opacity-60';
+}
+
+function onTapQuestCta() {
+	ionRouter.push('/tabs/quests');
+}
 
 // only show the card once we have at least one fetch returned to avoid a flash of zeros
 const hasLoaded = ref(false);
@@ -82,7 +168,10 @@ async function loadJourneys() {
 		const res = results[i];
 		const row = ROWS[i];
 		if (!res || !row) continue;
-		if (valid(res)) counts.value[row.type] = res.data?.count ?? 0;
+		if (valid(res)) {
+			counts.value[row.type] = res.data?.count ?? 0;
+			lastWrites.value[row.type] = (res.data as { lastWrite?: number })?.lastWrite ?? 0;
+		}
 	}
 	hasLoaded.value = true;
 }
@@ -95,13 +184,19 @@ function onTap(row: { type: JourneyType; cta: string }) {
 function onJourneyUpdated(ev: Event) {
 	const detail = (ev as CustomEvent<{ type: JourneyType; count: number }>).detail;
 	if (!detail) return;
-	if (detail.type in counts.value) counts.value[detail.type] = detail.count;
+	if (detail.type in counts.value) {
+		counts.value[detail.type] = detail.count;
+		lastWrites.value[detail.type] = Date.now();
+	}
 }
 
 onMounted(() => {
 	void loadJourneys();
 	if (import.meta.client) {
 		window.addEventListener('earth-app:journey-updated', onJourneyUpdated);
+		tickHandle = setInterval(() => {
+			now.value = Date.now();
+		}, 60000);
 	}
 });
 
@@ -109,6 +204,7 @@ onBeforeUnmount(() => {
 	if (import.meta.client) {
 		window.removeEventListener('earth-app:journey-updated', onJourneyUpdated);
 	}
+	if (tickHandle) clearInterval(tickHandle);
 });
 
 watch(
@@ -118,3 +214,25 @@ watch(
 	}
 );
 </script>
+
+<style scoped>
+/* sky has no shared PulseRing primitive — inline the keyframe locally */
+.daily-quest-chip {
+	position: relative;
+	overflow: visible;
+}
+.daily-quest-pulse {
+	animation: daily-quest-pulse 1.6s ease-out infinite;
+}
+@keyframes daily-quest-pulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0.55);
+	}
+	80% {
+		box-shadow: 0 0 0 10px rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0);
+	}
+}
+</style>
