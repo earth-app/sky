@@ -1,6 +1,8 @@
 <template>
-	<IonCard class="m-0 rounded-xl overflow-hidden">
-		<IonCardHeader class="pb-1">
+	<IonCard
+		class="m-0! p-2 rounded-xl! border-2 border-gray-700 light:border-gray-300 overflow-hidden"
+	>
+		<IonCardHeader class="flex items-center pb-4">
 			<div class="flex items-center gap-2">
 				<IonIcon
 					:icon="pulseOutline"
@@ -8,7 +10,7 @@
 				/>
 				<IonCardSubtitle class="uppercase tracking-wide text-xs">Mood Spark</IonCardSubtitle>
 			</div>
-			<IonCardTitle class="text-base font-medium mt-1">{{ question }}</IonCardTitle>
+			<IonCardTitle class="text-base! text-center font-medium! my-2!">{{ question }}</IonCardTitle>
 		</IonCardHeader>
 		<IonCardContent class="pt-2 pb-3">
 			<div
@@ -21,7 +23,7 @@
 					type="button"
 					:disabled="loading"
 					:aria-label="`Vote ${MOOD_LABELS[emoji]}`"
-					class="flex flex-col items-center gap-1 py-2 rounded-lg border border-medium/30 bg-medium/5 active:scale-95 transition-transform disabled:opacity-50"
+					class="flex flex-col items-center gap-1 py-2! rounded-lg! border-2! border-gray-700! light:border-gray-300! bg-accented/5! active:scale-95! transition-transform disabled:opacity-50"
 					@click="onVote(emoji)"
 				>
 					<span class="text-3xl">{{ emoji }}</span>
