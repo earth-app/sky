@@ -4,6 +4,7 @@
 			<component
 				:is="resolved"
 				v-if="resolved"
+				v-bind="extraProps"
 				:topic="topic"
 			/>
 		</div>
@@ -44,4 +45,14 @@ const COMPONENTS: Record<FeedWidgetKind, ReturnType<typeof defineAsyncComponent>
 };
 
 const resolved = computed(() => COMPONENTS[props.kind] ?? null);
+
+// MMiniLeaderboard needs a journey type. rotate per UTC day for variety.
+const LEADERBOARD_TYPES = ['article', 'prompt', 'event'] as const;
+const extraProps = computed<Record<string, unknown>>(() => {
+	if (props.kind === 'MiniLeaderboard') {
+		const day = Math.floor(Date.now() / 86_400_000);
+		return { type: LEADERBOARD_TYPES[day % LEADERBOARD_TYPES.length] };
+	}
+	return {};
+});
 </script>
