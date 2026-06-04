@@ -1,7 +1,7 @@
 <template>
 	<IonCard
 		v-if="hasContent"
-		class="info-card-group mt-6 shadow-xl rounded-lg w-full p-4"
+		class="info-card-group mt-6 shadow-xl rounded-lg w-full max-w-full min-w-0 overflow-hidden p-4"
 	>
 		<div class="flex space-x-1 items-start mb-4">
 			<div
@@ -38,12 +38,15 @@
 		</div>
 		<div
 			ref="carouselViewport"
-			class="relative overflow-hidden touch-pan-y"
+			class="relative overflow-hidden touch-pan-y w-full max-w-full min-w-0"
 		>
 			<div
 				ref="carouselContainer"
-				class="flex flex-row items-stretch flex-nowrap transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing *:shrink-0 *:w-full *:h-full *:px-2"
-				:style="{ transform: `translateX(-${currentSlide * slideWidth}px)` }"
+				class="flex flex-row items-stretch flex-nowrap transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing *:shrink-0 *:h-full *:px-2 *:w-(--slide-width) w-full"
+				:style="{
+					transform: `translateX(-${currentSlide * slideWidth}px)`,
+					'--slide-width': slideWidth ? `${slideWidth}px` : '100%'
+				}"
 				@mousedown="startDrag"
 				@mousemove="onDrag"
 				@mouseup="endDrag"
@@ -72,7 +75,7 @@
 				</IonButton>
 
 				<div
-					v-if="!showProgress && showDots && totalSlides > 1"
+					v-if="!showProgress && showDots && totalSlides > 1 && !indicatorOverflow"
 					class="flex items-center justify-center gap-2"
 				>
 					<button
@@ -84,6 +87,14 @@
 						:aria-label="`Go to slide ${index}`"
 						@click="goToSlide(index - 1)"
 					/>
+				</div>
+
+				<div
+					v-if="indicatorOverflow && totalSlides > 1"
+					class="flex items-center justify-center px-3 text-xs text-gray-500 dark:text-gray-400 tabular-nums"
+					:aria-label="`Slide ${currentSlide + 1} of ${totalSlides}`"
+				>
+					{{ currentSlide + 1 }} / {{ totalSlides }}
 				</div>
 
 				<IonButton
@@ -101,7 +112,7 @@
 			</div>
 
 			<div
-				v-if="showProgress"
+				v-if="showProgress && !indicatorOverflow"
 				class="w-full px-8"
 			>
 				<IonProgressBar
@@ -171,6 +182,10 @@ const progress = computed(() => {
 	return currentSlide.value / (totalSlides.value - 1);
 });
 
+// dots become unmanageable and progress is noisy past ~10 items — fall back to a compact counter
+const MAX_INDICATOR_SLIDES = 10;
+const indicatorOverflow = computed(() => totalSlides.value > MAX_INDICATOR_SLIDES);
+
 function calculateSlides() {
 	if (!carouselContainer.value || !carouselViewport.value) return;
 
@@ -178,9 +193,16 @@ function calculateSlides() {
 	if (children.length === 0) return;
 
 	const viewportWidth = carouselViewport.value.clientWidth;
+	if (viewportWidth <= 0) return;
 
-	slideWidth.value = viewportWidth;
-	totalSlides.value = children.length;
+	// only write when the value actually changed; otherwise ResizeObserver + reactive width writes
+	// each other into a churn loop (each child width update re-fires ResizeObserver on the viewport)
+	if (Math.abs(slideWidth.value - viewportWidth) >= 1) {
+		slideWidth.value = viewportWidth;
+	}
+	if (totalSlides.value !== children.length) {
+		totalSlides.value = children.length;
+	}
 }
 
 function goToSlide(index: number) {
@@ -327,10 +349,21 @@ const endTouch = () => {
 	}
 };
 
+// rAF-coalesce resize callbacks so a width tick doesn't fire a synchronous re-measure inside the
+// same frame (which is what triggered the flicker loop on the events-calendar layout)
+let pendingResize: number | null = null;
+function scheduleCalculate() {
+	if (pendingResize !== null) return;
+	pendingResize = requestAnimationFrame(() => {
+		pendingResize = null;
+		calculateSlides();
+	});
+}
+
 onMounted(() => {
 	calculateSlides();
 	const resizeObserver = new ResizeObserver(() => {
-		calculateSlides();
+		scheduleCalculate();
 	});
 
 	if (carouselViewport.value) {
@@ -339,13 +372,11 @@ onMounted(() => {
 
 	onUnmounted(() => {
 		resizeObserver.disconnect();
+		if (pendingResize !== null) {
+			cancelAnimationFrame(pendingResize);
+			pendingResize = null;
+		}
 	});
-});
-
-watchEffect(() => {
-	if (carouselContainer.value) {
-		calculateSlides();
-	}
 });
 </script>
 

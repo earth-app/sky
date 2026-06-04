@@ -126,21 +126,38 @@
 				v-if="youtubeId"
 				hydrate-on-visible
 			>
-				<iframe
-					:src="`https://www.youtube.com/embed/${youtubeId}?autoplay=0&mute=1&controls=1&rel=0&modestbranding=1&origin=${origin}`"
-					class="w-full min-h-64 object-cover rounded-lg mb-2"
-					allow="
-						accelerometer;
-						autoplay;
-						clipboard-write;
-						encrypted-media;
-						gyroscope;
-						picture-in-picture;
-					"
-					allowfullscreen
-					loading="lazy"
-					referrerpolicy="strict-origin-when-cross-origin"
-				></iframe>
+				<div class="relative w-full min-h-64 mb-2">
+					<iframe
+						v-if="!youtubeFailed"
+						:src="youtubeEmbedSrc"
+						:title="`YouTube video for ${title}`"
+						class="w-full min-h-64 object-cover rounded-lg"
+						allow="
+							accelerometer;
+							autoplay;
+							clipboard-write;
+							encrypted-media;
+							gyroscope;
+							picture-in-picture;
+						"
+						allowfullscreen
+						loading="lazy"
+						referrerpolicy="strict-origin-when-cross-origin"
+						@error="youtubeFailed = true"
+					></iframe>
+					<button
+						v-else
+						type="button"
+						class="w-full min-h-64 rounded-lg flex flex-col items-center justify-center gap-2 bg-black/40 light:bg-black/10 text-sm hover:bg-black/50 transition-colors"
+						@click="openYouTubeExternally"
+					>
+						<UIcon
+							name="mdi:youtube"
+							class="size-10 text-red-500"
+						/>
+						<span class="text-center px-4">Couldn't load the player. Tap to watch on YouTube.</span>
+					</button>
+				</div>
 			</LazyClientOnly>
 			<LazyClientOnly
 				v-if="video"
@@ -400,13 +417,50 @@ const showCardImage = computed(() => Boolean(props.image && appSettings.value.ca
 
 const runtimeConfig = useRuntimeConfig();
 
-const origin = computed(() => {
-	if (import.meta.client && !Capacitor.isNativePlatform()) {
-		return encodeURIComponent(window.location.origin);
+const isNativeWebView = computed(() => {
+	if (!import.meta.client) return false;
+	if (Capacitor.isNativePlatform()) return true;
+
+	if (typeof window !== 'undefined') {
+		const host = window.location.hostname || '';
+		const proto = window.location.protocol || '';
+		if (proto === 'capacitor:' || proto === 'file:') return true;
+		if (host === 'localhost' || host === '127.0.0.1') return true;
 	}
 
-	return encodeURIComponent(runtimeConfig.public.crustBaseUrl || 'https://app.earth-app.com');
+	return false;
 });
+
+const origin = computed(() => {
+	if (isNativeWebView.value) return null;
+	if (import.meta.client) return encodeURIComponent(window.location.origin);
+	return null;
+});
+
+const youtubeEmbedSrc = computed(() => {
+	const base = `https://www.youtube-nocookie.com/embed/${props.youtubeId}`;
+	const params = [
+		'autoplay=0',
+		'mute=1',
+		'controls=1',
+		'rel=0',
+		'modestbranding=1',
+		'playsinline=1'
+	];
+	if (origin.value) params.push(`origin=${origin.value}`);
+	return `${base}?${params.join('&')}`;
+});
+
+const youtubeFailed = ref(false);
+function openYouTubeExternally() {
+	if (!props.youtubeId) return;
+	const url = `https://www.youtube.com/watch?v=${props.youtubeId}`;
+	if (Capacitor.isNativePlatform()) {
+		void Browser.open({ url });
+	} else if (typeof window !== 'undefined') {
+		window.open(url, '_blank', 'noopener');
+	}
+}
 
 function goTo(url: string) {
 	navigateTo(url, { external: url.startsWith('http') });
