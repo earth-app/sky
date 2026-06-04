@@ -1,7 +1,15 @@
 <template>
 	<IonCard
 		:color="theme"
-		class="p-2 mb-4"
+		:class="[
+			'p-2 mb-4 notif-card',
+			enterClass,
+			isBadgeSource && !notification.read ? 'notif-badge-border' : '',
+			isQuestSource ? 'notif-quest-border' : '',
+			notification.read ? 'notif-read' : ''
+		]"
+		:style="enterStyle"
+		@click="haptics.selection()"
 	>
 		<IonCardHeader>
 			<div class="flex justify-between items-start mb-2">
@@ -32,9 +40,9 @@
 						class="mx-2"
 					>
 						<span
-							class="inline-block size-3 bg-blue-500 rounded-full"
+							:class="['inline-block size-3 rounded-full', unreadDotClass]"
 							title="Mark as Read"
-							@click="markAsRead"
+							@click.stop="markAsRead"
 						></span>
 					</div>
 					<UIcon
@@ -42,7 +50,7 @@
 						name="mdi:delete-outline"
 						class="size-5 text-gray-500"
 						title="Delete Notification"
-						@click="removeNotification"
+						@click.stop="removeNotification"
 					/>
 				</div>
 			</div>
@@ -76,12 +84,14 @@ import { trimString } from 'utils';
 const props = defineProps<{
 	notification: UserNotification;
 	additional?: boolean;
+	index?: number;
 }>();
 
 const emit = defineEmits<{
 	(event: 'deleted', notification: UserNotification): void;
 }>();
 const { markNotificationRead } = useNotifications();
+const haptics = useAppHaptics();
 
 const timestamp = computed(() => {
 	const time = DateTime.fromMillis(props.notification.created_at * 1000);
@@ -95,8 +105,47 @@ const fullTimestamp = computed(() => {
 
 const routerLink = computed(() => `/tabs/profile/notifications/${props.notification.id}`);
 
+// source-driven matrix — same shape as crust but Ionic-friendly (no canvas, CSS only)
+const isQuestSource = computed(() => {
+	const src = (props.notification.source || '').toLowerCase();
+	return src === 'quest' || /quest/i.test(props.notification.title);
+});
+const isBadgeSource = computed(() => {
+	const src = (props.notification.source || '').toLowerCase();
+	return src === 'badge' || props.notification.title === 'New Badge Unlocked!';
+});
+const isFriendSource = computed(() => {
+	const src = (props.notification.source || '').toLowerCase();
+	return src === 'friend_request' || src === 'friend_accept' || src === 'friend';
+});
+const isMentionSource = computed(() => {
+	const src = (props.notification.source || '').toLowerCase();
+	return src === 'mention' || src === 'reply';
+});
+
+const enterClass = computed(() => {
+	if (props.notification.type === 'error' || isMentionSource.value) return 'notif-enter-shake';
+	if (isQuestSource.value) return 'notif-enter-quest';
+	if (isBadgeSource.value) return 'notif-enter-fade';
+	if (isFriendSource.value) return 'notif-enter-friend';
+	return 'notif-enter-fade';
+});
+
+const enterStyle = computed(() => {
+	const delay = (props.index ?? 0) * 80;
+	return delay > 0 ? { animationDelay: `${delay}ms` } : undefined;
+});
+
+const unreadDotClass = computed(() => {
+	if (props.notification.type === 'error') return 'bg-red-500 notif-dot-error';
+	if (props.notification.type === 'warning') return 'bg-yellow-500 notif-dot-warning';
+	if (isFriendSource.value) return 'bg-blue-500 notif-dot-friend';
+	return 'bg-blue-500';
+});
+
 async function markAsRead() {
 	if (!props.notification.read) {
+		await haptics.selection();
 		const res = await markNotificationRead(props.notification.id);
 		if (!res.success) {
 			console.error('Failed to mark notification as read:', res.message);
@@ -155,3 +204,177 @@ async function removeNotification() {
 	}
 }
 </script>
+
+<style scoped>
+.notif-card {
+	transition: opacity 200ms ease;
+}
+.notif-read {
+	opacity: 0.7;
+	filter: grayscale(0.2);
+}
+
+/* default enter — plain fade */
+@keyframes notif-fade-in {
+	0% {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+.notif-enter-fade {
+	animation: notif-fade-in 320ms ease-out both;
+}
+
+/* quest enter — fade + soft glow pulse (once) */
+@keyframes notif-quest-in {
+	0% {
+		opacity: 0;
+		box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+	}
+	35% {
+		opacity: 1;
+		box-shadow: 0 0 16px 2px rgba(250, 204, 21, 0.45);
+	}
+	100% {
+		opacity: 1;
+		box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+	}
+}
+.notif-enter-quest {
+	animation: notif-quest-in 1400ms ease-out both;
+}
+/* persistent quest border while unread keeps the card distinct in the list */
+.notif-quest-border {
+	border-left: 3px solid rgba(250, 204, 21, 0.7);
+}
+
+/* badge enter — conic-gradient border via pseudo for unread */
+.notif-badge-border {
+	position: relative;
+	isolation: isolate;
+}
+.notif-badge-border::before {
+	content: '';
+	position: absolute;
+	inset: -2px;
+	border-radius: inherit;
+	padding: 2px;
+	background: conic-gradient(from 0deg, #a855f7, #f59e0b, #3b82f6, #a855f7);
+	-webkit-mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	-webkit-mask-composite: xor;
+	mask:
+		linear-gradient(#000 0 0) content-box,
+		linear-gradient(#000 0 0);
+	mask-composite: exclude;
+	animation: notif-badge-spin 8s linear infinite;
+	pointer-events: none;
+	z-index: -1;
+}
+@keyframes notif-badge-spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+/* friend enter — small pulse on the dot via class on unread span */
+@keyframes notif-friend-in {
+	0% {
+		opacity: 0;
+		transform: scale(0.96);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+.notif-enter-friend {
+	animation: notif-friend-in 320ms ease-out both;
+}
+@keyframes notif-dot-friend-pulse {
+	0%,
+	100% {
+		transform: scale(1);
+		box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
+	}
+	50% {
+		transform: scale(1.15);
+		box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+	}
+}
+.notif-dot-friend {
+	animation: notif-dot-friend-pulse 1.6s ease-out infinite;
+}
+
+/* error/mention enter — one-shot shake */
+@keyframes notif-shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	20% {
+		transform: translateX(-4px);
+	}
+	40% {
+		transform: translateX(4px);
+	}
+	60% {
+		transform: translateX(-3px);
+	}
+	80% {
+		transform: translateX(3px);
+	}
+}
+.notif-enter-shake {
+	animation: notif-shake 500ms ease-in-out both;
+}
+
+/* type-driven dot pulses for warning/error */
+@keyframes notif-dot-warning {
+	0%,
+	100% {
+		opacity: 0.55;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+.notif-dot-warning {
+	animation: notif-dot-warning 1600ms ease-in-out infinite;
+}
+@keyframes notif-dot-error {
+	0%,
+	100% {
+		opacity: 0.5;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1.15);
+	}
+}
+.notif-dot-error {
+	animation: notif-dot-error 1100ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.notif-enter-fade,
+	.notif-enter-quest,
+	.notif-enter-friend,
+	.notif-enter-shake,
+	.notif-badge-border::before,
+	.notif-dot-friend,
+	.notif-dot-warning,
+	.notif-dot-error {
+		animation: none !important;
+	}
+}
+</style>

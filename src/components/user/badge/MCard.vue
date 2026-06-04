@@ -28,7 +28,17 @@
 		</IonHeader>
 		<IonContent>
 			<div class="flex flex-col items-center gap-4 mt-12">
-				<UserBadgeDetailsHeader v-bind="badgeHeaderProps" />
+				<Transition
+					appear
+					enter-active-class="badge-header-enter"
+				>
+					<div
+						v-if="showDetails"
+						class="flex flex-col items-center"
+					>
+						<UserBadgeDetailsHeader v-bind="badgeHeaderProps" />
+					</div>
+				</Transition>
 				<span
 					v-if="'granted' in badge && badge.granted"
 					class="text-sm text-center opacity-90 mt-2 mx-10"
@@ -49,12 +59,14 @@
 					<span class="text-sm! font-semibold opacity-90 self-center"
 						>{{ Math.round(badge.progress * 100) }}%</span
 					>
-					<IonProgressBar
-						:value="badge.progress"
-						class="w-full mt-1"
-						:color="ionRarityColor"
-						status
-					/>
+					<div :class="['progress-flow-wrap', isProgressActive ? 'progress-flow-active' : '']">
+						<IonProgressBar
+							:value="badge.progress"
+							class="w-full mt-1"
+							:color="ionRarityColor"
+							status
+						/>
+					</div>
 				</div>
 
 				<div
@@ -200,6 +212,14 @@ const {
 	ensureMasteryListFetched
 } = useBadgeMastery(() => props.badge, SKY_MASTERY_BUTTON_THEME);
 
+// gradient flow only animates while progress is in motion — at 100% the bar stays solid
+const isProgressActive = computed(() => {
+	if (!('progress' in props.badge)) return false;
+	if ('granted' in props.badge && props.badge.granted) return false;
+	const p = (props.badge.progress ?? 0) * 100;
+	return p > 0 && p < 100;
+});
+
 const ionRarityColor = computed(() => {
 	switch (props.badge.rarity) {
 		case 'normal':
@@ -341,3 +361,61 @@ const masteryTour = buildBadgeMasteryTour({
 	onMasteryCtaClick: () => handleMasteryClick()
 });
 </script>
+
+<style scoped>
+/* easeOutBack float-in for the badge header — parity with crust modal */
+@keyframes badge-header-enter {
+	0% {
+		opacity: 0.4;
+		transform: translateY(18px) scale(0.85);
+	}
+	60% {
+		opacity: 1;
+		transform: translateY(-2px) scale(1.03);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+.badge-header-enter {
+	animation: badge-header-enter 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* moving sheen on the in-progress badge bar — stops at 100% via class gate */
+.progress-flow-wrap {
+	position: relative;
+	border-radius: 9999px;
+	overflow: hidden;
+}
+.progress-flow-active::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: linear-gradient(
+		90deg,
+		rgba(255, 255, 255, 0) 0%,
+		rgba(255, 255, 255, 0.18) 50%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	background-size: 200% 100%;
+	animation: badge-progress-flow 2.5s linear infinite;
+	mix-blend-mode: overlay;
+}
+@keyframes badge-progress-flow {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.badge-header-enter,
+	.progress-flow-active::after {
+		animation: none !important;
+	}
+}
+</style>

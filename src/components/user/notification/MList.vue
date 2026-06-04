@@ -53,10 +53,11 @@
 			</div>
 			<div :id="additional ? 'notifications-list' : undefined">
 				<UserNotificationMCard
-					v-for="notification in displayed"
+					v-for="(notification, idx) in displayed"
 					:key="notification.id"
 					:notification="notification"
 					:additional="additional"
+					:index="idx"
 				/>
 			</div>
 		</div>
