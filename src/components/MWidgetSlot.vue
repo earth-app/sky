@@ -26,19 +26,13 @@ const props = withDefaults(
 );
 
 const COMPONENTS: Record<FeedWidgetKind, ReturnType<typeof defineAsyncComponent>> = {
-	MoodSpark: defineAsyncComponent(() => import('~/components/activity/widgets/MMoodSpark.vue')),
-	MicroPoll: defineAsyncComponent(() => import('~/components/activity/widgets/MMicroPoll.vue')),
-	MicroQuiz: defineAsyncComponent(() => import('~/components/activity/widgets/MMicroQuiz.vue')),
-	ImpactTracker: defineAsyncComponent(
-		() => import('~/components/activity/widgets/MImpactTracker.vue')
-	),
-	MiniLeaderboard: defineAsyncComponent(
-		() => import('~/components/activity/widgets/MMiniLeaderboard.vue')
-	),
-	MicroReflection: defineAsyncComponent(
-		() => import('~/components/activity/widgets/MMicroReflection.vue')
-	),
-	RapidFlash: defineAsyncComponent(() => import('~/components/activity/widgets/MRapidFlash.vue'))
+	MoodSpark: defineAsyncComponent(() => import('~/components/widgets/MMoodSpark.vue')),
+	MicroPoll: defineAsyncComponent(() => import('~/components/widgets/MMicroPoll.vue')),
+	MicroQuiz: defineAsyncComponent(() => import('~/components/widgets/MMicroQuiz.vue')),
+	ImpactTracker: defineAsyncComponent(() => import('~/components/widgets/MImpactTracker.vue')),
+	MiniLeaderboard: defineAsyncComponent(() => import('~/components/widgets/MMiniLeaderboard.vue')),
+	MicroReflection: defineAsyncComponent(() => import('~/components/widgets/MMicroReflection.vue')),
+	RapidFlash: defineAsyncComponent(() => import('~/components/widgets/MRapidFlash.vue'))
 };
 
 const resolved = computed(() => COMPONENTS[props.kind] ?? null);

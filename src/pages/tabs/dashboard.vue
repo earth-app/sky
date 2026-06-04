@@ -304,7 +304,7 @@
 									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
-							<LazyActivityMWidgetSlot
+							<LazyMWidgetSlot
 								v-if="widgetForIndex(index)"
 								:kind="widgetForIndex(index)!"
 								topic="daily"
