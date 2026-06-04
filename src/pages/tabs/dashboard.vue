@@ -304,6 +304,12 @@
 									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
+							<LazyActivityMWidgetSlot
+								v-if="widgetForIndex(index)"
+								:kind="widgetForIndex(index)!"
+								topic="daily"
+								hydrate-on-visible
+							/>
 						</template>
 						<IonInfiniteScroll
 							@ionInfinite="onInfinite"
@@ -363,6 +369,7 @@ type FeedItem =
 type ContentType = FeedItem['type'];
 
 const { user, fetchUser, fetchRecommendedActivities } = useAuth();
+const { widgetForIndex } = useFeedWidgets();
 const { motd, fetchMotd } = useMotd();
 const { settings: appSettings, init: initSettings } = useAppSettings();
 const { startTour, startTourIfNew, hasCompleted } = useSiteTour();
