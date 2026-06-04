@@ -40,6 +40,7 @@
 		<IonRouterOutlet :animation="slide" />
 
 		<ClientOnly>
+			<MBadgeUnlockRibbon />
 			<MSiteTour
 				:steps="welcomeTour"
 				name="Welcome Tour"
