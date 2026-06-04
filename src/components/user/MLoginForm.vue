@@ -213,6 +213,8 @@ function normalizeIdentifier(raw: string): string {
 async function handleLogin() {
 	if (isSubmitting.value || !canSubmit.value) return;
 
+	useLogger().info('user.action', 'login.submit');
+
 	isSubmitting.value = true;
 	error.value = '';
 

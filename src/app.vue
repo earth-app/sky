@@ -52,17 +52,31 @@
 				v-model:open="celebrationOpen"
 				:quest-title="celebrationPayload.questTitle"
 				:points="celebrationPayload.points"
-				:badge-icon="celebrationPayload.badgeIcon"
 			>
-				<template #actions>
-					<UButton
-						color="success"
-						variant="soft"
-						icon="mdi:share-variant"
+				<template #actions="{ close }">
+					<IonButton
+						color="tertiary"
+						size="small"
 						@click="shareCelebration"
 					>
+						<UIcon
+							name="mdi:share-variant"
+							class="size-5 mr-2"
+						/>
 						Share
-					</UButton>
+					</IonButton>
+
+					<IonButton
+						color="primary"
+						size="small"
+						@click="close"
+					>
+						Keep Exploring
+						<UIcon
+							name="mdi:arrow-right"
+							class="size-5 ml-2"
+						/>
+					</IonButton>
 				</template>
 			</UserQuestCompletionOverlay>
 		</ClientOnly>

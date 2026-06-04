@@ -2,6 +2,7 @@
 	<IonModal
 		:is-open="open"
 		:backdrop-dismiss="!sending"
+		@didPresent="onPresent"
 		@didDismiss="onDismiss"
 		style="--max-height: 60%; --width: 90%; --min-width: 320px"
 	>
@@ -104,7 +105,12 @@ const promptText = computed(() => {
 	return `Add an email in your profile to ${action} and unlock account recovery, login alerts, and notifications.`;
 });
 
+function onPresent() {
+	useLogger().info('modal.open', 'email-gate');
+}
+
 function onDismiss() {
+	useLogger().info('modal.close', 'email-gate');
 	if (sending.value) return;
 	close();
 }

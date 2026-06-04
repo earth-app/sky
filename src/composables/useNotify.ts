@@ -1,4 +1,5 @@
 import { Toast } from '@capacitor/toast';
+import { logInfo, logWarn } from './useLogger';
 
 type FetchLikeError = {
 	statusCode?: number;
@@ -55,7 +56,7 @@ function extractStatus(error: FetchLikeError | undefined | null): number | null 
 	return null;
 }
 
-function extractServerMessage(error: FetchLikeError | undefined | null): string | null {
+function extractServerMessageRaw(error: FetchLikeError | undefined | null): string | null {
 	if (!error) return null;
 
 	if (typeof error.data === 'string' && error.data.trim()) {
@@ -77,7 +78,7 @@ function extractServerMessage(error: FetchLikeError | undefined | null): string 
 	return null;
 }
 
-function looksLikeRawHttpError(value: string): boolean {
+export function looksLikeRawHttpError(value: string): boolean {
 	if (!value) return false;
 	const trimmed = value.trim();
 	return RAW_BRACKET_STATUS_PATTERN.test(trimmed) || trimmed.includes('/api/');
@@ -111,7 +112,7 @@ export function formatApiError(
 
 	const fetchError = error as FetchLikeError;
 	const status = extractStatus(fetchError);
-	const serverMessage = extractServerMessage(fetchError);
+	const serverMessage = extractServerMessageRaw(fetchError);
 
 	if (serverMessage && !looksLikeRawHttpError(serverMessage)) {
 		return serverMessage;
@@ -143,6 +144,9 @@ export async function showErrorToast(
 	const { fallback, duration = 'long' } = options;
 	const text = formatApiError(error, fallback);
 
+	// surface in logs before the toast — toast plugin can fail on web
+	logWarn('toast.error', text);
+
 	try {
 		await Toast.show({ text, duration });
 	} catch {
@@ -154,9 +158,14 @@ export async function showErrorToast(
 
 export async function showInfoToast(text: string, options: { duration?: ToastDuration } = {}) {
 	if (!text) return;
+	logInfo('toast.info', text);
 	try {
 		await Toast.show({ text, duration: options.duration ?? 'short' });
 	} catch {
 		// swallow toast errors
 	}
 }
+
+// matches the crust extractor name so shared callers can use the same symbol
+// from either side; rich status fallbacks are sky-specific
+export const extractServerMessage = formatApiError;

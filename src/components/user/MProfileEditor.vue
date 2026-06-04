@@ -12,27 +12,29 @@
 			<IonButton
 				class="font-semibold text-center"
 				color="primary"
+				shape="round"
+				size="small"
 				:disabled="avatarLoading"
 				@click="regenerateProfilePhoto"
 			>
 				<UIcon
 					name="mdi:refresh"
-					class="size-5 mr-2"
+					class="size-5 mx-2"
 					:class="{ 'animate-spin': avatarLoading }"
 				/>
-				Regenerate Avatar
+				<span class="mr-2">Regenerate Avatar</span>
 			</IonButton>
 			<IonButton
 				class="ml-2"
 				size="small"
-				fill="clear"
+				fill="outline"
 				color="secondary"
 				aria-label="Help"
 				@click="startTour('user-profile')"
 			>
 				<UIcon
 					name="mdi:progress-question"
-					class="size-5"
+					class="size-5 mx-2"
 				/>
 			</IonButton>
 		</div>
@@ -156,7 +158,7 @@
 					<IonButton
 						expand="block"
 						class="w-full"
-						color="success"
+						color="primary"
 						:disabled="savingProfile || !hasProfileChanges"
 						@click="saveProfile"
 					>
@@ -288,6 +290,13 @@
 						<p class="text-xs m-0 mt-1 opacity-80">
 							Impact Points increase as you engage with The Earth App and the world around you.
 						</p>
+						<p class="text-xs m-0 mt-1 text-warning flex items-center">
+							<UIcon
+								name="mdi:account-tag"
+								class="size-4 mr-0.5"
+							/>
+							Your rank gives you a {{ cosmeticDiscount }} off all purchases!
+						</p>
 					</IonText>
 				</IonItem>
 				<Transition name="cosmetics-collapse">
@@ -303,7 +312,7 @@
 						</div>
 						<div
 							v-else
-							class="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full py-2"
+							class="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1 w-full py-2"
 						>
 							<button
 								v-for="cosmetic in cosmetics"
@@ -413,7 +422,21 @@
 				id="account-deletion"
 				class="w-full mt-2! max-w-md p-2! rounded-xl border-2 border-red-500/50"
 			>
-				<IonItem>
+				<IonItem
+					v-if="reauthChecking"
+					lines="none"
+				>
+					<IonLabel class="text-sm text-muted">Checking sign-in status...</IonLabel>
+				</IonItem>
+				<IonItem
+					v-else-if="recentlyAuthenticated"
+					lines="none"
+				>
+					<IonLabel class="text-sm">
+						You're recently signed in. Confirm the phrase below to permanently delete your account.
+					</IonLabel>
+				</IonItem>
+				<IonItem v-else-if="props.user.account.has_password">
 					<IonInput
 						v-model="deletePassword"
 						type="password"
@@ -425,6 +448,41 @@
 					>
 						<IonInputPasswordToggle slot="end" />
 					</IonInput>
+				</IonItem>
+				<template v-else-if="(props.user.account.linked_providers?.length || 0) > 0">
+					<IonItem lines="none">
+						<IonLabel class="text-sm text-muted">
+							Reauthenticate with one of your linked providers before deleting.
+						</IonLabel>
+					</IonItem>
+					<IonItem
+						v-for="provider in props.user.account.linked_providers"
+						:key="`reauth-${provider}`"
+						lines="none"
+					>
+						<IonButton
+							expand="block"
+							color="primary"
+							fill="outline"
+							class="w-full"
+							:disabled="deleteLoading"
+							@click="handleReauthProvider(provider)"
+						>
+							<UIcon
+								:name="`logos:${provider}-icon`"
+								class="size-4 mr-2"
+							/>
+							Reauthenticate With {{ capitalizeFully(provider) }}
+						</IonButton>
+					</IonItem>
+				</template>
+				<IonItem
+					v-else
+					lines="none"
+				>
+					<IonLabel class="text-sm text-muted">
+						No reauthentication method is available. Contact support to delete this account.
+					</IonLabel>
 				</IonItem>
 				<IonItem>
 					<IonInput
@@ -648,7 +706,8 @@ const {
 	sendVerificationEmail,
 	updateAccount,
 	updateFieldPrivacy,
-	deleteAccount
+	deleteAccount,
+	getReauthState
 } = useAuth();
 const config = useRuntimeConfig();
 const { isNative, beginFlow } = useMobileOAuth();
@@ -747,15 +806,19 @@ const passwordModalOpen = ref(false);
 const deletePassword = ref('');
 const deleteConfirmationText = ref('');
 const deleteLoading = ref(false);
+const reauthChecking = ref(true);
+const recentlyAuthenticated = ref(false);
 
 const oauthProviders = OAUTH_PROVIDERS;
 
 const deletePhrase = computed(() => `DELETE @${props.user.username}`);
-const canDeleteAccount = computed(
-	() =>
-		deletePassword.value.trim().length > 0 &&
-		deleteConfirmationText.value.trim() === deletePhrase.value
-);
+const canDeleteAccount = computed(() => {
+	if (deleteConfirmationText.value.trim() !== deletePhrase.value) return false;
+	if (recentlyAuthenticated.value) return true;
+	if (props.user.account.has_password) return deletePassword.value.trim().length > 0;
+	// oauth-only - user must complete a redirect-based reauth before deleting
+	return false;
+});
 
 const emailVerificationStatus = computed(() => {
 	if (!props.user.account.email) return 'No email set';
@@ -787,6 +850,24 @@ const cosmetics = computed<CosmeticWithState[]>(() => {
 			state: cosmeticState
 		};
 	});
+});
+
+const cosmeticDiscount = computed(() => {
+	const discount = cosmetics.value.map((c) => c.discount || 0);
+	if (discount.length === 0) return null;
+	if (discount.every((d) => d === 0)) {
+		return null;
+	}
+
+	const firstDiscount = discount[0] || 0;
+
+	// if all the same, return that, otherwise return smallest plus a "+" to indicate varied discounts
+	if (discount.every((d) => d === firstDiscount)) {
+		return firstDiscount > 0 ? `${firstDiscount * 100}%` : null;
+	} else {
+		const minDiscount = Math.min(...discount);
+		return minDiscount > 0 ? `${minDiscount * 100}%+` : null;
+	}
 });
 
 const showCosmeticModal = ref(false);
@@ -913,6 +994,7 @@ onBeforeUnmount(() => {
 });
 
 async function regenerateProfilePhoto() {
+	useLogger().info('user.action', 'avatar.regenerate');
 	const yes = await Dialog.confirm({ message: 'Are you sure? You cannot revert this action.' });
 	if (!yes.value) {
 		notifyWarning();
@@ -923,30 +1005,40 @@ async function regenerateProfilePhoto() {
 
 	avatarLoading.value = true;
 
-	const res = await regenerateAvatar();
-	if (valid(res) && res.data instanceof Blob) {
-		if (avatarOverride.value && avatarOverride.value.startsWith('blob:')) {
-			URL.revokeObjectURL(avatarOverride.value);
+	try {
+		const res = await regenerateAvatar();
+		if (valid(res) && res.data instanceof Blob) {
+			if (avatarOverride.value && avatarOverride.value.startsWith('blob:')) {
+				URL.revokeObjectURL(avatarOverride.value);
+			}
+
+			avatarOverride.value = URL.createObjectURL(res.data);
+			await fetchUser();
+
+			// cache-bust remote url in case avatar_url is unchanged but bytes differ
+			const remoteUrl = props.user?.account?.avatar_url;
+			if (remoteUrl && (remoteUrl.startsWith('http://') || remoteUrl.startsWith('https://'))) {
+				avatarStore.clear(remoteUrl);
+				avatarStore.preloadAvatar(
+					`${remoteUrl}${remoteUrl.includes('?') ? '&' : '?'}v=${Date.now()}`
+				);
+			}
+
+			notifySuccess();
+			await showInfoToast('Avatar regenerated.', { duration: 'long' });
+		} else {
+			const message = res.message || 'Avatar generation failed - please try again.';
+			console.error(message);
+			notifyError();
+
+			await showErrorToast(message, {
+				fallback: 'Avatar regeneration failed.',
+				duration: 'long'
+			});
 		}
-
-		avatarOverride.value = URL.createObjectURL(res.data);
-		fetchUser();
-
+	} finally {
+		// belt-and-suspenders: always clear loading even if user backgrounds the app mid-call
 		avatarLoading.value = false;
-		notifySuccess();
-		await Toast.show({
-			text: 'Your profile photo has been successfully regenerated.',
-			duration: 'long'
-		});
-	} else {
-		avatarLoading.value = false;
-		console.error(res.message || 'Failed to regenerate profile photo.');
-		notifyError();
-
-		await Toast.show({
-			text: res.message || 'Failed to regenerate profile photo.',
-			duration: 'long'
-		});
 	}
 }
 
@@ -1160,7 +1252,7 @@ async function handleOAuthProvider(provider: OAuthProvider) {
 	} catch (error: any) {
 		notifyError();
 		await Toast.show({
-			text: error?.message || 'Failed to start OAuth flow.',
+			text: extractServerMessage(error, 'Failed to start OAuth flow.'),
 			duration: 'long'
 		});
 	}
@@ -1171,8 +1263,55 @@ function handlePasswordChanged() {
 	void notifySuccess();
 }
 
+async function refreshReauthState() {
+	reauthChecking.value = true;
+	try {
+		const res = await getReauthState();
+		if (valid(res)) {
+			recentlyAuthenticated.value = Boolean(res.data.recently_authenticated);
+		}
+	} catch (e) {
+		console.warn('Failed to fetch reauth state', e);
+	} finally {
+		reauthChecking.value = false;
+	}
+}
+
+const route = useRoute();
+onMounted(async () => {
+	await refreshReauthState();
+	if (route.query.success === 'reauth_completed') {
+		await Toast.show({
+			text: 'Reauthentication confirmed. You may now delete your account.',
+			duration: 'short'
+		});
+	} else if (route.query.error === 'reauth_failed') {
+		notifyError();
+		await Toast.show({
+			text: 'We could not verify your provider. Please try again.',
+			duration: 'long'
+		});
+	}
+});
+
+async function handleReauthProvider(provider: OAuthProvider) {
+	try {
+		await impactLight();
+		const authUrl = authLink(provider, 'reauth', 'mobile');
+		await beginFlow(authUrl, 'reauth');
+	} catch (error: any) {
+		notifyError();
+		await Toast.show({
+			text: error?.message || 'Failed to start reauth flow.',
+			duration: 'long'
+		});
+	}
+}
+
 async function handleDeleteAccount() {
 	if (!canDeleteAccount.value || deleteLoading.value) return;
+
+	useLogger().info('user.action', 'account.delete.submit');
 
 	const firstConfirm = await Dialog.confirm({
 		title: 'Delete Account',
@@ -1195,7 +1334,8 @@ async function handleDeleteAccount() {
 	await impactHeavy();
 
 	deleteLoading.value = true;
-	const res = await deleteAccount(deletePassword.value);
+	const password = recentlyAuthenticated.value ? null : deletePassword.value || null;
+	const res = await deleteAccount(password);
 	deleteLoading.value = false;
 
 	if (valid(res)) {
@@ -1212,13 +1352,22 @@ async function handleDeleteAccount() {
 		await refreshNuxtData();
 		await navigateTo('/');
 		return;
-	} else {
-		let message = res.message || 'Failed to delete account.';
-		notifyError();
-		await Toast.show({
-			text: message,
-			duration: 'long'
-		});
+	}
+
+	const message = res.message || 'Failed to delete account.';
+	const isReauthRequired = (res as any).reason === 'REAUTH_REQUIRED' || /reauth/i.test(message);
+
+	notifyError();
+	await Toast.show({
+		text: isReauthRequired
+			? 'Your sign-in window has expired. Please reauthenticate and try again.'
+			: message,
+		duration: 'long'
+	});
+
+	if (isReauthRequired) {
+		recentlyAuthenticated.value = false;
+		await refreshReauthState();
 	}
 }
 
@@ -1288,7 +1437,7 @@ async function resetCosmetic() {
 	} catch (error: any) {
 		notifyError();
 		await Toast.show({
-			text: error?.message || 'Failed to reset cosmetic.',
+			text: extractServerMessage(error, 'Failed to reset cosmetic.'),
 			duration: 'long'
 		});
 	} finally {
@@ -1323,7 +1472,7 @@ async function handlePurchaseClick(cosmeticKey: AvatarCosmetic['key']) {
 	} catch (error: any) {
 		notifyError();
 		await Toast.show({
-			text: error?.message || 'Failed to purchase cosmetic.',
+			text: extractServerMessage(error, 'Failed to purchase cosmetic.'),
 			duration: 'long'
 		});
 	} finally {
@@ -1365,7 +1514,7 @@ async function handleSelectClick(cosmeticKey: AvatarCosmetic['key']) {
 	} catch (error: any) {
 		notifyError();
 		await Toast.show({
-			text: error?.message || 'Failed to select cosmetic.',
+			text: extractServerMessage(error, 'Failed to select cosmetic.'),
 			duration: 'long'
 		});
 	} finally {
@@ -1440,7 +1589,7 @@ async function updateActivitiesList(search: string) {
 		}
 	} catch (error: any) {
 		await Toast.show({
-			text: error?.message || 'Failed to fetch activities.',
+			text: extractServerMessage(error, 'Failed to fetch activities.'),
 			duration: 'long'
 		});
 	} finally {

@@ -3,6 +3,7 @@
 		:is-open="open"
 		:initial-breakpoint="0.75"
 		:breakpoints="[0, 0.25, 0.5, 0.75, 1]"
+		@did-present="handleDidPresent"
 		@did-dismiss="handleDidDismiss"
 	>
 		<div class="flex flex-col items-center overflow-y-auto overflow-x-hidden">
@@ -47,8 +48,13 @@ const search = ref('');
 
 let dismissResolver: (() => void) | null = null;
 
+function handleDidPresent() {
+	useLogger().info('modal.open', props.title || 'content-drawer');
+}
+
 function handleDidDismiss() {
 	open.value = false;
+	useLogger().info('modal.close', props.title || 'content-drawer');
 	if (dismissResolver) {
 		dismissResolver();
 		dismissResolver = null;

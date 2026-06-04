@@ -1,5 +1,8 @@
 <template>
-	<IonCard class="info-card-group mt-6 shadow-xl rounded-lg w-full p-4">
+	<IonCard
+		v-if="hasContent"
+		class="info-card-group mt-6 shadow-xl rounded-lg w-full p-4"
+	>
 		<div class="flex space-x-1 items-start mb-4">
 			<div
 				v-if="icon"
@@ -113,6 +116,8 @@
 </template>
 
 <script setup lang="ts">
+import { Comment, Fragment, Text } from 'vue';
+
 const props = defineProps<{
 	title: string;
 	description?: string;
@@ -126,6 +131,28 @@ const props = defineProps<{
 const emit = defineEmits<{
 	(event: 'icon-click'): void;
 }>();
+
+// guard against empty-slot renders (header/footer would otherwise show as a hollow card)
+const slots = useSlots();
+const hasContent = computed(() => {
+	const nodes = slots.default?.() ?? [];
+	const flatten = (list: typeof nodes): boolean => {
+		for (const node of list) {
+			// comments + empty fragments are inert, real children imply renderable content
+			if (node.type === Comment) continue;
+			if (node.type === Fragment) {
+				const children = Array.isArray(node.children) ? (node.children as typeof nodes) : [];
+				if (flatten(children)) return true;
+				continue;
+			}
+			if (node.type === Text && typeof node.children === 'string' && !node.children.trim())
+				continue;
+			return true;
+		}
+		return false;
+	};
+	return flatten(nodes);
+});
 
 const carouselViewport = ref<HTMLElement>();
 const carouselContainer = ref<HTMLElement>();

@@ -159,6 +159,7 @@ import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { Share } from '@capacitor/share';
 import { Toast } from '@capacitor/toast';
 import type { OAuthProvider } from 'types/user';
 import { capitalizeFully } from 'utils';
@@ -390,6 +391,58 @@ async function restoreDefaultsAction() {
 		text: 'Settings restored to defaults.',
 		duration: 'short'
 	});
+}
+
+async function exportLogsAction() {
+	const logger = useLogger();
+	const result = await logger.exportLogs();
+
+	if (Capacitor.isNativePlatform() && result.uri) {
+		try {
+			await Share.share({
+				url: result.uri,
+				title: 'App Logs',
+				dialogTitle: 'Export Logs'
+			});
+			await showInfoToast('Logs Shared');
+			return;
+		} catch (err) {
+			// share sheet cancel throws — treat as a silent no-op
+			const message = err instanceof Error ? err.message : String(err);
+			if (/cancel/i.test(message)) return;
+			await showInfoToast(`Logs Saved To ${result.uri}`);
+			return;
+		}
+	}
+
+	// web fallback — trigger a blob download
+	if (typeof document !== 'undefined') {
+		const blob = new Blob([result.text], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `sky-logs-${Date.now()}.txt`;
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+		URL.revokeObjectURL(url);
+		await showInfoToast('Logs Downloaded');
+	}
+}
+
+async function clearLogsAction() {
+	const confirmed = await Dialog.confirm({
+		title: 'Clear Logs',
+		message: 'This will erase all local log files. Continue?'
+	});
+	if (!confirmed.value) {
+		notifyWarning();
+		return;
+	}
+
+	await useLogger().clearLogs();
+	notifySuccess();
+	await showInfoToast('Logs Cleared');
 }
 
 const settingSections = computed<SettingSection[]>(() => [
@@ -638,6 +691,22 @@ const settingSections = computed<SettingSection[]>(() => [
 				placeholder: 'Restore',
 				color: 'danger',
 				action: restoreDefaultsAction
+			},
+			{
+				kind: 'action',
+				title: 'Export Logs',
+				description: 'Share recent app logs for debugging',
+				placeholder: 'Export',
+				color: 'primary',
+				action: exportLogsAction
+			},
+			{
+				kind: 'action',
+				title: 'Clear Logs',
+				description: 'Erase all local log files before reproducing a bug',
+				placeholder: 'Clear',
+				color: 'danger',
+				action: clearLogsAction
 			}
 		]
 	}

@@ -142,7 +142,7 @@
 					<UserMBadgeShowcase v-if="user" />
 
 					<div
-						v-if="user"
+						v-if="user && onboarding.state.value"
 						class="w-full px-3"
 					>
 						<OnboardingMWelcomeChecklist @open-persona="personaOpen = true" />
@@ -190,11 +190,11 @@
 						class="flex flex-col gap-4 items-center justify-center w-full"
 					>
 						<template
-							v-for="(item, index) in feedItems"
+							v-for="(item, index) in renderableFeedItems"
 							:key="`${item.type}-${item.isGroup ? 'group' : 'single'}-${index}`"
 						>
 							<MInfoCardGroup
-								v-if="item.type === 'activity' && item.isGroup"
+								v-if="item.type === 'activity' && item.isGroup && item.data.length > 0"
 								title="New Content"
 								description="Explore new interests and activities"
 								icon="material-symbols:apps"
@@ -218,7 +218,7 @@
 								/>
 							</div>
 							<MInfoCardGroup
-								v-else-if="item.type === 'prompt' && item.isGroup"
+								v-else-if="item.type === 'prompt' && item.isGroup && item.data.length > 0"
 								title="Prompts for Reflection"
 								description="Thought-provoking prompts to inspire your day"
 								icon="material-symbols:lightbulb-circle-outline"
@@ -242,7 +242,7 @@
 								/>
 							</div>
 							<MInfoCardGroup
-								v-else-if="item.type === 'article' && item.isGroup"
+								v-else-if="item.type === 'article' && item.isGroup && item.data.length > 0"
 								title="Latest Articles"
 								description="Stay informed with the newest articles"
 								icon="mdi:newspaper-variant-multiple-outline"
@@ -266,7 +266,7 @@
 								/>
 							</div>
 							<MInfoCardGroup
-								v-else-if="item.type === 'event' && item.isGroup"
+								v-else-if="item.type === 'event' && item.isGroup && item.data.length > 0"
 								title="New Events"
 								description="Join events happening around you"
 								icon="mdi:calendar-star"
@@ -290,7 +290,7 @@
 								/>
 							</div>
 							<MInfoCardGroup
-								v-else-if="item.type === 'user' && item.isGroup"
+								v-else-if="item.type === 'user' && item.isGroup && item.data.length > 0"
 								title="Discover Users"
 								description="Connect with like-minded individuals"
 								icon="mdi:account-group-outline"
@@ -379,6 +379,10 @@ const motdColor = computed(() => {
 const contentRef = ref<any>(null);
 const textSizePromptRef = ref<{ maybeOpen: () => void } | null>(null);
 const feedItems = ref<FeedItem[]>([]);
+// data can transiently empty during refetch, outer filter + inner v-if guards belt-and-suspenders
+const renderableFeedItems = computed(() =>
+	feedItems.value.filter((i) => Array.isArray(i.data) && i.data.length > 0)
+);
 const isLoadingMore = ref(false);
 const isRefreshing = ref(false);
 const hasInitialized = ref(false);
@@ -871,6 +875,10 @@ onMounted(async () => {
 	if (!isOffline.value) {
 		void fetchMotd();
 	}
+
+	// kick off onboarding fetch from the parent — the checklist container is
+	// gated on onboarding.fetched, so we can't rely on the child's onMounted
+	if (user.value) void onboarding.fetchState();
 
 	await nextTick();
 	await refreshFeed(0);

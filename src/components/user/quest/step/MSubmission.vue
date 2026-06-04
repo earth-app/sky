@@ -673,6 +673,11 @@ async function submitPhoto(file: File) {
 }
 
 async function submitStepResponse(extra: Record<string, unknown>, validatingLabel: string) {
+	useLogger().info('user.action', 'quest.step.submit', {
+		stepType: props.step.type,
+		stepIndex: props.step.index
+	});
+
 	if (!user.value) {
 		submitError.value = 'Your account is still loading. Please try again in a moment.';
 		return;

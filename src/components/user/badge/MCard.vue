@@ -4,6 +4,7 @@
 		:badge="badge"
 		:is-granted="isGranted"
 		:is-mastered="isMastered"
+		:size="size"
 		@clicked="noModal || (showDetails = true)"
 	/>
 	<IonModal
@@ -133,10 +134,12 @@ import { BADGES_DRAWER_CLOSE } from '~/utils/injection';
 const props = withDefaults(
 	defineProps<{
 		badge: Badge | UserBadge;
+		size?: 'small' | 'medium' | 'full';
 		noModal?: boolean;
 	}>(),
 	{
-		noModal: false
+		noModal: false,
+		size: 'full'
 	}
 );
 
@@ -309,8 +312,10 @@ async function generateAndOpen() {
 					// don't mark badge as exempt — the slot is just temporarily full. store
 					// already refreshed the list, so the disabled state will catch up on next open
 					await showInfoToast(
-						error.message ||
-							'Mastery cap reached. Complete or let one expire before generating another.',
+						extractServerMessage(
+							error,
+							'Mastery cap reached. Complete or let one expire before generating another.'
+						),
 						{ duration: 'long' }
 					);
 					break;

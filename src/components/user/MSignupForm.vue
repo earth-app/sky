@@ -190,6 +190,8 @@ async function handleFormError(event: any) {
 async function handleSignup() {
 	if (loading.value) return;
 
+	useLogger().info('user.action', 'signup.submit');
+
 	error.value = '';
 	const normalizedEmail = email.value.trim();
 	const normalizedName = fullName.value.trim();

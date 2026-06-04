@@ -171,7 +171,7 @@ async function startDownload() {
 		});
 	} catch (error: any) {
 		await Toast.show({
-			text: error?.message || 'Failed to download activity',
+			text: extractServerMessage(error, 'Failed to download activity'),
 			duration: 'short'
 		});
 	}

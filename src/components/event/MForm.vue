@@ -495,7 +495,7 @@ async function handleSubmit(event: FormSubmitEvent<EventData>) {
 			return;
 		}
 		notifyError();
-		error.value = err.message || 'An error occurred while saving settings';
+		error.value = extractServerMessage(err, 'An error occurred while saving settings');
 
 		await Toast.show({
 			text: error.value,

@@ -117,9 +117,15 @@ export function useDeepLinkRouting() {
 				: rawContext;
 
 			if (sessionToken) {
+				// reauth context returns to the profile editor so the delete section can
+				// re-read the recently-authenticated state and unlock the danger button
+				const target =
+					context === 'reauth'
+						? '/tabs/profile/editor?success=reauth_completed'
+						: '/tabs/dashboard';
 				return {
 					type: 'oauth-complete',
-					target: '/tabs/dashboard',
+					target,
 					sessionToken,
 					provider,
 					context
@@ -130,7 +136,11 @@ export function useDeepLinkRouting() {
 			// the existing error toast pipeline can surface a contextual message.
 			const errorCode = parsed.searchParams.get('error') || 'auth_failed';
 			const errorTarget =
-				context === 'signup' ? '/signup' : context === 'link' ? '/tabs/profile/editor' : '/login';
+				context === 'signup'
+					? '/signup'
+					: context === 'link' || context === 'reauth'
+						? '/tabs/profile/editor'
+						: '/login';
 			return {
 				type: 'internal',
 				target: `${errorTarget}?error=${encodeURIComponent(errorCode)}`

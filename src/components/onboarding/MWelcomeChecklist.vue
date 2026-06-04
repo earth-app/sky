@@ -210,8 +210,12 @@ const percent = computed(() =>
 	progress.value.total === 0 ? 0 : Math.round((progress.value.done / progress.value.total) * 100)
 );
 
+// wait for the first fetch before rendering — `state` is null on mount, which
+// makes isDismissed/isComplete read false and produces a one-frame flash on
+// users who have already dismissed or finished the checklist
 const show = computed(() => {
 	if (!user.value) return false;
+	if (!onboarding.state.value) return false;
 	if (onboarding.isDismissed.value) return false;
 	if (onboarding.isComplete.value) return false;
 	return true;

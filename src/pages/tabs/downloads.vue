@@ -193,7 +193,7 @@ async function refreshDownloads() {
 		await refreshUsedSpace();
 	} catch (error: any) {
 		await Toast.show({
-			text: error?.message || 'Failed to load downloads',
+			text: extractServerMessage(error, 'Failed to load downloads'),
 			duration: 'short'
 		});
 	} finally {
@@ -232,7 +232,7 @@ async function deleteDownload(item: DownloadedItem) {
 		});
 	} catch (error: any) {
 		await Toast.show({
-			text: error?.message || 'Failed to remove download',
+			text: extractServerMessage(error, 'Failed to remove download'),
 			duration: 'short'
 		});
 	} finally {
@@ -278,7 +278,7 @@ async function deleteAllDownloads() {
 		});
 	} catch (error: any) {
 		await Toast.show({
-			text: error?.message || 'Failed to clear downloads',
+			text: extractServerMessage(error, 'Failed to clear downloads'),
 			duration: 'short'
 		});
 	} finally {

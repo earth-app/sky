@@ -211,7 +211,7 @@ async function loadActivities(search: string) {
 		}
 	} catch (error: any) {
 		await Toast.show({
-			text: error?.message || 'Failed to fetch activities.',
+			text: extractServerMessage(error, 'Failed to fetch activities.'),
 			duration: 'long'
 		});
 	} finally {

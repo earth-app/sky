@@ -166,7 +166,7 @@ async function resendVerification() {
 			});
 		}
 	} catch (error: any) {
-		errorMessage.value = error?.message || 'Failed to resend verification email.';
+		errorMessage.value = extractServerMessage(error, 'Failed to resend verification email.');
 		notifyError();
 		await Toast.show({
 			text: errorMessage.value,
@@ -216,7 +216,10 @@ async function submitCode() {
 			});
 		}
 	} catch (error: any) {
-		errorMessage.value = error?.message || 'An unexpected error occurred while verifying email.';
+		errorMessage.value = extractServerMessage(
+			error,
+			'An unexpected error occurred while verifying email.'
+		);
 		notifyError();
 		await Toast.show({
 			text: errorMessage.value,

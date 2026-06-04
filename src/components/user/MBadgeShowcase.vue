@@ -20,7 +20,7 @@
 					v-for="badge in recentBadges"
 					:key="badge.id"
 					:badge="badge"
-					no-modal
+					size="medium"
 					class="shrink-0"
 				/>
 			</div>

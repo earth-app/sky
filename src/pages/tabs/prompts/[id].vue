@@ -155,7 +155,7 @@ async function startDownload() {
 		});
 	} catch (error: any) {
 		await Toast.show({
-			text: error?.message || 'Failed to download prompt',
+			text: extractServerMessage(error, 'Failed to download prompt'),
 			duration: 'short'
 		});
 	}

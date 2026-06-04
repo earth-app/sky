@@ -182,7 +182,7 @@ async function startDownload() {
 		});
 	} catch (error: any) {
 		await Toast.show({
-			text: error?.message || 'Failed to download article',
+			text: extractServerMessage(error, 'Failed to download article'),
 			duration: 'short'
 		});
 	}
