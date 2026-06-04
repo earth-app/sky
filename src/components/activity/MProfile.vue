@@ -94,26 +94,36 @@
 			</p>
 
 			<ClientOnly>
-				<MInfoCard
+				<template
 					v-for="(card, index) in displayCards"
-					class="z-20"
-					:id="`card-${index}`"
 					:key="`card-${index}`"
-					:icon="card.icon"
-					:external="true"
-					:title="card.title"
-					:subtitle="card.description"
-					:subtitle-link="card.descriptionLink"
-					:content="card.content"
-					:link="card.link"
-					:image="card.image"
-					:image-link="card.imageLink"
-					:object="{ url: card.object, type: card.objectType }"
-					:youtube-id="card.youtubeId"
-					:video="card.video"
-					:footer="card.footer"
-					in-browser
-				/>
+				>
+					<MInfoCard
+						class="z-20"
+						:id="`card-${index}`"
+						:icon="card.icon"
+						:external="true"
+						:title="card.title"
+						:subtitle="card.description"
+						:subtitle-link="card.descriptionLink"
+						:content="card.content"
+						:link="card.link"
+						:image="card.image"
+						:image-link="card.imageLink"
+						:object="{ url: card.object, type: card.objectType }"
+						:youtube-id="card.youtubeId"
+						:video="card.video"
+						:footer="card.footer"
+						in-browser
+					/>
+					<!-- interleave a widget after every 6 cards; activity-aware so prompts get tuned questions -->
+					<LazyMWidgetSlot
+						v-if="cardWidgetKind(index)"
+						:kind="cardWidgetKind(index)!"
+						:activity="{ id: activity.id, name: activity.name }"
+						hydrate-on-visible
+					/>
+				</template>
 			</ClientOnly>
 		</div>
 
@@ -156,7 +166,20 @@ const props = defineProps<{
 
 const { user } = useAuth();
 const { cards, loadCardsForActivity } = useActivityCards(makeMServerRequest);
+const { widgetForIndex } = useFeedWidgets();
 const offlineMode = computed(() => Boolean(props.offlineMode));
+
+// shift the rotation index by an activity-id hash so different activities don't all show
+// the same widget kind at the same card position
+const activityIdHash = computed(() =>
+	(props.activity?.id ?? '').split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
+);
+function cardWidgetKind(index: number): FeedWidgetKind | null {
+	// widget every 6th card (index 5, 11, 17, ...) matches crust Profile.vue cadence
+	if ((index + 1) % 6 !== 0) return null;
+	const shifted = 7 + (Math.floor((index + 1) / 6) - 1 + (activityIdHash.value % 8)) * 8;
+	return widgetForIndex(shifted);
+}
 
 const normalizedOfflineCards = computed<ActivityProfileCard[]>(() => {
 	return (props.offlineCards || []).slice(0, 10).map((card) => ({

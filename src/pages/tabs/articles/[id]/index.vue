@@ -75,6 +75,14 @@
 					class="w-full max-w-2xl px-4 mt-2"
 				/>
 				<ArticleMPage :article="currentArticle" />
+				<!-- per-article mood bucket; MoodSpark is the safest detail-page widget (no activity context needed) -->
+				<div class="w-full max-w-2xl px-4 my-3">
+					<LazyMWidgetSlot
+						kind="MoodSpark"
+						:topic="`article-${currentArticle.id}`"
+						hydrate-on-visible
+					/>
+				</div>
 				<div
 					v-if="!loadedFromOffline"
 					class="flex items-center w-screen"

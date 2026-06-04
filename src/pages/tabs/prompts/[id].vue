@@ -77,6 +77,14 @@
 				:prompt="currentPrompt"
 				:offline-mode="loadedFromOffline"
 			/>
+			<!-- prompts are already reflective; MicroReflection mirrors that tone -->
+			<div class="w-full max-w-2xl mx-auto px-4 my-3">
+				<LazyMWidgetSlot
+					kind="MicroReflection"
+					:topic="`prompt-${currentPrompt.id}`"
+					hydrate-on-visible
+				/>
+			</div>
 		</IonContent>
 		<div
 			v-else-if="unavailableOffline"

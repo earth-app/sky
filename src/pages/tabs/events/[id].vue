@@ -42,6 +42,14 @@
 						/>
 					</MInfoCardGroup>
 				</div>
+				<!-- per-event mood bucket near the bottom of the page -->
+				<div class="w-full max-w-2xl px-4 my-3">
+					<LazyMWidgetSlot
+						kind="MoodSpark"
+						:topic="`event-${event.id}`"
+						hydrate-on-visible
+					/>
+				</div>
 			</div>
 			<div
 				v-else-if="unavailableOffline"

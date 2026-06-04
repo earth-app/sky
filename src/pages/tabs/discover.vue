@@ -79,44 +79,58 @@
 					id="discover-results"
 					class="w-full max-w-2xl flex flex-col items-center gap-2"
 				>
+					<!-- standalone word-of-the-day above the results stream (not in rotation pool) -->
+					<div class="w-full px-2">
+						<LazyWidgetsMWordOfTheDay hydrate-on-visible />
+					</div>
+
 					<span
 						v-if="showResultsSummary"
 						class="text-sm opacity-70 font-semibold"
 						>{{ capitalizeFully(SEGMENT_LABELS[activeSegment]) }} -
 						{{ comma(displayedResults.length) }} Results</span
 					>
-					<div
-						v-for="result in displayedResults"
+					<template
+						v-for="(result, index) in displayedResults"
 						:key="`${result.data_type}-${result.id}`"
-						class="flex flex-col gap-2 w-full"
 					>
-						<LazyEventMCard
-							v-if="result.data_type === 'event'"
-							:event="result"
+						<div class="flex flex-col gap-2 w-full">
+							<LazyEventMCard
+								v-if="result.data_type === 'event'"
+								:event="result"
+								hydrate-on-visible
+							/>
+							<LazyActivityMCard
+								v-else-if="result.data_type === 'activity'"
+								:activity="result"
+								hydrate-on-visible
+							/>
+							<LazyArticleMCard
+								v-else-if="result.data_type === 'article'"
+								:article="result"
+								hydrate-on-visible
+							/>
+							<LazyPromptMCard
+								v-else-if="result.data_type === 'prompt'"
+								:prompt="result"
+								hydrate-on-visible
+							/>
+							<LazyUserMCard
+								v-else-if="result.data_type === 'user'"
+								:user="result"
+								hydrate-on-visible
+								class="text-center text-sm opacity-70 py-6"
+							/>
+						</div>
+						<!-- interleave a rotation widget mid-stream; uses crust's deterministic per-day picker -->
+						<LazyMWidgetSlot
+							v-if="widgetForIndex(index)"
+							:kind="widgetForIndex(index)!"
+							topic="discover"
+							class="w-full"
 							hydrate-on-visible
 						/>
-						<LazyActivityMCard
-							v-else-if="result.data_type === 'activity'"
-							:activity="result"
-							hydrate-on-visible
-						/>
-						<LazyArticleMCard
-							v-else-if="result.data_type === 'article'"
-							:article="result"
-							hydrate-on-visible
-						/>
-						<LazyPromptMCard
-							v-else-if="result.data_type === 'prompt'"
-							:prompt="result"
-							hydrate-on-visible
-						/>
-						<LazyUserMCard
-							v-else-if="result.data_type === 'user'"
-							:user="result"
-							hydrate-on-visible
-							class="text-center text-sm opacity-70 py-6"
-						/>
-					</div>
+					</template>
 
 					<div class="flex justify-center py-4">
 						<IonButton
@@ -204,6 +218,7 @@ const discoverScrollSignal = useState<number>('discover-scroll-signal', () => 0)
 
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+const { widgetForIndex } = useFeedWidgets();
 const { fetchRandom: getRandomActivities, fetch: getActivities } = useActivities();
 const { fetchRandom: getRandomPrompts, fetch: getPrompts } = usePrompts();
 const {
