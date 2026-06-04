@@ -10,10 +10,21 @@
 			</h3>
 		</div>
 		<div
-			v-if="rows.length === 0"
+			v-if="loading && rows.length === 0"
 			class="text-xs text-gray-500 py-4 text-center"
 		>
 			Loading top streaks...
+		</div>
+		<div
+			v-else-if="rows.length === 0"
+			class="text-xs text-gray-500 py-6 text-center flex flex-col items-center gap-2"
+		>
+			<UIcon
+				name="mdi:medal-outline"
+				class="size-8 text-gray-400"
+			/>
+			<p>No active {{ typeLabel.toLowerCase() }} streaks yet.</p>
+			<p class="text-[10px]">Be the first to start one.</p>
 		</div>
 		<ul
 			v-else
@@ -72,6 +83,15 @@ const { user: currentUser } = useAuth(makeMServerRequest);
 const avatarStore = useAvatarStore();
 const { selection } = useAppHaptics();
 
+// gate the empty-state UI behind a short window so we don't flash "no streaks" before the
+// composable's first fetch settles. rows going positive at any point flips us out early.
+const loading = ref(true);
+onMounted(() => {
+	setTimeout(() => {
+		loading.value = false;
+	}, 3000);
+});
+
 const typeLabel = computed(() => {
 	const t = props.type;
 	return t.charAt(0).toUpperCase() + t.slice(1);
@@ -93,6 +113,15 @@ const rows = computed(() =>
 			isSelf: currentUser.value?.id === entry.id
 		};
 	})
+);
+
+// flip loading off the moment data arrives; the 3s timer is just a fallback
+watch(
+	() => rows.value.length,
+	(n) => {
+		if (n > 0) loading.value = false;
+	},
+	{ immediate: true }
 );
 
 // prefetch avatar blobs for top 3
