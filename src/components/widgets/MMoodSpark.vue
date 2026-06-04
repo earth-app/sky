@@ -81,6 +81,7 @@ import {
 	IonProgressBar
 } from '@ionic/vue';
 import { pulseOutline } from 'ionicons/icons';
+import { showErrorToast, showInfoToast } from '~/composables/useNotify';
 
 const props = withDefaults(
 	defineProps<{
@@ -99,7 +100,6 @@ const emit = defineEmits<{
 
 const { snapshot, hasVoted, vote, fetchSnapshot, EMOJIS } = useMood(() => props.topic);
 const haptics = useAppHaptics();
-const { showInfoToast, showErrorToast } = useNotify();
 
 const MOOD_LABELS: Record<MoodEmoji, string> = {
 	'😍': 'Love',
