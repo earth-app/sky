@@ -10,7 +10,7 @@
 				<IonButtons slot="end">
 					<IonButton
 						v-if="user && !user.account.email_verified"
-						fill="clear"
+						fill="outline"
 						color="secondary"
 						aria-label="Help"
 						@click="startTour('verify-email')"
