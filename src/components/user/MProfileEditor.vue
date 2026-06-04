@@ -1312,7 +1312,7 @@ async function handleReauthProvider(provider: OAuthProvider) {
 	} catch (error: any) {
 		notifyError();
 		await Toast.show({
-			text: error?.message || 'Failed to start reauth flow.',
+			text: extractServerMessage(error, 'Failed to start reauth flow.'),
 			duration: 'long'
 		});
 	}

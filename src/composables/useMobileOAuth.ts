@@ -1,7 +1,7 @@
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 
-type OAuthFlowContext = 'login' | 'signup' | 'link' | 'unlink' | 'unknown';
+type OAuthFlowContext = 'login' | 'signup' | 'link' | 'unlink' | 'unknown' | 'reauth';
 
 type OAuthFlowState = {
 	active: boolean;
@@ -92,11 +92,19 @@ export function validateOAuthUrl(url: string): OAuthValidationResult {
 // Crust's mobile contract: the OAuth `state` parameter must be `<provider>:mobile[:context][:session_token]`.
 // The server reads `:mobile` and routes the callback through the mobile-aware /oauth/complete path
 // (universal/app-link target) instead of the web profile page. Context defaults are server-inferred
-// when omitted, so we leave the third segment off for the 'unknown' context. For native `link`
-// flows we append a URL-safe base64-encoded session token as a 4th segment because the
+// when omitted, so we leave the third segment off for the 'unknown' context. For native `link` and
+// `reauth` flows we append a URL-safe base64-encoded session token as a 4th segment because the
 // SafariViewController cookie jar doesn't share with the app's localStorage-based auth, and crust
-// needs to know which mobile user is requesting the link.
-const MOBILE_STATE_CONTEXTS: ReadonlySet<OAuthFlowContext> = new Set(['login', 'signup', 'link']);
+// needs to know which mobile user is requesting the operation (reauth in particular errors with
+// `reauth_no_session` when the token is missing).
+const MOBILE_STATE_CONTEXTS: ReadonlySet<OAuthFlowContext> = new Set([
+	'login',
+	'signup',
+	'link',
+	'reauth'
+]);
+
+const SESSION_TOKEN_CONTEXTS: ReadonlySet<OAuthFlowContext> = new Set(['link', 'reauth']);
 
 function encodeBase64Url(value: string): string {
 	const base64 =
@@ -127,7 +135,7 @@ export function applyMobileOAuthState(
 	const suffix = MOBILE_STATE_CONTEXTS.has(context) ? `:mobile:${context}` : ':mobile';
 	let nextState = `${currentState}${suffix}`;
 
-	if (context === 'link' && sessionToken && Capacitor.isNativePlatform()) {
+	if (SESSION_TOKEN_CONTEXTS.has(context) && sessionToken && Capacitor.isNativePlatform()) {
 		nextState += `:${encodeBase64Url(sessionToken)}`;
 	}
 
