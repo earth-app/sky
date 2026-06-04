@@ -252,36 +252,48 @@ async function removeNotification() {
 	border-left: 3px solid rgba(250, 204, 21, 0.7);
 }
 
-/* badge enter — conic-gradient border via pseudo for unread */
+/* badge enter — conic-gradient border via pseudo for unread.
+   rotate the gradient angle, not the element. rotating the pseudo with inset:-2px
+   and no overflow clip paints diagonal streaks across the page. */
+@property --notif-badge-angle {
+	syntax: '<angle>';
+	initial-value: 0deg;
+	inherits: false;
+}
 .notif-badge-border {
 	position: relative;
 	isolation: isolate;
+	overflow: hidden;
 }
 .notif-badge-border::before {
 	content: '';
 	position: absolute;
-	inset: -2px;
+	inset: 0;
 	border-radius: inherit;
 	padding: 2px;
-	background: conic-gradient(from 0deg, #a855f7, #f59e0b, #3b82f6, #a855f7);
+	background: conic-gradient(from var(--notif-badge-angle), #a855f7, #f59e0b, #3b82f6, #a855f7);
 	-webkit-mask:
-		linear-gradient(#000 0 0) content-box,
-		linear-gradient(#000 0 0);
+		linear-gradient(black, black) content-box,
+		linear-gradient(black, black);
 	-webkit-mask-composite: xor;
 	mask:
-		linear-gradient(#000 0 0) content-box,
-		linear-gradient(#000 0 0);
+		linear-gradient(black, black) content-box,
+		linear-gradient(black, black);
 	mask-composite: exclude;
 	animation: notif-badge-spin 8s linear infinite;
 	pointer-events: none;
 	z-index: -1;
 }
 @keyframes notif-badge-spin {
-	0% {
-		transform: rotate(0deg);
+	to {
+		--notif-badge-angle: 360deg;
 	}
-	100% {
-		transform: rotate(360deg);
+}
+/* older firefox doesn't support @property; skip the spin rather than have the
+   ring sit static-but-glowing in the wrong place */
+@supports not (background: paint(something)) {
+	.notif-badge-border::before {
+		animation: none;
 	}
 }
 
