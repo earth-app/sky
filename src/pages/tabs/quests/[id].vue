@@ -94,16 +94,21 @@
 				</IonToolbar>
 			</IonHeader>
 
-			<div class="h-full overflow-auto">
+			<div class="h-full overflow-auto relative">
 				<UserQuestStepMSubmission
 					v-if="quest"
 					:quest="quest"
 					:progress="progress"
 					:step="openStep"
 					:migration-signals="migrationSignals"
-					@submitted="closeStepModal"
+					@submitted="onStepSubmitted"
 				/>
 				<Loading v-else-if="stepOpen" />
+				<UiSparkleBurst
+					:trigger="sparkleTick"
+					:count="36"
+					color="success"
+				/>
 			</div>
 		</IonModal>
 	</IonPage>
@@ -208,6 +213,18 @@ watch(
 	},
 	{ immediate: true }
 );
+
+const { notifySuccess } = useAppHaptics();
+const sparkleTick = ref(0);
+
+// micro-confetti tick + haptic, then close after the burst plays
+function onStepSubmitted() {
+	sparkleTick.value++;
+	void notifySuccess();
+	setTimeout(() => {
+		closeStepModal();
+	}, 650);
+}
 
 const openStep = ref<
 	| (QuestStep & {
