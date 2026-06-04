@@ -192,6 +192,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
+import { theme } from '~/composables/useSettings';
 
 const props = defineProps<{
 	quest: Quest;

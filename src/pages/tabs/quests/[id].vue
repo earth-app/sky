@@ -10,7 +10,7 @@
 		</IonHeader>
 
 		<IonContent :scroll-y="true">
-			<div class="flex flex-col items-center px-4">
+			<div class="flex flex-col items-center px-4 mt-2">
 				<UAlert
 					v-if="quest && isMasteryQuest && !isMasteryQuestCompleted"
 					color="warning"

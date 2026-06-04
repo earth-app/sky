@@ -19,15 +19,17 @@
 					color="primary"
 					@click="openDailyQuest"
 				>
-					<UIcon
-						name="ion:flash-outline"
-						class="size-4 mr-1"
-					/>
-					<IonLabel class="text-xs font-semibold"> Today's Quest: {{ truncatedTitle }} </IonLabel>
+					<IonLabel class="flex items-center text-xs font-semibold px-3">
+						<UIcon
+							name="ion:flash-outline"
+							class="size-4 mr-1"
+						/>
+						Today's Quest: {{ truncatedTitle }}
+					</IonLabel>
 				</IonChip>
 			</div>
-			<div class="flex items-center justify-between px-4 py-3">
-				<div class="flex items-center">
+			<div class="flex items-center px-4 py-3">
+				<div class="flex items-center min-w-3/5">
 					<UIcon
 						name="mdi:fire"
 						class="size-6 text-warning"
@@ -41,7 +43,7 @@
 					v-for="row in rows"
 					:key="row.type"
 					type="button"
-					class="flex flex-col items-center gap-1 py-3 rounded-lg transition-colors active:bg-primary/10"
+					class="flex flex-col items-center gap-1 py-3! rounded-lg! transition-colors active:bg-primary/10"
 					:class="cellClass(row)"
 					:aria-label="`${row.label} journey: ${row.count}. Tap to continue.`"
 					@click="onTap(row)"
@@ -51,11 +53,11 @@
 						class="size-6"
 						:class="row.count > 0 ? 'text-primary' : 'text-gray-500'"
 					/>
-					<span class="text-xl font-bold tabular-nums leading-none">{{ row.count }}</span>
+					<span class="text-xl font-bold! tabular-nums leading-none">{{ row.count }}</span>
 					<span class="text-xs opacity-80">{{ row.label }}</span>
 					<span
 						v-if="row.expiringSoon"
-						class="text-[10px] font-semibold text-red-500"
+						class="text-[10px] font-semibold! text-red-500"
 						>Expires Soon</span
 					>
 				</button>
