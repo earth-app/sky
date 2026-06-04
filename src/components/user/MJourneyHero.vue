@@ -65,14 +65,14 @@
 			<button
 				v-if="showQuestCta"
 				type="button"
-				class="mx-3 mb-3 flex items-center justify-center gap-2 py-2 rounded-lg bg-primary/10 active:bg-primary/20 text-primary text-sm font-medium"
+				class="mx-2! px-3! mb-3! flex items-center justify-center gap-2 py-2! rounded-lg! bg-primary/10! active:bg-primary/20! text-primary! text-sm! font-medium!"
 				@click="onTapQuestCta"
 			>
 				<UIcon
 					name="mdi:flag-checkered"
 					class="size-4"
 				/>
-				<span>Try a Quest to Keep Your Streak Alive</span>
+				<span>Try a Quest to Keep your Streak Alive</span>
 			</button>
 		</IonCard>
 	</div>
