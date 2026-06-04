@@ -117,10 +117,9 @@ const ownerAvatarUrl = computed(() => {
 });
 const authorAvatar = computed(() => {
 	const url = ownerAvatarUrl.value;
-	if (!url) return '/favicon.png';
-	if (url.startsWith('data:')) return url;
-	if (!url.startsWith('http')) return '/favicon.png';
-	return avatarStore.get(url)?.avatar128 || '/favicon.png';
+	// sky cards may receive inlined offline data: URIs from the R2 download cache
+	if (url?.startsWith('data:')) return url;
+	return avatarStore.safeUrl(url, 'avatar128');
 });
 
 watch(
