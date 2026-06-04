@@ -90,6 +90,17 @@
 						>{{ capitalizeFully(SEGMENT_LABELS[activeSegment]) }} -
 						{{ comma(displayedResults.length) }} Results</span
 					>
+					<div
+						v-if="displayedResults.length === 0 && isLoading"
+						class="flex flex-col gap-3 w-full px-2 py-4"
+					>
+						<MSkeleton
+							v-for="n in 4"
+							:key="`discover-skeleton-${n}`"
+							:height="120"
+							width="100%"
+						/>
+					</div>
 					<template
 						v-for="(result, index) in displayedResults"
 						:key="`${result.data_type}-${result.id}`"

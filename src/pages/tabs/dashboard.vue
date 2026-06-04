@@ -397,7 +397,18 @@ const renderableFeedItems = computed(() =>
 const isLoadingMore = ref(false);
 const isRefreshing = ref(false);
 const hasInitialized = ref(false);
-const lastContentType = ref<ContentType | null>(null);
+// last two types are blocked when picking the next one so groups don't cluster within 2 steps
+const recentContentTypes = ref<ContentType[]>([]);
+const RECENT_TYPE_LOOKBACK = 2;
+// track recently shown IDs per content type so we don't recycle the same card across nearby groups
+const recentlyShownIds = ref<Record<ContentType, Set<string>>>({
+	activity: new Set(),
+	prompt: new Set(),
+	article: new Set(),
+	event: new Set(),
+	user: new Set()
+});
+const RECENT_ID_LOOKBACK = 30;
 const dashboardRefreshSignal = useState<number>('dashboard-refresh-signal', () => 0);
 
 const GROUP_SIZES = {
@@ -475,11 +486,52 @@ async function dismissResumeTour() {
 
 function getNextContentType(): ContentType {
 	const types: ContentType[] = ['activity', 'prompt', 'article', 'event', 'user'];
-	const availableTypes = types.filter((t) => t !== lastContentType.value);
+	// block any type that appeared in the last RECENT_TYPE_LOOKBACK picks so groups stay spaced
+	const blocked = new Set(recentContentTypes.value.slice(-RECENT_TYPE_LOOKBACK));
+	let availableTypes = types.filter((t) => !blocked.has(t));
+	// belt-and-suspenders: if the lookback ever blocks everything, fall back to "not the last one"
+	if (availableTypes.length === 0) {
+		const lastType = recentContentTypes.value[recentContentTypes.value.length - 1];
+		availableTypes = types.filter((t) => t !== lastType);
+	}
 	const randomIndex = Math.floor(Math.random() * availableTypes.length);
 	const nextType = availableTypes[randomIndex]!;
-	lastContentType.value = nextType;
+	recentContentTypes.value.push(nextType);
+	if (recentContentTypes.value.length > RECENT_TYPE_LOOKBACK * 2) {
+		recentContentTypes.value.splice(0, recentContentTypes.value.length - RECENT_TYPE_LOOKBACK * 2);
+	}
 	return nextType;
+}
+
+// strip out items we've already shown recently to keep duplicate data out of the visible feed
+function dedupeData<T extends { id: string }>(type: ContentType, data: T[]): T[] {
+	const seen = recentlyShownIds.value[type];
+	const filtered: T[] = [];
+	const seenInBatch = new Set<string>();
+	for (const item of data) {
+		if (!item?.id) continue;
+		if (seen.has(item.id) || seenInBatch.has(item.id)) continue;
+		seenInBatch.add(item.id);
+		filtered.push(item);
+	}
+	return filtered;
+}
+
+function recordShownIds(type: ContentType, data: { id: string }[]) {
+	const seen = recentlyShownIds.value[type];
+	for (const item of data) {
+		if (item?.id) seen.add(item.id);
+	}
+	// cap the set so it doesn't grow unbounded across infinite scroll
+	if (seen.size > RECENT_ID_LOOKBACK) {
+		const overflow = seen.size - RECENT_ID_LOOKBACK;
+		let removed = 0;
+		for (const id of seen) {
+			if (removed >= overflow) break;
+			seen.delete(id);
+			removed++;
+		}
+	}
 }
 
 function shouldBeGroup(): boolean {
@@ -655,9 +707,14 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		Math.random() < (isDataConstrained.value ? 0.15 : 0.3) && hasAuthenticatedUser;
 	let feedItem: FeedItem | null = null;
 
+	// over-fetch when we need a group so dedupe still leaves enough items to fill it
+	const requestCount = isGroup ? Math.min(count * 2 + 2, 16) : Math.max(count, 3);
+
 	if (type === 'activity') {
-		const data = await fetchContent(type, count, useRecommended);
+		const raw = await fetchContent(type, requestCount, useRecommended);
+		const data = dedupeData(type, raw).slice(0, isGroup ? count : 1);
 		if (data.length > 0) {
+			recordShownIds(type, data);
 			feedItem = { type, isGroup, data };
 		}
 
@@ -668,8 +725,10 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 			}
 		}
 	} else if (type === 'prompt') {
-		const data = await fetchContent(type, count, useRecommended);
+		const raw = await fetchContent(type, requestCount, useRecommended);
+		const data = dedupeData(type, raw).slice(0, isGroup ? count : 1);
 		if (data.length > 0) {
+			recordShownIds(type, data);
 			feedItem = { type, isGroup, data };
 		}
 
@@ -680,8 +739,10 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 			}
 		}
 	} else if (type === 'article') {
-		const data = await fetchContent(type, count, useRecommended);
+		const raw = await fetchContent(type, requestCount, useRecommended);
+		const data = dedupeData(type, raw).slice(0, isGroup ? count : 1);
 		if (data.length > 0) {
+			recordShownIds(type, data);
 			feedItem = { type, isGroup, data };
 		}
 
@@ -692,8 +753,10 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 			}
 		}
 	} else if (type === 'event') {
-		const data = await fetchContent(type, count, useRecommended);
+		const raw = await fetchContent(type, requestCount, useRecommended);
+		const data = dedupeData(type, raw).slice(0, isGroup ? count : 1);
 		if (data.length > 0) {
+			recordShownIds(type, data);
 			feedItem = { type, isGroup, data };
 		}
 
@@ -705,8 +768,10 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		}
 	} else if (type === 'user') {
 		// users are always groups since single user cards don't make much sense in a feed context
-		const data = await fetchContent(type, Math.max(2, count), useRecommended);
+		const raw = await fetchContent(type, Math.max(2, requestCount), useRecommended);
+		const data = dedupeData(type, raw).slice(0, Math.max(2, count));
 		if (data.length > 0) {
+			recordShownIds(type, data);
 			feedItem = { type, isGroup: true, data };
 		}
 
@@ -834,7 +899,10 @@ async function refreshFeed(scrollDurationMs: number = 300) {
 	if (isRefreshing.value) return;
 
 	isRefreshing.value = true;
-	lastContentType.value = null;
+	recentContentTypes.value = [];
+	for (const type of Object.keys(recentlyShownIds.value) as ContentType[]) {
+		recentlyShownIds.value[type].clear();
+	}
 	await scrollToTop(scrollDurationMs);
 	feedItems.value = [];
 

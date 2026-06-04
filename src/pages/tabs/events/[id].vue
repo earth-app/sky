@@ -18,7 +18,7 @@
 					kind="event"
 					variant="countdown"
 					:expires-at="eventExpiresAt"
-					class="w-full max-w-2xl px-4 mt-2"
+					class="w-full max-w-2xl px-4 mt-2 min-h-24"
 				/>
 				<EventMPage :event="event" />
 				<div class="flex items-center w-screen">

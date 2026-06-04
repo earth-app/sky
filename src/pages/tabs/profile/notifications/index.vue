@@ -10,7 +10,6 @@
 
 				<IonButtons slot="end">
 					<IonButton
-						fill="clear"
 						color="secondary"
 						aria-label="Help"
 						@click="startTour('notifications')"
