@@ -29,9 +29,6 @@ const COMPONENTS: Record<FeedWidgetKind, ReturnType<typeof defineAsyncComponent>
 	MoodSpark: defineAsyncComponent(() => import('~/components/activity/widgets/MMoodSpark.vue')),
 	MicroPoll: defineAsyncComponent(() => import('~/components/activity/widgets/MMicroPoll.vue')),
 	MicroQuiz: defineAsyncComponent(() => import('~/components/activity/widgets/MMicroQuiz.vue')),
-	WordOfTheDay: defineAsyncComponent(
-		() => import('~/components/activity/widgets/MWordOfTheDay.vue')
-	),
 	ImpactTracker: defineAsyncComponent(
 		() => import('~/components/activity/widgets/MImpactTracker.vue')
 	),
