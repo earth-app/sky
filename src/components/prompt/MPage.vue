@@ -9,7 +9,7 @@
 		</IonRefresher>
 		<div class="flex justify-end w-full pr-2 mt-2">
 			<IonButton
-				fill="clear"
+				fill="outline"
 				size="small"
 				color="secondary"
 				aria-label="Help"

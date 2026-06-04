@@ -2,7 +2,7 @@
 	<div class="flex flex-col items-center w-full">
 		<div class="flex justify-end w-full pr-4 mt-2">
 			<IonButton
-				fill="clear"
+				fill="outline"
 				size="small"
 				color="secondary"
 				aria-label="Help"
@@ -31,7 +31,7 @@
 				by
 				<span
 					class="font-semibold text-blue-500"
-					@click="navigateTo(`/tabs/profile/@${article.author.username}`)"
+					@click="router.push(`/tabs/profile/@${article.author.username}`)"
 				>
 					@{{ article.author.username }}
 				</span>
@@ -175,6 +175,7 @@ import { DateTime } from 'luxon';
 import type { Article } from 'types/article';
 import { parseLooseDate, trimString } from 'utils';
 import slide from '~/animations/slide';
+import { theme } from '~/composables/useSettings';
 
 const props = defineProps<{
 	article: Article;

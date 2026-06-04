@@ -2,7 +2,7 @@
 	<div class="flex flex-col items-center w-full pt-8">
 		<div class="flex justify-end w-full pr-4">
 			<IonButton
-				fill="clear"
+				fill="outline"
 				size="small"
 				color="secondary"
 				aria-label="Help"
