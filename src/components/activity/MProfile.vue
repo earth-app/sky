@@ -58,6 +58,7 @@
 				</IonButton>
 
 				<IonButton
+					fill="outline"
 					size="small"
 					color="secondary"
 					@click="startTour('activities')"
@@ -75,6 +76,39 @@
 		>
 			{{ activity.description }}
 		</h3>
+		<IonCard
+			v-if="showNoveltyHint"
+			id="activity-novelty-hint"
+			color="tertiary"
+			class="min-w-85 w-4/5 mt-4 mb-2 p-3 flex items-start gap-2 border border-tertiary/40"
+		>
+			<UIcon
+				name="mdi:lightbulb-on-outline"
+				class="size-5 shrink-0 mt-0.5"
+			/>
+			<div class="flex flex-col gap-1 flex-1 min-w-0">
+				<p class="text-sm font-medium m-0!">A note on what you'll see here</p>
+				<p class="text-xs leading-snug m-0! opacity-90">
+					Some cards may drift away from
+					<span class="font-medium">{{ activity.name }}</span>
+					and that's intentional. The Earth App is built around novelty; those tangents are how you
+					bump into something new.
+				</p>
+			</div>
+			<IonButton
+				fill="clear"
+				size="small"
+				color="light"
+				aria-label="Dismiss hint"
+				class="m-0! shrink-0"
+				@click="dismissNoveltyHint"
+			>
+				<UIcon
+					name="mdi:close"
+					class="size-4"
+				/>
+			</IonButton>
+		</IonCard>
 		<div
 			id="activity-cards"
 			class="flex flex-col justify-center gap-4 px-4 w-full"
@@ -139,7 +173,10 @@
 </template>
 
 <script setup lang="ts">
+import { Preferences } from '@capacitor/preferences';
 import type { Activity } from 'types/activity';
+
+const NOVELTY_HINT_KEY = 'sky:activity-novelty-hint-dismissed';
 
 type ActivityProfileCard = {
 	title: string;
@@ -168,6 +205,27 @@ const { user } = useAuth();
 const { cards, loadCardsForActivity } = useActivityCards(makeMServerRequest);
 const { widgetForIndex } = useFeedWidgets();
 const offlineMode = computed(() => Boolean(props.offlineMode));
+
+const noveltyHintDismissed = ref(true); // default hidden until we read Preferences to avoid a flash
+const showNoveltyHint = computed(() => !noveltyHintDismissed.value && !offlineMode.value);
+
+onMounted(async () => {
+	try {
+		const { value } = await Preferences.get({ key: NOVELTY_HINT_KEY });
+		noveltyHintDismissed.value = value === '1';
+	} catch {
+		noveltyHintDismissed.value = false;
+	}
+});
+
+async function dismissNoveltyHint() {
+	noveltyHintDismissed.value = true;
+	try {
+		await Preferences.set({ key: NOVELTY_HINT_KEY, value: '1' });
+	} catch {
+		// best-effort; the in-memory flag still hides it for this session
+	}
+}
 
 // shift the rotation index by an activity-id hash so different activities don't all show
 // the same widget kind at the same card position
