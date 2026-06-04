@@ -78,7 +78,7 @@
 <script setup lang="ts">
 import { IonButton, IonCard } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
-import { useNotify } from '~/composables/useNotify';
+import { showInfoToast } from '~/composables/useNotify';
 
 type WordEntry = { word: string; partOfSpeech: string; definition: string };
 
@@ -102,7 +102,6 @@ const REMOTE_CACHE_KEY = 'wordoftheday:remote';
 const REMOTE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const { selection, notifySuccess } = useAppHaptics();
-const { showInfoToast } = useNotify();
 
 const acted = ref(false);
 const actedMsg = ref('');
