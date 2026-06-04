@@ -180,6 +180,7 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
+import { capitalizeFully, comma } from 'utils';
 import { theme } from '~/composables/useSettings';
 
 const SEARCH_DEBOUNCE_MS = 450;
