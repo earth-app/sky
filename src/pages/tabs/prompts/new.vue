@@ -2,14 +2,15 @@
 	<IonPage>
 		<IonHeader>
 			<IonToolbar>
-				<IonTitle>Create Prompt</IonTitle>
-				<IonButtons slot="start">
-					<IonBackButton default-href="/tabs/dashboard" />
+				<IonTitle>
 					<UAvatar
 						:src="avatar128"
 						size="md"
-						class="self-center mx-2 shadow-md shadow-black/10 light:shadow-black/30"
-					/>
+						class="self-center mx-1 shadow-md shadow-black/10 light:shadow-black/30"
+					/>Create Prompt</IonTitle
+				>
+				<IonButtons slot="start">
+					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
