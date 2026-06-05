@@ -18,10 +18,11 @@
 		"
 	>
 		<IonImg
-			v-if="showCardImage"
+			v-if="showCardImage && !imageFailed"
 			:src="image"
 			alt="Card Image"
 			class="mb-2"
+			@ionError="imageFailed = true"
 		/>
 		<IonCardHeader class="px-2">
 			<IonCardTitle>
@@ -415,6 +416,15 @@ const appSettings = useAppSettingsState();
 const { selection } = useAppHaptics();
 const showCardImage = computed(() => Boolean(props.image && appSettings.value.cardThumbnails));
 
+// hide on error rather than letting Ionic render the broken-image placeholder
+const imageFailed = ref(false);
+watch(
+	() => props.image,
+	() => {
+		imageFailed.value = false;
+	}
+);
+
 const runtimeConfig = useRuntimeConfig();
 
 const isNativeWebView = computed(() => {
@@ -437,7 +447,19 @@ const origin = computed(() => {
 	return null;
 });
 
+// strict YouTube id format so we don't ship malformed urls to crust's proxy
+const isValidYoutubeId = computed(
+	() => typeof props.youtubeId === 'string' && /^[A-Za-z0-9_-]{11}$/.test(props.youtubeId)
+);
+
 const youtubeEmbedSrc = computed(() => {
+	if (!isValidYoutubeId.value) return '';
+
+	if (isNativeWebView.value) {
+		const base = `${runtimeConfig.public.crustBaseUrl || 'https://app.earth-app.com'}/yt.html`;
+		return `${base}?v=${encodeURIComponent(props.youtubeId!)}`;
+	}
+
 	const base = `https://www.youtube-nocookie.com/embed/${props.youtubeId}`;
 	const params = [
 		'autoplay=0',
