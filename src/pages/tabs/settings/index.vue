@@ -604,6 +604,15 @@ const settingSections = computed<SettingSection[]>(() => [
 				placeholder: 'Manage',
 				color: 'primary',
 				link: '/tabs/settings/api-keys'
+			},
+			{
+				kind: 'link',
+				title: 'My Words',
+				description:
+					"Words you've saved from Word of the Day. Stored on this device for easy review later",
+				placeholder: 'View',
+				color: 'tertiary',
+				link: '/tabs/settings/words'
 			}
 		]
 	},

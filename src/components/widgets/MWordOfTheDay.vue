@@ -41,6 +41,15 @@
 				/>
 				{{ saved ? 'Saved' : 'Save Word' }}
 			</IonButton>
+			<IonText
+				color="primary"
+				class="flex items-center text-xs mt-2"
+				router-link="/tabs/settings/words"
+				>View Saved
+				<UIcon
+					name="mdi:arrow-right"
+					class="ml-0.5 size-4"
+			/></IonText>
 		</div>
 		<div
 			v-else
@@ -95,13 +104,12 @@ const emit = defineEmits<{
 	(event: 'complete', payload: { outcome: 'known' | 'saved' | 'skipped' }): void;
 }>();
 
-const SAVED_KEY = 'wordoftheday:saved';
-const SAVED_CAP = 30;
 // 24h client cache key for a future cloud word-of-the-day route
 const REMOTE_CACHE_KEY = 'wordoftheday:remote';
 const REMOTE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const { selection, notifySuccess } = useAppHaptics();
+const savedWords = useSavedWords();
 
 const acted = ref(false);
 const actedMsg = ref('');
@@ -127,42 +135,9 @@ const entry = computed<WordEntry>(
 	() => pool.value[pickIndex(sessionOffset.value)] ?? pool.value[0] ?? DEFAULT_WORDS[0]!
 );
 
-function readSavedList(): WordEntry[] {
-	if (typeof window === 'undefined') return [];
-	try {
-		const raw = window.localStorage.getItem(SAVED_KEY);
-		if (!raw) return [];
-		const parsed = JSON.parse(raw);
-		if (!Array.isArray(parsed)) return [];
-		return parsed.filter(
-			(item): item is WordEntry =>
-				item &&
-				typeof item.word === 'string' &&
-				typeof item.partOfSpeech === 'string' &&
-				typeof item.definition === 'string'
-		);
-	} catch {
-		return [];
-	}
-}
-
-function isAlreadySaved(word: string): boolean {
-	return readSavedList().some((w) => w.word.toLowerCase() === word.toLowerCase());
-}
-
 function saveWord() {
-	if (typeof window === 'undefined') return;
-	const list = readSavedList();
 	const w = entry.value;
-	if (!isAlreadySaved(w.word)) {
-		list.unshift({ word: w.word, partOfSpeech: w.partOfSpeech, definition: w.definition });
-		while (list.length > SAVED_CAP) list.pop();
-		try {
-			window.localStorage.setItem(SAVED_KEY, JSON.stringify(list));
-		} catch {
-			// quota or disabled storage — silent
-		}
-	}
+	savedWords.save({ word: w.word, partOfSpeech: w.partOfSpeech, definition: w.definition });
 	saved.value = true;
 	acted.value = true;
 	actedMsg.value = 'Saved to your words.';
@@ -191,7 +166,7 @@ function showAnother() {
 
 watchEffect(() => {
 	if (typeof window === 'undefined') return;
-	saved.value = isAlreadySaved(entry.value.word);
+	saved.value = savedWords.isSaved(entry.value.word);
 });
 
 // future cloud route: read 24h-cached remote pool if present.

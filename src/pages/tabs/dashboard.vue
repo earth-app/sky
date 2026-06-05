@@ -12,7 +12,7 @@
 				<IonRefresherContent />
 			</IonRefresher>
 			<div class="flex flex-col size-full items-center">
-				<div class="flex flex-col m-8 mt-16 w-full items-center justify-center">
+				<div class="flex flex-col m-8 mt-20 w-full items-center justify-center">
 					<IonImg
 						src="/earth-app.png"
 						alt="The Earth App"
@@ -140,6 +140,7 @@
 
 					<UserMJourneyHero v-if="user" />
 					<UserMBadgeShowcase v-if="user" />
+					<WidgetsMSavedWordsBlock v-if="user" />
 
 					<div
 						v-if="user && onboarding.state.value"

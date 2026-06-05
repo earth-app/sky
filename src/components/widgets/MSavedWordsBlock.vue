@@ -1,7 +1,7 @@
 <template>
 	<IonCard
 		v-if="list.length > 0"
-		class="info-card-group w-11/12 max-w-2xl mt-4 mx-auto p-4 rounded-xl shadow-md border border-info/20"
+		class="info-card-group w-11/12 max-w-2xl min-h-50 mt-4 mx-auto p-4 rounded-xl shadow-md border border-info/20"
 	>
 		<div class="flex items-start gap-2 mb-3">
 			<UIcon
