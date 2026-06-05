@@ -111,7 +111,7 @@ const emit = defineEmits<{
 
 const { selection } = useAppHaptics();
 const wrapperClass = computed(() => props.class || 'w-full');
-const buttonText = computed(() => props.buttonText || 'Select activities');
+const buttonText = computed(() => props.buttonText || 'Select Activities');
 const maxActivities = computed(() => props.maxActivities || 10);
 
 const modalOpen = ref(false);
