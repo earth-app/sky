@@ -73,7 +73,6 @@
 </template>
 
 <script setup lang="ts">
-import { Toast } from '@capacitor/toast';
 import type { Event } from 'types/event';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
 
@@ -126,15 +125,10 @@ async function loadSimilar() {
 	const res = await fetchSimilar();
 	if (valid(res)) {
 		relatedEvents.value = res.data;
-		relatedLoaded.value = true;
 	} else {
-		console.error('Failed to load similar events:', res.message);
-		relatedLoaded.value = true;
-
-		await Toast.show({
-			text: res.message || 'Failed to load similar events.',
-			duration: 'long'
-		});
+		console.warn('Failed to load similar events:', res.message);
+		relatedEvents.value = [];
 	}
+	relatedLoaded.value = true;
 }
 </script>
