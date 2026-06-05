@@ -127,7 +127,38 @@
 				v-if="youtubeId"
 				hydrate-on-visible
 			>
-				<div class="relative w-full min-h-64 mb-2">
+				<button
+					v-if="isNativeWebView"
+					type="button"
+					class="relative w-full min-h-64 mb-2 rounded-lg overflow-hidden block bg-black active:opacity-90 transition-opacity group"
+					@click.stop.prevent="openYouTubeExternally"
+				>
+					<img
+						v-if="youtubeThumbnailSrc"
+						:src="youtubeThumbnailSrc"
+						:alt="`YouTube video for ${title}`"
+						class="absolute inset-0 w-full h-full object-cover"
+						loading="lazy"
+						decoding="async"
+					/>
+					<div
+						class="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-black/60"
+					></div>
+					<div class="relative w-full h-full flex items-center justify-center min-h-64">
+						<div
+							class="size-16 rounded-xl bg-black/60 group-active:bg-red-600 transition-colors flex items-center justify-center backdrop-blur-sm"
+						>
+							<UIcon
+								name="mdi:play"
+								class="size-8 text-white"
+							/>
+						</div>
+					</div>
+				</button>
+				<div
+					v-else
+					class="relative w-full min-h-64 mb-2"
+				>
 					<iframe
 						v-if="!youtubeFailed"
 						:src="youtubeEmbedSrc"
@@ -425,8 +456,6 @@ watch(
 	}
 );
 
-const runtimeConfig = useRuntimeConfig();
-
 const isNativeWebView = computed(() => {
 	if (!import.meta.client) return false;
 	if (Capacitor.isNativePlatform()) return true;
@@ -447,24 +476,16 @@ const origin = computed(() => {
 	return null;
 });
 
-// strict YouTube id format so we don't ship malformed urls to crust's proxy
+// strict YouTube id format so we don't ship malformed urls to the thumbnail or embed
 const isValidYoutubeId = computed(
 	() => typeof props.youtubeId === 'string' && /^[A-Za-z0-9_-]{11}$/.test(props.youtubeId)
 );
 
+// web-only — native renders a thumbnail card + tap-to-open instead because WKWebView
+// drops cross-origin iframes silently (no @error). see template for the native branch.
 const youtubeEmbedSrc = computed(() => {
 	if (!isValidYoutubeId.value) return '';
-
-	if (isNativeWebView.value) {
-		const configured = runtimeConfig.public.crustBaseUrl;
-		if (!configured && import.meta.dev) {
-			console.warn(
-				'[MInfoCard] runtimeConfig.public.crustBaseUrl is unset — falling back to production. Set NUXT_PUBLIC_CRUST_BASE_URL for local builds.'
-			);
-		}
-		const base = `${configured || 'https://app.earth-app.com'}/yt.html`;
-		return `${base}?v=${encodeURIComponent(props.youtubeId!)}`;
-	}
+	if (isNativeWebView.value) return '';
 
 	const base = `https://www.youtube-nocookie.com/embed/${props.youtubeId}`;
 	const params = [
@@ -478,6 +499,10 @@ const youtubeEmbedSrc = computed(() => {
 	if (origin.value) params.push(`origin=${origin.value}`);
 	return `${base}?${params.join('&')}`;
 });
+
+const youtubeThumbnailSrc = computed(() =>
+	isValidYoutubeId.value ? `https://i.ytimg.com/vi/${props.youtubeId}/hqdefault.jpg` : ''
+);
 
 const youtubeFailed = ref(false);
 function openYouTubeExternally() {
