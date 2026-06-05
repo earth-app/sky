@@ -62,12 +62,16 @@
 				</p>
 			</div>
 
-			<p
+			<UAlert
 				v-if="errorMessage"
-				class="text-xs text-danger mt-2"
-			>
-				{{ errorMessage }}
-			</p>
+				color="error"
+				variant="subtle"
+				icon="mdi:alert-circle"
+				:title="errorMessage"
+				:close="{ color: 'error', variant: 'link' }"
+				class="mt-2! text-xs!"
+				@update:open="errorMessage = null"
+			/>
 		</IonCardContent>
 	</IonCard>
 </template>

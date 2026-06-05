@@ -13,6 +13,7 @@
 				</h3>
 			</div>
 			<IonChip
+				v-if="started"
 				color="secondary"
 				class="px-2 text-xs font-semibold"
 			>
@@ -23,8 +24,34 @@
 				{{ formattedTime }}
 			</IonChip>
 		</div>
+
 		<div
-			v-if="!done"
+			v-if="!started"
+			class="flex flex-col items-center text-center py-3 gap-3"
+		>
+			<UIcon
+				name="mdi:flash-outline"
+				class="size-10 text-secondary"
+			/>
+			<div class="flex flex-col gap-1">
+				<p class="text-sm font-semibold m-0!">{{ ctaTitle }}</p>
+				<p class="text-xs text-gray-500 m-0!">{{ ctaSubtitle }}</p>
+			</div>
+			<IonButton
+				color="secondary"
+				size="small"
+				@click="start"
+			>
+				<UIcon
+					name="mdi:play"
+					class="size-4 mr-1"
+				/>
+				Start Round
+			</IonButton>
+		</div>
+
+		<div
+			v-else-if="!done"
 			class="grid grid-cols-2 gap-2"
 		>
 			<IonButton
@@ -67,6 +94,19 @@
 			>
 				{{ questHint }}
 			</p>
+			<IonButton
+				color="secondary"
+				size="small"
+				fill="outline"
+				class="mt-3"
+				@click="restart"
+			>
+				<UIcon
+					name="mdi:restart"
+					class="size-4 mr-1"
+				/>
+				Play Again
+			</IonButton>
 		</div>
 	</IonCard>
 </template>
@@ -76,10 +116,21 @@ import { IonButton, IonCard, IonChip } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
 
 type Pair = { term: string; def: string };
-const props = withDefaults(defineProps<{ pool?: Pair[]; questHint?: string }>(), {
-	pool: () => DEFAULT_POOL,
-	questHint: undefined
-});
+const props = withDefaults(
+	defineProps<{
+		pool?: Pair[];
+		questHint?: string;
+		// label customization so MWidgetSlot can drop in activity-themed copy
+		ctaTitle?: string;
+		ctaSubtitle?: string;
+	}>(),
+	{
+		pool: () => DEFAULT_POOL,
+		questHint: undefined,
+		ctaTitle: 'Match 4 terms to their definitions',
+		ctaSubtitle: 'Tap when you’re ready — the timer only starts after you do.'
+	}
+);
 const emit = defineEmits<{ (event: 'complete', payload: { timeMs: number }): void }>();
 
 const ROUND = 4;
@@ -91,6 +142,7 @@ const matchedDefs = ref<Set<number>>(new Set());
 const shakeTerm = ref<number | null>(null);
 const shakeDef = ref<number | null>(null);
 const elapsed = ref(0);
+const started = ref(false);
 const done = ref(false);
 let startedAt = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -115,15 +167,34 @@ const cellColor = (matched: Set<number>, selected: number | null, i: number) =>
 const cellFill = (matched: Set<number>, selected: number | null, i: number) =>
 	matched.has(i) || selected === i ? 'solid' : 'outline';
 
-onMounted(() => {
-	const round = shuffle(props.pool).slice(0, ROUND);
+function start() {
+	if (started.value) return;
+	selection();
+	// pool can be smaller than ROUND on degenerate activity pools — fall back to default to stay playable
+	const sourcePool = props.pool.length >= ROUND ? props.pool : DEFAULT_POOL;
+	const round = shuffle(sourcePool).slice(0, ROUND);
 	terms.value = round;
 	defs.value = shuffle(round);
+	elapsed.value = 0;
 	startedAt = performance.now();
 	timer = setInterval(() => {
 		elapsed.value = performance.now() - startedAt;
 	}, 100);
-});
+	started.value = true;
+}
+
+function restart() {
+	if (timer) clearInterval(timer);
+	timer = null;
+	matchedTerms.value = new Set();
+	matchedDefs.value = new Set();
+	selectedTerm.value = null;
+	selectedDef.value = null;
+	done.value = false;
+	started.value = false;
+	elapsed.value = 0;
+}
+
 onBeforeUnmount(() => {
 	if (timer) clearInterval(timer);
 });
