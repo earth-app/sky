@@ -456,7 +456,13 @@ const youtubeEmbedSrc = computed(() => {
 	if (!isValidYoutubeId.value) return '';
 
 	if (isNativeWebView.value) {
-		const base = `${runtimeConfig.public.crustBaseUrl || 'https://app.earth-app.com'}/yt.html`;
+		const configured = runtimeConfig.public.crustBaseUrl;
+		if (!configured && import.meta.dev) {
+			console.warn(
+				'[MInfoCard] runtimeConfig.public.crustBaseUrl is unset — falling back to production. Set NUXT_PUBLIC_CRUST_BASE_URL for local builds.'
+			);
+		}
+		const base = `${configured || 'https://app.earth-app.com'}/yt.html`;
 		return `${base}?v=${encodeURIComponent(props.youtubeId!)}`;
 	}
 
