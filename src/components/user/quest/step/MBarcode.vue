@@ -117,7 +117,7 @@
 			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
 				Barcode Captured
 			</p>
-			<div class="flex flex-col items-center gap-1">
+			<div class="flex flex-col items-center gap-1 mb-8">
 				<p class="text-base! font-mono! text-white! tracking-widest break-all">
 					{{ scannedValue }}
 				</p>
