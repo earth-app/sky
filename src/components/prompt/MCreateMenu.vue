@@ -7,34 +7,41 @@
 				color="warning"
 				class="min-h-24"
 			/>
-			<IonTextarea
-				label="Prompt"
-				label-placement="floating"
-				required
-				fill="solid"
-				v-model="prompt"
-				placeholder="What is the meaning of life?"
-				:minlength="1"
-				:maxlength="256"
-			/>
 
-			<IonSelect
-				label="Visibility"
-				label-placement="fixed"
-				required
-				fill="solid"
-				placeholder="Select Prompt Visibility"
-				justify="start"
-				v-model="visibility"
-			>
-				<IonSelectOption
-					v-for="option in visibilityOptions"
-					:key="option.ordinal"
-					:value="option.name"
-				>
-					{{ capitalizeFully(option.name) }}
-				</IonSelectOption>
-			</IonSelect>
+			<IonList class="w-full border! rounded-lg! py-2! border-gray-300 light:border-gray-600">
+				<IonItem>
+					<IonTextarea
+						label="Prompt"
+						label-placement="floating"
+						required
+						fill="solid"
+						v-model="prompt"
+						placeholder="What is the meaning of life?"
+						:minlength="1"
+						:maxlength="256"
+					/>
+				</IonItem>
+
+				<IonItem>
+					<IonSelect
+						label="Visibility"
+						label-placement="fixed"
+						required
+						fill="solid"
+						placeholder="Select Prompt Visibility"
+						justify="start"
+						v-model="visibility"
+					>
+						<IonSelectOption
+							v-for="option in visibilityOptions"
+							:key="option.ordinal"
+							:value="option.name"
+						>
+							{{ capitalizeFully(option.name) }}
+						</IonSelectOption>
+					</IonSelect>
+				</IonItem>
+			</IonList>
 
 			<IonButton
 				class="mt-4"
