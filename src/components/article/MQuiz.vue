@@ -36,16 +36,20 @@
 							<span>{{ currentResult.correct ? 'Correct' : 'Incorrect' }}</span>
 						</div>
 
+						<!-- single-pick (multiple_choice + true_false) -->
 						<IonRadioGroup
+							v-if="
+								currentQuestion.type === 'multiple_choice' || currentQuestion.type === 'true_false'
+							"
 							class="w-full"
 							allow-empty-selection
-							:value="userAnswers[index] ?? null"
-							@ion-change="handleAnswerChange(index, $event)"
+							:value="singlePickAnswers[index] ?? null"
+							@ion-change="handleSinglePick(index, $event)"
 						>
 							<IonItem
-								v-for="option in currentOptions"
+								v-for="option in currentSingleOptions"
 								:key="option.value"
-								class="p-0 my-2"
+								class="p-0! my-2"
 							>
 								<IonRadio
 									:value="option.value"
@@ -56,36 +60,123 @@
 							</IonItem>
 						</IonRadioGroup>
 
+						<!-- multi_select -->
 						<div
-							v-if="score"
-							class="flex flex-col justify-center space-y-2 w-full self-start min-h-55"
+							v-else-if="currentQuestion.type === 'multi_select'"
+							class="flex flex-col gap-2 w-full px-2"
+						>
+							<p class="text-xs! text-gray-500 m-0!">Select every option that applies.</p>
+							<IonItem
+								v-for="(option, i) in (currentQuestion as any).options"
+								:key="`ms-${index}-${i}`"
+								class="p-0! my-1"
+							>
+								<IonCheckbox
+									slot="start"
+									:checked="multiSelectAnswers[index]?.includes(i) ?? false"
+									:disabled="!!score"
+									@ionChange="(ev) => handleMultiSelect(index, i, !!ev.detail.checked)"
+								/>
+								<IonLabel class="ml-2!">{{ option }}</IonLabel>
+							</IonItem>
+						</div>
+
+						<!-- order: untimed Orderer -->
+						<div
+							v-else-if="currentQuestion.type === 'order'"
+							class="flex flex-col gap-2 w-full px-2"
+						>
+							<UserQuestStepOrderer
+								:items="(currentQuestion as any).items"
+								untimed
+								:disabled="!!score"
+								:submit="false"
+								@update:order="(order: string[]) => handleOrderUpdate(index, order)"
+							/>
+						</div>
+
+						<!-- post-score breakdown -->
+						<div
+							v-if="score && currentResult"
+							class="flex flex-col justify-center space-y-2 w-full self-start min-h-55 mt-3 px-2"
 						>
 							<USeparator />
-							<div
-								v-for="(option, i) in currentOptions"
-								:key="i"
-								class="flex items-center justify-between p-2 rounded"
-								:class="{
-									'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400':
-										i === currentResult?.correct_answer_index,
-									'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400':
-										i === userAnswers[index] &&
-										!currentResult?.correct &&
-										i !== currentResult?.correct_answer_index
-								}"
-							>
-								<span>#{{ i + 1 }}. {{ option.label }}</span>
-								<UIcon
-									v-if="i === currentResult?.correct_answer_index"
-									name="mdi:check-circle"
-									class="text-green-500"
-								/>
-								<UIcon
-									v-else-if="i === userAnswers[index] && !currentResult?.correct"
-									name="mdi:close-circle"
-									class="text-red-500"
-								/>
-							</div>
+
+							<template v-if="currentQuestion.type === 'multi_select'">
+								<div
+									v-for="(option, i) in (currentQuestion as any).options"
+									:key="`msr-${i}`"
+									class="flex items-center justify-between p-2 rounded-md"
+									:class="multiSelectResultClass(i, currentResult)"
+								>
+									<span>#{{ i + 1 }}. {{ option }}</span>
+									<UIcon
+										v-if="
+											Array.isArray(currentResult.correct_answer_indices) &&
+											currentResult.correct_answer_indices.includes(i)
+										"
+										name="mdi:check-circle"
+										class="text-green-500"
+									/>
+									<UIcon
+										v-else-if="
+											Array.isArray(currentResult.user_answer_indices) &&
+											currentResult.user_answer_indices.includes(i)
+										"
+										name="mdi:close-circle"
+										class="text-red-500"
+									/>
+								</div>
+							</template>
+
+							<template v-else-if="currentQuestion.type === 'order'">
+								<p class="text-xs! text-gray-500 m-0!">Correct order:</p>
+								<ol class="flex flex-col gap-1">
+									<li
+										v-for="(item, i) in currentResult.correct_order || []"
+										:key="`co-${i}`"
+										class="flex items-center gap-2 rounded-md border border-gray-700/40 px-3 py-2"
+										:class="
+											currentResult.user_order && currentResult.user_order[i] === item
+												? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+												: ''
+										"
+									>
+										<span class="text-xs text-gray-500 w-5 text-right tabular-nums"
+											>{{ i + 1 }}.</span
+										>
+										<span>{{ item }}</span>
+									</li>
+								</ol>
+							</template>
+
+							<template v-else>
+								<div
+									v-for="(option, i) in currentSingleOptions"
+									:key="i"
+									class="flex items-center justify-between p-2 rounded-md"
+									:class="{
+										'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400':
+											i === currentResult?.correct_answer_index,
+										'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400':
+											i === singlePickAnswers[index] &&
+											!currentResult?.correct &&
+											i !== currentResult?.correct_answer_index
+									}"
+								>
+									<span>#{{ i + 1 }}. {{ option.label }}</span>
+									<UIcon
+										v-if="i === currentResult?.correct_answer_index"
+										name="mdi:check-circle"
+										class="text-green-500"
+									/>
+									<UIcon
+										v-else-if="i === singlePickAnswers[index] && !currentResult?.correct"
+										name="mdi:close-circle"
+										class="text-red-500"
+									/>
+								</div>
+							</template>
 						</div>
 					</div>
 				</Transition>
@@ -165,6 +256,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ArticleQuizAnswer, ArticleQuizQuestionSubmission } from 'types/article';
+
 const props = defineProps<{
 	article: Article;
 }>();
@@ -180,42 +273,59 @@ onMounted(() => {
 });
 
 const index = ref(0);
-const currentQuestion = computed(() => {
+const currentQuestion = computed<ArticleQuizQuestionSubmission | null>(() => {
 	if (!quiz.value || quiz.value.length === 0) return null;
-	return quiz.value[index.value] || null;
+	return (quiz.value[index.value] as ArticleQuizQuestionSubmission) || null;
 });
 
-const getQuestionOptions = (question: ArticleQuizQuestion) => {
-	if (question.options.length === 0 && question.type === 'true_false') {
-		return [
-			{ label: 'True', value: 0 },
-			{ label: 'False', value: 1 }
-		];
-	}
+function singleOptionLabels(q: ArticleQuizQuestionSubmission): string[] {
+	const opts = (q as any).options as string[] | undefined;
+	if (q.type === 'true_false' && (!opts || opts.length === 0)) return ['True', 'False'];
+	return opts || [];
+}
 
-	return question.options.map((option, optionIndex) => ({
-		label: option,
-		value: optionIndex
-	}));
-};
-
-const currentOptions = computed(() => {
-	if (!currentQuestion.value) return [];
-
-	return getQuestionOptions(currentQuestion.value);
+const currentSingleOptions = computed(() => {
+	const q = currentQuestion.value;
+	if (!q) return [] as { label: string; value: number }[];
+	return singleOptionLabels(q).map((label, i) => ({ label, value: i }));
 });
 
-const handleAnswerChange = (questionIndex: number, event: Event) => {
+// parallel per-question answer state
+const singlePickAnswers = ref<(number | null)[]>([]);
+const multiSelectAnswers = ref<(number[] | undefined)[]>([]);
+const orderAnswers = ref<(string[] | undefined)[]>([]);
+
+watch(
+	quiz,
+	(q) => {
+		const len = q?.length ?? 0;
+		singlePickAnswers.value = Array(len).fill(null);
+		multiSelectAnswers.value = Array(len).fill(undefined);
+		orderAnswers.value = Array(len).fill(undefined);
+	},
+	{ immediate: true }
+);
+
+function handleSinglePick(questionIndex: number, event: Event) {
 	const value = (event as CustomEvent<{ value?: number | string | null }>).detail?.value;
-
 	if (value === null || value === undefined || value === '') {
-		userAnswers.value[questionIndex] = null;
+		singlePickAnswers.value[questionIndex] = null;
 		return;
 	}
+	const n = Number(value);
+	singlePickAnswers.value[questionIndex] = Number.isFinite(n) ? n : null;
+}
 
-	const normalizedValue = Number(value);
-	userAnswers.value[questionIndex] = Number.isFinite(normalizedValue) ? normalizedValue : null;
-};
+function handleMultiSelect(questionIndex: number, optionIndex: number, checked: boolean) {
+	const set = new Set<number>(multiSelectAnswers.value[questionIndex] ?? []);
+	if (checked) set.add(optionIndex);
+	else set.delete(optionIndex);
+	multiSelectAnswers.value[questionIndex] = [...set].sort((a, b) => a - b);
+}
+
+function handleOrderUpdate(questionIndex: number, order: string[]) {
+	orderAnswers.value[questionIndex] = order;
+}
 
 const submitting = ref(false);
 const handleSubmit = async () => {
@@ -223,46 +333,71 @@ const handleSubmit = async () => {
 
 	submitting.value = true;
 	try {
-		await submitQuiz(
-			userAnswers.value.map((answer) => {
-				if (typeof answer !== 'number' || Number.isNaN(answer)) {
-					throw new Error('Cannot submit an incomplete quiz.');
-				}
+		const payload: ArticleQuizAnswer[] = quiz.value.map((q, i) => {
+			const question = q.question;
+			if (q.type === 'multi_select') {
+				const indices = multiSelectAnswers.value[i] ?? [];
+				const opts = (q as any).options as string[];
+				return {
+					question,
+					indices,
+					texts: indices.map((idx) => opts[idx] ?? '')
+				};
+			}
+			if (q.type === 'order') {
+				return { question, ordered: orderAnswers.value[i] ?? [] };
+			}
+			const pick = singlePickAnswers.value[i];
+			const labels = singleOptionLabels(q as ArticleQuizQuestionSubmission);
+			return {
+				question,
+				index: pick ?? undefined,
+				text: pick !== null && pick !== undefined ? (labels[pick] ?? '') : ''
+			};
+		});
 
-				return answer;
-			})
-		);
+		await submitQuiz(payload);
 	} finally {
 		submitting.value = false;
 	}
 };
 
-const userAnswers = ref<(number | null)[]>([]);
 const quizCompleted = computed(() => {
-	return (
-		Array.isArray(quiz.value) &&
-		quiz.value.length > 0 &&
-		!!quizSummary.value &&
-		quiz.value.every((question, questionIndex) => {
-			const answer = userAnswers.value[questionIndex];
-			const options = getQuestionOptions(question);
-
-			return (
-				typeof answer === 'number' &&
-				Number.isInteger(answer) &&
-				answer >= 0 &&
-				answer < options.length
-			);
-		})
-	);
+	if (!quiz.value || !quizSummary.value) return false;
+	if (quiz.value.length === 0) return false;
+	return quiz.value.every((q, i) => {
+		if (q.type === 'multi_select') {
+			return (multiSelectAnswers.value[i]?.length ?? 0) >= 1;
+		}
+		if (q.type === 'order') {
+			const items = ((q as any).items as string[]) || [];
+			return (orderAnswers.value[i]?.length ?? 0) === items.length;
+		}
+		return typeof singlePickAnswers.value[i] === 'number';
+	});
 });
 
 const currentResult = computed(() => {
 	if (!score.value || !currentQuestion.value) return null;
 	if (!score.value.results) return null;
-
 	return score.value.results[index.value] || null;
 });
+
+function multiSelectResultClass(i: number, result: any): Record<string, boolean> {
+	const correctIdx = Array.isArray(result?.correct_answer_indices)
+		? result.correct_answer_indices
+		: [];
+	const userIdx = Array.isArray(result?.user_answer_indices) ? result.user_answer_indices : [];
+	const isCorrect = correctIdx.includes(i);
+	const isUserPicked = userIdx.includes(i);
+	return {
+		'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400':
+			isCorrect && isUserPicked,
+		'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400':
+			isCorrect && !isUserPicked,
+		'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400': !isCorrect && isUserPicked
+	};
+}
 </script>
 
 <style scoped>
