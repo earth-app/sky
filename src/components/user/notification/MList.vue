@@ -37,18 +37,34 @@
 					class="text-xs!"
 					size="small"
 					fill="outline"
+					:disabled="isBusy"
 					@click="markAllRead"
 				>
-					Mark All as Read
+					<template v-if="isMarkingAll">
+						<IonSpinner
+							name="crescent"
+							class="mr-2 size-4!"
+						/>
+						Marking...
+					</template>
+					<template v-else> Mark All as Read </template>
 				</IonButton>
 				<IonButton
 					class="text-xs!"
 					size="small"
 					fill="outline"
 					color="tertiary"
+					:disabled="isBusy"
 					@click="clearAll"
 				>
-					Clear All
+					<template v-if="isClearing">
+						<IonSpinner
+							name="crescent"
+							class="mr-2 size-4!"
+						/>
+						Clearing...
+					</template>
+					<template v-else> Clear All </template>
 				</IonButton>
 			</div>
 			<div :id="additional ? 'notifications-list' : undefined">
@@ -73,12 +89,23 @@ const props = defineProps<{
 const { notifications, unreadCount, markAllNotificationsRead, clearAllNotifications } =
 	useNotifications();
 
+// these bulk calls can be slow; surface a spinner and block re-entry while running
+const isMarkingAll = ref(false);
+const isClearing = ref(false);
+const isBusy = computed(() => isMarkingAll.value || isClearing.value);
+
 async function markAllRead() {
-	const res = await markAllNotificationsRead();
-	if (!res.success) {
-		await showErrorToast(res.message, {
-			fallback: 'Failed to mark all notifications as read.'
-		});
+	if (isBusy.value) return;
+	isMarkingAll.value = true;
+	try {
+		const res = await markAllNotificationsRead();
+		if (!res.success) {
+			await showErrorToast(res.message, {
+				fallback: 'Failed to mark all notifications as read.'
+			});
+		}
+	} finally {
+		isMarkingAll.value = false;
 	}
 }
 
@@ -87,6 +114,7 @@ const displayed = computed(() => {
 });
 
 async function clearAll() {
+	if (isBusy.value) return;
 	const { value } = await Dialog.confirm({
 		title: 'Clear All Notifications?',
 		message: 'This permanently removes every notification on this account. You cannot undo this.',
@@ -95,11 +123,16 @@ async function clearAll() {
 	});
 	if (!value) return;
 
-	const res = await clearAllNotifications();
-	if (!res.success) {
-		await showErrorToast(res.message, {
-			fallback: 'Failed to clear notifications.'
-		});
+	isClearing.value = true;
+	try {
+		const res = await clearAllNotifications();
+		if (!res.success) {
+			await showErrorToast(res.message, {
+				fallback: 'Failed to clear notifications.'
+			});
+		}
+	} finally {
+		isClearing.value = false;
 	}
 }
 </script>
