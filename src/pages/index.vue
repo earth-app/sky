@@ -114,6 +114,7 @@
 <script setup lang="ts">
 import { Preferences } from '@capacitor/preferences';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { onIonViewWillEnter } from '@ionic/vue';
 import { OAUTH_PROVIDERS } from 'types/user';
 import slide from '~/animations/slide';
 import { theme } from '~/composables/useSettings';
@@ -233,11 +234,20 @@ async function navigateHome() {
 	}
 }
 
-// safety net for late hydration (anon → authed mid-page, or token refresh)
-watch(user, async (next, prev) => {
-	if (next && !prev) {
+// safety net for late hydration (anon → authed mid-page, or token refresh); fire on
+// any truthy resolve, not just the null→value edge, so a flaky re-fetch retry still routes
+watch(user, async (next) => {
+	if (next) {
 		await navigateHome();
+	} else {
+		// re-arm on logout / failed auth so the next success can navigate (latch is otherwise one-way)
+		navigatingHome = false;
 	}
+});
+
+// page is kept alive in the outlet; re-arm whenever we return to index
+onIonViewWillEnter(() => {
+	navigatingHome = false;
 });
 
 const onboardingOpen = ref(false);

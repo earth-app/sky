@@ -64,6 +64,7 @@
 </template>
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
+import { onIonViewWillEnter } from '@ionic/vue';
 import { OAUTH_PROVIDERS } from 'types/user';
 import slide from '~/animations/slide';
 
@@ -99,10 +100,18 @@ watch(
 		if (currentUser && !redirectingAfterSubmit.value) {
 			redirectingAfterSubmit.value = true;
 			await navigateTo(redirectPath.value, { replace: true });
+		} else if (!currentUser) {
+			// re-arm on cleared/failed auth so a retry can navigate (latch is otherwise one-way)
+			redirectingAfterSubmit.value = false;
 		}
 	},
 	{ immediate: true }
 );
+
+// page kept alive in the outlet; re-arm on re-entry
+onIonViewWillEnter(() => {
+	if (!user.value) redirectingAfterSubmit.value = false;
+});
 
 async function showLoginError(errorType: string) {
 	let description = 'An unknown error occurred during login.';

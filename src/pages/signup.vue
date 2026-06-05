@@ -66,6 +66,7 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
+import { onIonViewWillEnter } from '@ionic/vue';
 import { OAUTH_PROVIDERS, type User } from 'types/user';
 import slide from '~/animations/slide';
 
@@ -90,7 +91,12 @@ onMounted(() => {
 watch(
 	() => user.value,
 	async (currentUser) => {
-		if (!currentUser || redirectingAfterSubmit.value) return;
+		if (!currentUser) {
+			// re-arm on cleared/failed auth so a retry can navigate (latch is otherwise one-way)
+			redirectingAfterSubmit.value = false;
+			return;
+		}
+		if (redirectingAfterSubmit.value) return;
 		redirectingAfterSubmit.value = true;
 		try {
 			await Toast.show({ text: 'You are already logged in.', duration: 'short' });
@@ -101,6 +107,11 @@ watch(
 	},
 	{ immediate: true }
 );
+
+// page kept alive in the outlet; re-arm on re-entry
+onIonViewWillEnter(() => {
+	if (!user.value) redirectingAfterSubmit.value = false;
+});
 
 async function showSignupError(errorType: string) {
 	let description = 'An unknown error occurred during sign up.';
