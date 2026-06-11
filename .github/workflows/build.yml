@@ -37,7 +37,7 @@ jobs:
           overwrite: true
       - name: Attest Build Artifacts
         if: success() || failure()
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: sky-build-ios-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
@@ -76,7 +76,7 @@ jobs:
           overwrite: true
       - name: Attest Build Artifacts
         if: success() || failure()
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: sky-build-android-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
