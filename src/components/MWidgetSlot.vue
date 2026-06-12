@@ -279,7 +279,7 @@ const extraProps = computed<Record<string, unknown>>(() => {
 	const out: Record<string, unknown> = {};
 
 	if (props.kind === 'MiniLeaderboard') {
-		out.type = LEADERBOARD_TYPES[dayOfYearUtc() % LEADERBOARD_TYPES.length];
+		out.metric = LEADERBOARD_TYPES[dayOfYearUtc() % LEADERBOARD_TYPES.length];
 	}
 
 	// ImpactTracker always varies (with or without activity context)
