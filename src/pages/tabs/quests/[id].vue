@@ -125,7 +125,13 @@
 const route = useRoute();
 const { user } = useAuth();
 const userId = computed(() => user.value?.id);
-const { quest: currentQuest, questHistory, badges } = useUser(userId);
+const {
+	quest: currentQuest,
+	questHistory,
+	badges,
+	fetchUserQuest,
+	fetchQuestHistoryEntry
+} = useUser(userId);
 const { fetchQuest } = useQuests();
 
 const quest = ref<Quest | null>(null);
@@ -255,11 +261,26 @@ const openStep = ref<
 >(null);
 const stepOpen = ref(false);
 
-// keep stepOpen + openStep in lockstep — iOS sheet-swipe-down fires did-dismiss
-// without going through the @click close, so a single source of truth here
-// prevents the "ref still true, modal hidden, can't reopen" desync.
+let reconciling = false;
+async function reconcileQuestState() {
+	if (reconciling || !user.value?.id) return;
+	reconciling = true;
+	try {
+		await fetchUserQuest(true);
+		const viewedId = quest.value?.id;
+		if (viewedId && currentQuest.value?.questId !== viewedId) {
+			await fetchQuestHistoryEntry(viewedId, { force: true });
+		}
+	} catch {
+		// non-fatal: the optimistic update usually already reflects the change
+	} finally {
+		reconciling = false;
+	}
+}
+
 function closeStepModal() {
 	stepOpen.value = false;
 	openStep.value = null;
+	void reconcileQuestState();
 }
 </script>
