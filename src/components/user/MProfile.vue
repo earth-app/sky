@@ -10,6 +10,14 @@
 				<UserMFriendsButtons :user="user" />
 				<UserMFriendsCount :user="user" />
 
+				<UserMChallengeFriendButton
+					v-if="canChallenge"
+					:friend-id="user.id"
+					:friend-name="displayName"
+					fill="solid"
+					class="my-2"
+				/>
+
 				<IonButton
 					v-if="isCurrentUser"
 					color="secondary"
@@ -186,6 +194,13 @@
 			</MContentDrawer>
 		</div>
 		<div
+			v-if="isCurrentUser"
+			id="user-invite"
+			class="flex flex-col items-center justify-center px-4 mb-6"
+		>
+			<UserMInviteFriend class="w-full max-w-xl" />
+		</div>
+		<div
 			id="user-content"
 			class="flex flex-col items-center justify-center px-4 gap-2"
 		>
@@ -359,6 +374,11 @@ const user = computed(() => userState.value || props.user);
 const { user: currentUser } = useAuth();
 
 const isCurrentUser = computed(() => user.value?.id === currentUser.value?.id);
+
+// friends-only, never self — challenge a friend to one of your own quests
+const canChallenge = computed(
+	() => !!props.user.is_friend && currentUser.value?.id !== props.user.id
+);
 
 const { friends, fetchFriends } = useFriends(props.user.id);
 const {
