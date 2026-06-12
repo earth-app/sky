@@ -8,12 +8,30 @@
 			class="m-0 p-0"
 		>
 			<div
-				v-if="dailyQuest"
+				v-if="currentQuest"
+				class="px-3 pt-3"
+			>
+				<IonChip
+					:class="['m-0 quest-chip', !prefersReducedMotion ? 'current-quest-pulse' : '']"
+					color="warning"
+					@click="openCurrentQuest"
+				>
+					<IonLabel class="flex items-center text-xs font-semibold px-3">
+						<UIcon
+							name="mdi:compass-rose"
+							class="size-4 mr-1"
+						/>
+						Continue Quest: {{ truncatedCurrentTitle }}
+					</IonLabel>
+				</IonChip>
+			</div>
+			<div
+				v-else-if="dailyQuest"
 				class="px-3 pt-3"
 			>
 				<IonChip
 					:class="[
-						'm-0 daily-quest-chip',
+						'm-0 quest-chip',
 						!dailyQuestTapped && !prefersReducedMotion ? 'daily-quest-pulse' : ''
 					]"
 					color="primary"
@@ -104,17 +122,21 @@ const ionRouter = useIonRouter();
 const { selection } = useAppHaptics();
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
-// today's quest chip — deterministic per-day, shared with crust NavBar
+const userId = computed(() => user.value?.id);
+
 const {
 	quest: dailyQuest,
 	isTapped: dailyQuestTapped,
 	markTapped: markDailyQuestTapped
 } = useDailyQuest();
+const { quest: currentQuest, fetchUserQuest } = useUser(userId);
 
-const truncatedTitle = computed(() => {
-	const t = dailyQuest.value?.title ?? '';
+function truncate(t: string): string {
 	return t.length > 30 ? `${t.slice(0, 27).trimEnd()}…` : t;
-});
+}
+
+const truncatedTitle = computed(() => truncate(dailyQuest.value?.title ?? ''));
+const truncatedCurrentTitle = computed(() => truncate(currentQuest.value?.quest.title ?? ''));
 
 function openDailyQuest() {
 	if (!dailyQuest.value) return;
@@ -122,6 +144,20 @@ function openDailyQuest() {
 	markDailyQuestTapped();
 	ionRouter.navigate(`/tabs/quests/${dailyQuest.value.id}`, 'forward', 'push');
 }
+
+function openCurrentQuest() {
+	if (!currentQuest.value) return;
+	void selection();
+	ionRouter.navigate(`/tabs/quests/${currentQuest.value.questId}`, 'forward', 'push');
+}
+
+watch(
+	userId,
+	(id) => {
+		if (id) void fetchUserQuest();
+	},
+	{ immediate: true }
+);
 
 const STREAK_TTL_MS = 172800000;
 const WARN_THRESHOLD_MS = 12 * 60 * 60 * 1000;
@@ -218,11 +254,11 @@ watch(
 </script>
 
 <style scoped>
-/* sky has no shared PulseRing primitive — inline the keyframe locally */
-.daily-quest-chip {
+.quest-chip {
 	position: relative;
 	overflow: visible;
 }
+
 .daily-quest-pulse {
 	animation: daily-quest-pulse 1.6s ease-out infinite;
 }
@@ -235,6 +271,21 @@ watch(
 	}
 	100% {
 		box-shadow: 0 0 0 0 rgba(var(--ion-color-primary-rgb, 56, 128, 255), 0);
+	}
+}
+
+.current-quest-pulse {
+	animation: current-quest-pulse 1.6s ease-out infinite;
+}
+@keyframes current-quest-pulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(var(--ion-color-warning-rgb, 56, 128, 255), 0.55);
+	}
+	80% {
+		box-shadow: 0 0 0 10px rgba(var(--ion-color-warning-rgb, 56, 128, 255), 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(var(--ion-color-warning-rgb, 56, 128, 255), 0);
 	}
 }
 </style>
