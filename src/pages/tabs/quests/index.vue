@@ -90,6 +90,8 @@
 
 <script setup lang="ts">
 const { user } = useAuth();
+const route = useRoute();
+const ionRouter = useIonRouter();
 
 const userId = computed(() => user.value?.id);
 const { quest, questHistory, fetchUserQuest, fetchQuestHistory } = useUser(userId);
@@ -97,6 +99,14 @@ const { quests, fetchQuests } = useQuests();
 
 const search = ref('');
 const isRefreshing = ref(false);
+
+// challenge / deep-link entry — /tabs/quests?open=<questId> jumps straight to that quest.
+// guard against re-firing on tab re-entry by clearing the query once handled.
+function maybeOpenQuest() {
+	const open = typeof route.query.open === 'string' ? route.query.open : '';
+	if (!open) return;
+	ionRouter.navigate(`/tabs/quests/${open}`, 'forward', 'push');
+}
 
 const HISTORY_PAGE_LIMIT = 100;
 async function refreshQuestData() {
@@ -114,7 +124,14 @@ async function refreshQuestData() {
 
 onMounted(() => {
 	fetchQuests();
+	maybeOpenQuest();
 });
+
+// a deep link may arrive while the quests tab is already alive in the outlet
+watch(
+	() => route.query.open,
+	() => maybeOpenQuest()
+);
 
 // merge static catalog with history so dynamic quests (badge_mastery, activity, custom)
 // — which never appear in the catalog — still show up once they've been started/completed

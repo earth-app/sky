@@ -46,6 +46,13 @@
 					>
 				</div>
 
+				<UserQuestMChallengeBanner
+					v-if="quest"
+					:quest-id="quest.id"
+					:your-completed-steps="completedStepCount"
+					:total-steps="quest.steps.length"
+				/>
+
 				<UserQuestMTimeline
 					v-if="quest"
 					:quest="quest"
@@ -130,6 +137,14 @@ const progress = computed(() => {
 	}
 
 	return questHistory.value.get(quest.value.id)?.progress;
+});
+
+// count progress slots with at least one entry — matches how the timeline marks a
+// step complete (alt-step groups are an array, regular steps a single entry).
+const completedStepCount = computed(() => {
+	const slots = progress.value;
+	if (!Array.isArray(slots)) return 0;
+	return slots.filter((slot) => (Array.isArray(slot) ? slot.length > 0 : !!slot)).length;
 });
 
 // only pass through cloud cancel signals when the open quest matches the active one.
