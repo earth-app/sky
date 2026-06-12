@@ -74,7 +74,7 @@
 				v-if="type"
 				color="primary"
 				size="small"
-				:router-link="`/tabs/profile/journey-leaderboard/${type}`"
+				:router-link="`/tabs/profile/leaderboard/${type}`"
 				class="mt-2"
 				@click="open = false"
 			>

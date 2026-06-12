@@ -381,6 +381,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { DateTime } from 'luxon';
+import { makeMServerRequest } from '~/composables/useServer';
 import { injectMissingExif } from '~/utils/exif';
 
 const props = defineProps<{
@@ -564,13 +565,11 @@ function notifyStepComplete(questCompleted = false) {
 	void showInfoToast(stepCompleteMessage(questCompleted), { duration: 'short' });
 
 	if (questCompleted) {
-		// crust's celebration listener fires native haptics + the mobile overlay,
-		// keyed on this global state — see initQuestCelebrationListener() in app.vue
 		const { triggerCelebration } = useQuestCelebration();
 		triggerCelebration({
+			questId: props.quest.id,
 			questTitle: props.quest.title,
-			points: props.quest.reward,
-			badgeIcon: props.quest.icon || 'mdi:trophy-award'
+			points: props.quest.reward
 		});
 	}
 }
