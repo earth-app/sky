@@ -1,3 +1,5 @@
+import { Preferences } from '@capacitor/preferences';
+
 type DeepLinkResult =
 	| { type: 'internal'; target: string }
 	| { type: 'external'; target: string }
@@ -26,6 +28,18 @@ const OAUTH_COMPLETE_PATHS = new Set([
 	'/auth/complete',
 	'/auth/callback-mobile'
 ]);
+
+const REFERRAL_CODE_KEY = 'referral_code';
+
+// best-effort persist — invite resolution must never block on storage
+async function persistReferralCode(code: string) {
+	if (!code) return;
+	try {
+		await Preferences.set({ key: REFERRAL_CODE_KEY, value: code });
+	} catch (err) {
+		console.warn('[deep-link] failed to persist referral code:', err);
+	}
+}
 
 function normalizePath(pathname: string) {
 	if (!pathname) return '/';
@@ -92,6 +106,20 @@ export function useDeepLinkRouting() {
 		const pathname = normalizePath(parsed.pathname);
 		const query = parsed.search || '';
 		const hash = parsed.hash || '';
+
+		const refParam = parsed.searchParams.get('ref');
+		if (refParam) void persistReferralCode(refParam);
+
+		let inviteCode = '';
+		if (pathname.startsWith('/invite/')) {
+			inviteCode = pathname.slice('/invite/'.length).split('/')[0] || '';
+		} else if (isCustomScheme && host === 'invite') {
+			inviteCode = pathname.replace(/^\//, '').split('/')[0] || '';
+		}
+		if (inviteCode) {
+			void persistReferralCode(inviteCode);
+			return { type: 'internal', target: `/signup?ref=${encodeURIComponent(inviteCode)}` };
+		}
 
 		// OAuth callback completion (universal/app link from the crust callback) — extract token and
 		// hand back to the caller so it can populate the auth store and route the user in-app.
@@ -177,6 +205,11 @@ export function useDeepLinkRouting() {
 
 		if (pathname === '/dashboard') {
 			return { type: 'internal', target: `/tabs/dashboard${query}${hash}` };
+		}
+
+		// the challenge notification links to crust's /profile/quests?open=<id>
+		if (pathname === '/profile/quests') {
+			return { type: 'internal', target: `/tabs/quests${query}${hash}` };
 		}
 
 		if (pathname === '/profile' || pathname.startsWith('/profile/')) {
