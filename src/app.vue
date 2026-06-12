@@ -142,21 +142,37 @@ const {
 	closeCelebration
 } = useQuestCelebration();
 
+const { shareQuestCard } = useShareQuestCard();
+
 async function shareCelebration() {
-	const title = celebrationPayload.value?.questTitle || 'a quest';
-	const points = celebrationPayload.value?.points;
-	const text = points
-		? `I just completed "${title}" on The Earth App — earned ${points} Impact Points!`
-		: `I just completed "${title}" on The Earth App!`;
-	try {
-		await Share.share({
-			title: 'Quest Complete',
-			text,
-			dialogTitle: 'Share your quest win'
+	// questId rides along on the celebration payload (set in MSubmission.vue)
+	const payload = celebrationPayload.value as typeof celebrationPayload.value & {
+		questId?: string;
+	};
+	const questId = payload?.questId;
+	const selfId = user.value?.id;
+
+	if (questId && selfId) {
+		await shareQuestCard({
+			userId: selfId,
+			questId,
+			questTitle: payload?.questTitle,
+			points: payload?.points
 		});
-	} catch {
-		// user cancelled or plugin unavailable — silently swallow
+	} else {
+		// no questId/self id (e.g. fresh hydration) — share a plain text win
+		const title = payload?.questTitle || 'a quest';
+		const points = payload?.points;
+		const text = points
+			? `I just completed "${title}" on The Earth App — earned ${points} Impact Points!`
+			: `I just completed "${title}" on The Earth App!`;
+		try {
+			await Share.share({ title: 'Quest Complete', text, dialogTitle: 'Share Your Quest Win' });
+		} catch {
+			// user cancelled or plugin unavailable — silently swallow
+		}
 	}
+
 	closeCelebration();
 }
 
@@ -350,6 +366,16 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		icon: 'mdi:account-multiple-outline'
 	},
 	{
+		url: profilePath.value,
+		id: 'user-invite',
+		title: 'Invite Friends — Earn Rewards',
+		description:
+			'Share your personal invite link to bring friends onto the Earth App. When they join, you BOTH earn Impact Points — and you climb the Recruiter badge tiers as more friends sign up.',
+		footer: 'Tap Share to send your invite anywhere — messages, social, wherever your people are.',
+		anonymous: false,
+		icon: 'mdi:account-arrow-right'
+	},
+	{
 		id: 'user-journeys',
 		title: 'Your Journeys',
 		description:
@@ -363,9 +389,26 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		title: 'Your Content',
 		description:
 			"Every article and prompt response you publish lives here. It's your portfolio on the Earth App — and a great way for others to discover your perspective.",
-		footer: "You're all caught up! Tap Finish to start exploring.",
+		footer: 'One last stop — the leaderboard.',
 		anonymous: false,
 		icon: 'mdi:notebook-multiple'
+	},
+	{
+		url: '/tabs/profile/leaderboard/points',
+		id: 'leaderboard-hero',
+		title: 'Friendly Competition',
+		description:
+			'See how you stack up on Impact Points and journey streaks — globally, among your friends, or inside your circle. Challenge a friend to a quest right from their row.',
+		footer: "That's the tour! Tap Finish and start climbing.",
+		anonymous: false,
+		icon: 'mdi:trophy-variant',
+		cta: {
+			label: 'View Leaderboard',
+			icon: 'mdi:trophy-variant',
+			color: 'tertiary',
+			advance: true,
+			handler: () => router.push('/tabs/profile/leaderboard/points', slide)
+		}
 	}
 ]);
 
