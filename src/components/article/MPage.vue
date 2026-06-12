@@ -105,7 +105,7 @@
 			>
 
 			<IonButton
-				v-else-if="score"
+				v-else-if="quiz && quiz.length > 0 && score"
 				id="quiz-button"
 				:color="theme"
 				size="small"
