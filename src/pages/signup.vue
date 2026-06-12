@@ -65,6 +65,8 @@
 </template>
 
 <script setup lang="ts">
+import { Preferences } from '@capacitor/preferences';
+import { Share } from '@capacitor/share';
 import { Toast } from '@capacitor/toast';
 import { onIonViewWillEnter } from '@ionic/vue';
 import { OAUTH_PROVIDERS, type User } from 'types/user';
@@ -81,13 +83,24 @@ if (typeof error === 'string') {
 	showSignupError(error);
 }
 
+async function bridgeReferralCode() {
+	try {
+		const fromQuery = typeof route.query.ref === 'string' ? route.query.ref : '';
+		const code = fromQuery || (await Preferences.get({ key: 'referral_code' })).value || '';
+		if (code && /^[0-9A-HJKMNP-TV-Z]{6}$/.test(code)) {
+			useCookie<string | null>('referral_code').value = code;
+		}
+	} catch (err) {
+		console.warn('[signup] failed to bridge referral code:', err);
+	}
+}
+
 onMounted(() => {
+	void bridgeReferralCode();
 	// kick off hydration, but don't await — the watcher below handles redirect.
 	fetchUser();
 });
 
-// Watcher (instead of one-shot onMounted) so a late hydration (deep-link OAuth
-// return, slow API) still redirects the user away from the signup form.
 watch(
 	() => user.value,
 	async (currentUser) => {
@@ -196,6 +209,34 @@ const signupTour: SiteTourStep[] = [
 			'A long, unique passphrase beats a complicated short one. A password manager makes it painless.',
 		icon: 'mdi:form-textbox',
 		highlightPadding: 8
+	},
+	{
+		id: 'signup',
+		title: "Know Someone Who'd Love This?",
+		description:
+			'Exploring is more fun together! Invite a friend to sign up too. They can join in seconds, and once you have an account you can earn rewards for everyone you bring along.',
+		footer: 'Tap Invite to share The Earth App with a friend.',
+		icon: 'mdi:account-multiple-plus-outline',
+		placement: 'bottom',
+		cta: {
+			label: 'Invite a Friend',
+			icon: 'mdi:share-variant',
+			color: 'tertiary',
+			advance: false,
+			handler: async () => {
+				// pre-account: a primitive share with no referral code (there's no account yet)
+				try {
+					await Share.share({
+						title: 'Join me on The Earth App',
+						text: 'I just found The Earth App; discover hobbies, quests, and more. Come join me!',
+						url: 'https://app.earth-app.com',
+						dialogTitle: 'Invite a Friend'
+					});
+				} catch {
+					// user dismissed the share sheet or it's unavailable — stay quiet
+				}
+			}
+		}
 	}
 ];
 </script>
