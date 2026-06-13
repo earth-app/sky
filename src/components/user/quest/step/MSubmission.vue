@@ -149,10 +149,6 @@
 					v-if="!progress?.migrated && progress?.score"
 					:score="progress.score"
 				/>
-				<Quote
-					v-if="!progress?.migrated && progress?.prompt"
-					:text="progress.prompt"
-				/>
 			</div>
 
 			<template v-else-if="category === 'photo'">
