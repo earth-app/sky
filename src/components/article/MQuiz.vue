@@ -1,16 +1,30 @@
 <template>
-	<div class="flex flex-col gap-4 items-center justify-center w-full min-h-50">
-		<h3
-			v-if="score"
-			class="text-base font-semibold"
-		>
-			{{ score.scorePercent }}% ({{ score.score }} / {{ score.total }})
-		</h3>
+	<div class="flex flex-col items-center w-full gap-4 py-2">
 		<div
 			v-if="quiz && quiz.length > 0"
-			class="flex flex-col items-center justify-between w-full"
+			class="flex flex-col items-center w-full max-w-xl px-4"
 		>
-			<div class="flex flex-col items-center justify-between w-full">
+			<!-- progress + score header -->
+			<div class="w-full mb-5">
+				<div class="flex items-center justify-between mb-1.5">
+					<span class="text-xs! font-medium opacity-60"
+						>Question {{ index + 1 }} of {{ quiz.length }}</span
+					>
+					<span
+						v-if="score"
+						class="text-xs! font-semibold text-primary"
+						>{{ score.scorePercent }}% ({{ score.score }}/{{ score.total }})</span
+					>
+				</div>
+				<div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+					<div
+						class="h-full rounded-full bg-primary transition-all duration-300"
+						:style="{ width: ((index + 1) / quiz.length) * 100 + '%' }"
+					/>
+				</div>
+			</div>
+
+			<div class="flex flex-col items-center w-full">
 				<Transition
 					name="fade"
 					mode="out-in"
@@ -20,7 +34,7 @@
 						class="flex flex-col items-center w-full"
 						v-if="currentQuestion"
 					>
-						<h2 class="text-lg! font-semibold! mb-4 self-start px-4">
+						<h2 class="text-lg! font-semibold! mb-4 self-start">
 							{{ index + 1 }}. {{ currentQuestion.question }}
 						</h2>
 
@@ -67,7 +81,7 @@
 						>
 							<p class="text-xs! text-gray-500 m-0!">Select every option that applies.</p>
 							<IonItem
-								v-for="(option, i) in (currentQuestion as any).options"
+								v-for="(option, i) in currentQuestion.options"
 								:key="`ms-${index}-${i}`"
 								class="p-0! my-1"
 							>
@@ -104,7 +118,7 @@
 
 							<template v-if="currentQuestion.type === 'multi_select'">
 								<div
-									v-for="(option, i) in (currentQuestion as any).options"
+									v-for="(option, i) in currentQuestion.options"
 									:key="`msr-${i}`"
 									class="flex items-center justify-between p-2 rounded-md"
 									:class="multiSelectResultClass(i, currentResult)"
@@ -181,10 +195,11 @@
 					</div>
 				</Transition>
 
-				<div class="flex gap-4">
+				<div class="flex w-full justify-center gap-3 mt-6">
 					<IonButton
 						color="primary"
 						size="small"
+						fill="outline"
 						@click="index--"
 						:disabled="index === 0"
 					>
@@ -201,11 +216,11 @@
 						@click="index++"
 						:disabled="index === quiz.length - 1"
 					>
+						Next
 						<UIcon
 							name="mdi:arrow-right"
 							class="size-5"
 						/>
-						Next
 					</IonButton>
 
 					<IonButton
@@ -213,45 +228,33 @@
 						color="secondary"
 						size="small"
 						@click="handleSubmit"
-						:disabled="!quizCompleted || submitting"
+						:disabled="submitting"
 						:loading="submitting"
 					>
 						Submit
 						<UIcon
-							name="mdi:arrow-right"
+							name="mdi:check"
 							class="size-5"
 						/>
 					</IonButton>
-
-					<div
-						v-else-if="index === quiz.length - 1 && !quizCompleted"
-						class="w-16"
-					/>
 				</div>
 			</div>
-			<div class="my-4 w-full bg-black/80">
-				<div
-					class="h-4 bg-blue-600 transition-all duration-300"
-					:style="{
-						width: ((index + 1) / quiz.length) * 100 + '%',
-						borderTopRightRadius: index + 1 === quiz.length ? '0' : '0.5rem',
-						borderBottomRightRadius: index + 1 === quiz.length ? '0' : '0.5rem'
-					}"
-				/>
-			</div>
 		</div>
 		<div
-			v-else-if="quiz === null"
-			class="text-center text-gray-500 py-8"
-		>
-			<p>No quiz available for this article.</p>
-		</div>
-		<div
-			v-else
+			v-else-if="quiz === undefined || retrying"
 			class="flex items-center justify-center py-8"
 		>
 			<Loading />
 		</div>
+		<MInlineError
+			v-else
+			title="Quiz unavailable"
+			description="We couldn't load this quiz. It may be a connection hiccup; try again."
+			severity="warning"
+			icon="mdi:cloud-alert-outline"
+			class="my-8"
+			@retry="retryQuiz"
+		/>
 	</div>
 </template>
 
@@ -267,9 +270,42 @@ const { quiz, fetchQuiz, quizSummary, score, fetchQuizScore, submitQuiz } = useA
 	makeMServerRequest
 );
 
+const articleStore = useArticleStore();
+const reloadAttempts = ref(0);
+const retrying = ref(false);
+const MAX_AUTO_RELOADS = 3;
+
+async function loadQuiz(force = false) {
+	if (force) {
+		articleStore.quizCache.delete(props.article.id);
+		articleStore.quizSummaryCache.delete(props.article.id);
+	}
+	await fetchQuiz();
+}
+
+async function ensureQuizLoaded() {
+	await loadQuiz();
+	while (
+		Array.isArray(quiz.value) &&
+		quiz.value.length === 0 &&
+		reloadAttempts.value < MAX_AUTO_RELOADS
+	) {
+		retrying.value = true;
+		reloadAttempts.value++;
+		await new Promise((r) => setTimeout(r, 500 * 2 ** (reloadAttempts.value - 1))); // 0.5s, 1s, 2s
+		await loadQuiz(true);
+	}
+	retrying.value = false;
+}
+
+function retryQuiz() {
+	reloadAttempts.value = 0;
+	void ensureQuizLoaded();
+}
+
 onMounted(() => {
-	fetchQuiz();
-	fetchQuizScore();
+	void ensureQuizLoaded();
+	void fetchQuizScore();
 });
 
 const index = ref(0);
