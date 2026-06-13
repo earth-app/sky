@@ -266,7 +266,10 @@ async function reconcileQuestState() {
 	if (reconciling || !user.value?.id) return;
 	reconciling = true;
 	try {
-		await fetchUserQuest(true);
+		if (currentQuest.value !== null) {
+			await fetchUserQuest(true);
+		}
+
 		const viewedId = quest.value?.id;
 		if (viewedId && currentQuest.value?.questId !== viewedId) {
 			await fetchQuestHistoryEntry(viewedId, { force: true });
@@ -283,4 +286,15 @@ function closeStepModal() {
 	openStep.value = null;
 	void reconcileQuestState();
 }
+
+const celebration = useQuestCelebration();
+watch(
+	() => celebration.open.value,
+	(open) => {
+		if (!open || !stepOpen.value) return;
+		const celebratedId = celebration.payload.value.questId;
+		if (celebratedId && celebratedId !== quest.value?.id) return;
+		closeStepModal();
+	}
+);
 </script>
