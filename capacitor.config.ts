@@ -9,7 +9,6 @@ const config: CapacitorConfig = {
 	webDir: '.output/public',
 	loggingBehavior: 'debug',
 	appendUserAgent: 'The Earth App/Sky',
-	backgroundColor: '#174f96',
 	server: {
 		androidScheme: 'https',
 		iosScheme: 'https'

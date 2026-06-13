@@ -4,18 +4,15 @@ import CapacitorBackgroundRunner
 import CoreLocation
 import FirebaseCore
 import FirebaseMessaging
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate {
 
     var window: UIWindow?
 
-    // Significant Location Changes wake the app whenever the device moves ~500m,
-    // including from a terminated state. SLC events get translated into
-    // `distanceTick` events on the background runner, which gives the distance
-    // tracker far denser sampling than BGTaskScheduler's ~15-min cadence alone.
-    // The runner itself no-ops if there's no active tracking session, so this
-    // is cheap when no quest distance step is running.
+    private var hasActivatedOnce = false
+
     private lazy var slcManager: CLLocationManager = {
         let m = CLLocationManager()
         m.delegate = self
@@ -25,21 +22,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
     }()
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-       FirebaseApp.configure()
-       // Register the BGTaskScheduler identifier and re-arm pending tasks so the
-       // distance-tracker runner keeps firing across app restarts.
-       BackgroundRunnerPlugin.registerBackgroundTask()
-       BackgroundRunnerPlugin.handleApplicationDidFinishLaunching(launchOptions: launchOptions)
+        FirebaseApp.configure()
+        // Register the BGTaskScheduler identifier and re-arm pending tasks so the
+        // distance-tracker runner keeps firing across app restarts.
+        BackgroundRunnerPlugin.registerBackgroundTask()
+        BackgroundRunnerPlugin.handleApplicationDidFinishLaunching(launchOptions: launchOptions)
 
-       startSignificantLocationMonitoring()
+        startSignificantLocationMonitoring()
 
-       // If iOS relaunched us via an SLC delivery (app was terminated), the
-       // launchOptions dict carries the location key — start monitoring again
-       // and the delegate will be called with the queued positions.
-       if launchOptions?[.location] != nil {
+        // If iOS relaunched us via an SLC delivery (app was terminated), the
+        // launchOptions dict carries the location key — start monitoring again
+        // and the delegate will be called with the queued positions.
+        if launchOptions?[.location] != nil {
            startSignificantLocationMonitoring()
-       }
-        return true
+        }
+
+        // Match the window (and therefore UIColor.systemBackground, which sits behind
+        // the webview) to the in-app theme before the first frame paints.
+        applyInterfaceStyleFromSettings()
+    	return true
     }
 
     private func startSignificantLocationMonitoring() {
@@ -115,6 +116,43 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+        applyInterfaceStyleFromSettings()
+        if hasActivatedOnce {
+            recoverWebViewIfTerminated()
+        }
+        hasActivatedOnce = true
+    }
+
+    private func applyInterfaceStyleFromSettings() {
+        guard let window = window else { return }
+        // Capacitor Preferences stores values JSON-encoded under a "CapacitorStorage." prefix.
+        let raw = UserDefaults.standard.string(forKey: "CapacitorStorage.app.setting.theme")
+        let theme = raw?.replacingOccurrences(of: "\"", with: "")
+        switch theme {
+        case "light": window.overrideUserInterfaceStyle = .light
+        case "dark": window.overrideUserInterfaceStyle = .dark
+        default: window.overrideUserInterfaceStyle = .unspecified
+        }
+    }
+
+    private func recoverWebViewIfTerminated() {
+        guard let vc = window?.rootViewController as? CAPBridgeViewController,
+              let webView = vc.webView,
+              let baseURL = vc.bridge?.config.serverURL else { return }
+
+        let current = webView.url?.absoluteString
+        if current == nil || current?.isEmpty == true || current?.hasPrefix("about:") == true {
+            webView.load(URLRequest(url: baseURL))
+            return
+        }
+
+        // URL looks valid but the process may still be dead — a terminated process
+        // can't run JS, so a failing ping is our cue to reboot the SPA.
+        webView.evaluateJavaScript("1") { _, error in
+            if error != nil {
+                webView.load(URLRequest(url: baseURL))
+            }
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
