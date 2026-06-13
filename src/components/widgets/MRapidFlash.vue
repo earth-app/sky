@@ -128,7 +128,7 @@ const props = withDefaults(
 		pool: () => DEFAULT_POOL,
 		questHint: undefined,
 		ctaTitle: 'Match 4 terms to their definitions',
-		ctaSubtitle: 'Tap when you’re ready — the timer only starts after you do.'
+		ctaSubtitle: "Tap when you're ready! the timer only starts after you do."
 	}
 );
 const emit = defineEmits<{ (event: 'complete', payload: { timeMs: number }): void }>();
