@@ -146,6 +146,13 @@ async function toggleBlock() {
 
 	if (res.success) {
 		blocking.value = willBlock;
+		// blocking severs friendship/circle on the backend — mirror that here
+		if (willBlock) {
+			props.user.is_friend = false;
+			props.user.is_my_friend = false;
+			props.user.is_mutual = false;
+			props.user.is_in_my_circle = false;
+		}
 		await Toast.show({
 			text: willBlock
 				? `You have blocked @${props.user.username}.`
