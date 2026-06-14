@@ -59,6 +59,12 @@
 							class="text-success size-6"
 						/>
 					</Transition>
+
+					<ReportMButton
+						v-if="currentPrompt && user"
+						content-type="prompt"
+						:content-id="currentPrompt.id"
+					/>
 				</IonButtons>
 			</IonToolbar>
 		</IonHeader>

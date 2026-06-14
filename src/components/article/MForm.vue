@@ -177,6 +177,7 @@ const props = defineProps<{
 }>();
 
 const { create } = useArticles();
+const { checkText } = useClientModeration();
 const { user } = useAuth();
 const emailGate = useEmailGate();
 const { notifyError, notifySuccess } = useAppHaptics();
@@ -255,6 +256,19 @@ async function handleSubmit() {
 	if (props.mode === 'create' && !emailGate.requireVerified('publish articles')) return;
 	loading.value = true;
 	if (props.mode === 'create') {
+		// preventive client pre-check — server stays authoritative
+		const verdict = await checkText(`${state.title}\n${state.content}`);
+		if (!verdict.allowed) {
+			loading.value = false;
+			notifyError();
+			const reason =
+				verdict.category === 'spam'
+					? 'This looks like spam.'
+					: 'Please remove inappropriate language.';
+			await showErrorToast(undefined, { fallback: reason });
+			return;
+		}
+
 		const res = await create({
 			title: state.title,
 			description: state.description,

@@ -92,6 +92,7 @@ const emit = defineEmits<{
 
 const { user } = useAuth();
 const { event, fetch, fetchSubmissionsForUser, submitImage } = useEvent(props.eventId);
+const { checkImage } = useClientModeration();
 const currentSubmissionsCount = ref(0);
 
 const isNative = Capacitor.isNativePlatform();
@@ -253,6 +254,19 @@ async function submitUpload() {
 	if (!value.value) return;
 
 	submitting.value = true;
+
+	// preventive client pre-check — server stays authoritative
+	for (const file of value.value) {
+		const verdict = await checkImage(file);
+		if (!verdict.allowed) {
+			submitting.value = false;
+			await showErrorToast(undefined, {
+				fallback: "This image looks explicit and can't be posted."
+			});
+			return;
+		}
+	}
+
 	for (const file of value.value) {
 		const res = await submitImage(file);
 		if (valid(res)) {

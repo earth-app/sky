@@ -59,6 +59,12 @@
 							class="text-success size-6"
 						/>
 					</Transition>
+
+					<ReportMButton
+						v-if="currentArticle && user"
+						content-type="article"
+						:content-id="currentArticle.id"
+					/>
 				</IonButtons>
 			</IonToolbar>
 		</IonHeader>

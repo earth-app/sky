@@ -1,37 +1,42 @@
 <template>
-	<MInfoCard
+	<div
 		v-if="articleData"
-		:subtitle="articleData.title"
-		:content="trimString(articleData.content, 300)"
-		:link="noLink ? undefined : `/tabs/articles/${articleData.id}`"
-		:footer="footer"
-		:avatar="{
-			src: authorAvatar,
-			size: 'xl',
-			chip: authorAvatarChipColor
-				? {
-						color: authorAvatarChipColor,
-						size: 'xl'
-					}
-				: undefined
-		}"
-		:secondary-avatar="
-			showSecondaryAvatar
-				? {
-						src: articleOceanFavicon,
-						size: 'xs'
-					}
-				: undefined
-		"
-		:badges="
-			articleData.tags.map((tag) => ({
-				text: tag,
-				color: 'warning',
-				icon: 'mdi:tag-outline'
-			}))
-		"
-		class="p-4"
-	/>
+		class="relative"
+	>
+		<MInfoCard
+			:subtitle="articleData.title"
+			:content="trimString(articleData.content, 300)"
+			:link="noLink ? undefined : `/tabs/articles/${articleData.id}`"
+			:footer="footer"
+			:avatar="{
+				src: authorAvatar,
+				size: 'xl',
+				chip: authorAvatarChipColor
+					? {
+							color: authorAvatarChipColor,
+							size: 'xl'
+						}
+					: undefined
+			}"
+			:secondary-avatar="
+				showSecondaryAvatar
+					? {
+							src: articleOceanFavicon,
+							size: 'xs'
+						}
+					: undefined
+			"
+			:badges="
+				articleData.tags.map((tag) => ({
+					text: tag,
+					color: 'warning',
+					icon: 'mdi:tag-outline'
+				}))
+			"
+			:report="canReport ? { contentType: 'article', contentId: articleData?.id } : undefined"
+			class="p-4"
+		/>
+	</div>
 </template>
 
 <script setup lang="ts">
@@ -43,6 +48,9 @@ const props = defineProps<{
 	article: Article;
 	noLink?: boolean;
 }>();
+
+const { user } = useAuth();
+const canReport = computed(() => Boolean(user.value) && !isOffline.value);
 
 const articleData = computed(() => {
 	const article = props.article;

@@ -27,6 +27,13 @@
 					class="my-2"
 					>Edit Profile</IonButton
 				>
+
+				<ReportMButton
+					v-if="!isCurrentUser && currentUser"
+					content-type="user"
+					:content-id="user.id"
+					class="my-2"
+				/>
 			</div>
 			<div class="flex items-center px-2">
 				<div class="flex flex-col">

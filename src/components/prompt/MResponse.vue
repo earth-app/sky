@@ -1,49 +1,39 @@
 <template>
 	<ClientOnly>
 		<div class="w-full flex items-center justify-center my-8">
-			<MInfoCard
-				:title="identifier"
-				:content="responseText"
-				:footer="time"
-				:avatar="{
-					src: authorAvatar,
-					size: 'md',
-					chip: response?.owner.account.account_type
-						? {
-								color:
-									response?.owner.account.account_type === 'ORGANIZER'
-										? 'warning'
-										: response?.owner.account.account_type === 'ADMINISTRATOR'
-											? 'error'
-											: undefined
-							}
-						: undefined,
-					link: `/tabs/profile/@${response?.owner.username}`
-				}"
-				:buttons="
-					hasButtons
-						? [
-								{
-									text: 'Edit',
-									color: 'secondary',
-									size: 'small',
-									onClick: () => {
-										editOpen = true;
-									}
-								},
-								{
-									text: 'Delete',
-									color: 'danger',
-									size: 'small',
-									onClick: () => {
-										deleteResponse();
-									}
+			<div class="relative w-full">
+				<MInfoCard
+					:title="identifier"
+					:content="responseText"
+					:footer="time"
+					:avatar="{
+						src: authorAvatar,
+						size: 'md',
+						chip: response?.owner.account.account_type
+							? {
+									color:
+										response?.owner.account.account_type === 'ORGANIZER'
+											? 'warning'
+											: response?.owner.account.account_type === 'ADMINISTRATOR'
+												? 'error'
+												: undefined
 								}
-							]
-						: undefined
-				"
-				class="w-full p-4 border-2 border-gray-800 light:border-gray-500"
-			/>
+							: undefined,
+						link: `/tabs/profile/@${response?.owner.username}`
+					}"
+					class="w-full p-4 border-2 border-gray-800 light:border-gray-500"
+					:report="
+						canReport
+							? {
+									contentType: 'prompt_response',
+									contentId: response.id,
+									parentId: response.prompt_id,
+									extraActions: reportExtraActions
+								}
+							: undefined
+					"
+				/>
+			</div>
 		</div>
 		<IonModal
 			v-if="hasButtons"
@@ -145,6 +135,20 @@ watch(
 
 const editOpen = ref(false);
 const editLoading = ref(false);
+
+const canReport = computed(() => Boolean(user.value) && !isOffline.value);
+
+const reportExtraActions = computed(() => {
+	if (!hasButtons.value) return [];
+	return [
+		{ text: 'Edit', handler: () => (editOpen.value = true) },
+		{
+			text: 'Delete',
+			role: 'destructive' as const,
+			handler: () => deleteResponse()
+		}
+	];
+});
 
 async function saveResponse() {
 	editLoading.value = true;

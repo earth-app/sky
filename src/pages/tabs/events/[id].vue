@@ -5,6 +5,17 @@
 				<IonButtons slot="start">
 					<IonBackButton default-href="/tabs/profile/editor" />
 				</IonButtons>
+
+				<IonButtons
+					slot="end"
+					class="gap-2 mx-2"
+				>
+					<ReportMButton
+						v-if="event && user"
+						content-type="event"
+						:content-id="event.id"
+					/>
+				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
 

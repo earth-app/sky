@@ -1,44 +1,29 @@
 <template>
-	<MInfoCard
-		:subtitle="promptText"
-		:content="`By ${ownerHandle}`"
-		:avatar="{
-			src: authorAvatar,
-			size: 'xl',
-			chip: authorAvatarChipColor
-				? {
-						color: authorAvatarChipColor,
-						size: 'xl'
-					}
-				: undefined
-		}"
-		:link="noLink ? undefined : `/tabs/prompts/${prompt.id}`"
-		:footer="`${footer} • ${prompt.responses_count ? withSuffix(prompt.responses_count) + ' Responses' : 'No Responses'}`"
-		:secondary-footer="secondaryFooter"
-		:buttons="
-			hasButtons && noLink
-				? [
-						{
-							text: 'Edit',
-							color: 'secondary',
-							size: 'small',
-							onClick: () => {
-								editOpen = true;
-							}
-						},
-						{
-							text: 'Delete',
-							color: 'danger',
-							size: 'small',
-							onClick: () => {
-								deletePrompt();
-							}
+	<div class="relative">
+		<MInfoCard
+			:subtitle="promptText"
+			:content="`By ${ownerHandle}`"
+			:avatar="{
+				src: authorAvatar,
+				size: 'xl',
+				chip: authorAvatarChipColor
+					? {
+							color: authorAvatarChipColor,
+							size: 'xl'
 						}
-					]
-				: undefined
-		"
-		class="p-4"
-	/>
+					: undefined
+			}"
+			:link="noLink ? undefined : `/tabs/prompts/${prompt.id}`"
+			:footer="`${footer} • ${prompt.responses_count ? withSuffix(prompt.responses_count) + ' Responses' : 'No Responses'}`"
+			:secondary-footer="secondaryFooter"
+			:report="
+				canReport
+					? { contentType: 'prompt', contentId: prompt.id, extraActions: reportExtraActions }
+					: undefined
+			"
+			class="p-4"
+		/>
+	</div>
 	<IonModal
 		v-if="hasButtons"
 		can-dismiss
@@ -179,6 +164,21 @@ onMounted(() => {
 
 const editOpen = ref(false);
 const editLoading = ref(false);
+
+const canReport = computed(() => Boolean(user.value) && !isOffline.value);
+
+// owner Edit/Delete are merged into the overflow sheet only on the detail view (noLink)
+const reportExtraActions = computed(() => {
+	if (!hasButtons.value || !props.noLink) return [];
+	return [
+		{ text: 'Edit', handler: () => (editOpen.value = true) },
+		{
+			text: 'Delete',
+			role: 'destructive' as const,
+			handler: () => deletePrompt()
+		}
+	];
+});
 
 async function savePrompt() {
 	editLoading.value = true;

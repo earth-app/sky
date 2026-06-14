@@ -1,28 +1,31 @@
 <template>
-	<MInfoCard
-		v-bind="$attrs"
-		:title="event.name"
-		:content="full ? event.description : trimString(event.description, 350)"
-		:link="noLink ? undefined : `/tabs/events/${event.id}`"
-		:avatar="{
-			src: authorAvatar,
-			size: 'lg',
-			chip: authorAvatarChipColor
-				? {
-						color: authorAvatarChipColor,
-						size: 'lg'
-					}
-				: undefined
-		}"
-		:badges="badges"
-		:image="full ? undefined : thumbnail || undefined"
-		:buttons="buttons"
-		:avatar-group="{
-			avatars: attendeeAvatars,
-			max: 5
-		}"
-		:footer="footer"
-	/>
+	<div class="relative">
+		<MInfoCard
+			v-bind="$attrs"
+			:title="event.name"
+			:content="full ? event.description : trimString(event.description, 350)"
+			:link="noLink ? undefined : `/tabs/events/${event.id}`"
+			:avatar="{
+				src: authorAvatar,
+				size: 'lg',
+				chip: authorAvatarChipColor
+					? {
+							color: authorAvatarChipColor,
+							size: 'lg'
+						}
+					: undefined
+			}"
+			:badges="badges"
+			:image="full ? undefined : thumbnail || undefined"
+			:buttons="buttons"
+			:avatar-group="{
+				avatars: attendeeAvatars,
+				max: 5
+			}"
+			:footer="footer"
+			:report="canReport ? { contentType: 'event', contentId: event.id } : undefined"
+		/>
+	</div>
 	<MContentDrawer
 		ref="attendeesDrawerRef"
 		:title="`Event Attendees (${comma(reactiveEvent.attendee_count)})`"
@@ -74,6 +77,8 @@ onMounted(() => {
 });
 
 const reactiveEvent = computed(() => eventState.value || props.event);
+
+const canReport = computed(() => Boolean(user.value) && !isOffline.value);
 
 const attendeesDrawerRef = ref<InstanceType<typeof MContentDrawer>>();
 

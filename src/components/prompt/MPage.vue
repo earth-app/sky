@@ -168,10 +168,22 @@ const posting = ref(false);
 const newResponse = ref('');
 
 const emailGate = useEmailGate();
+const { checkText } = useClientModeration();
 
 async function postResponse() {
 	if (posting.value || isOfflineMode.value) return;
 	if (!emailGate.requireVerified('post a prompt response')) return;
+
+	// preventive client pre-check — server stays authoritative
+	const verdict = await checkText(newResponse.value);
+	if (!verdict.allowed) {
+		const reason =
+			verdict.category === 'spam'
+				? 'This looks like spam.'
+				: 'Please remove inappropriate language.';
+		await showErrorToast(undefined, { fallback: reason });
+		return;
+	}
 
 	posting.value = true;
 
