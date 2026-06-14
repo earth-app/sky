@@ -45,7 +45,6 @@
 				label="Username"
 				name="username"
 				:required="true"
-				hint="Lowercase letters, numbers, _.- only"
 			>
 				<IonInput
 					v-model="username"
@@ -77,6 +76,25 @@
 					<IonInputPasswordToggle slot="end" />
 				</IonInput>
 			</UFormField>
+
+			<p class="text-xs opacity-80 text-center mb-3 px-4">
+				By signing up, you agree to our
+				<button
+					type="button"
+					class="text-primary! font-semibold! underline!"
+					@click="openTos"
+				>
+					Terms of Service
+				</button>
+				and
+				<button
+					type="button"
+					class="text-primary! font-semibold! underline!"
+					@click="openPrivacy"
+				>
+					Privacy Policy</button
+				>.
+			</p>
 
 			<div class="flex w-full justify-center">
 				<IonButton
@@ -116,6 +134,7 @@
 </template>
 
 <script setup lang="ts">
+import { Browser } from '@capacitor/browser';
 import { Toast } from '@capacitor/toast';
 import { emailSchema, fullNameSchema, passwordSchema, usernameSchema } from 'schemas';
 import type { User } from 'types/user';
@@ -132,13 +151,18 @@ const error = ref('');
 const signup = useSignup();
 const { notifyError } = useAppHaptics();
 
+// links must leave the app on native
+async function openTos() {
+	await Browser.open({ url: 'https://earth-app.com/tos' });
+}
+async function openPrivacy() {
+	await Browser.open({ url: 'https://earth-app.com/privacy-policy' });
+}
+
 const emit = defineEmits<{
 	signupSuccess: [user: User, hasEmail: boolean];
 }>();
 
-// Mirror crust's web Form: zod validation lives on the UForm so per-field errors
-// render automatically. Local schemas re-wrap the shared ones so an empty
-// optional field (email/name) doesn't trip min-length errors.
 const signupSchema = z.object({
 	email: z
 		.string()
