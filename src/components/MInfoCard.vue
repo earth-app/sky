@@ -333,6 +333,15 @@
 				class="text-xs block font-sans text-gray-500 light:text-gray-400 mb-2"
 				>{{ secondaryFooter }}</span
 			>
+
+			<ReportMButton
+				v-if="report"
+				:content-type="report.contentType"
+				:content-id="report.contentId"
+				:parent-id="report.parentId"
+				:extra-actions="report.extraActions"
+				class="absolute top-1 right-1 z-10"
+			/>
 		</IonCardContent>
 	</IonCard>
 </template>
@@ -441,6 +450,16 @@ const props = defineProps<{
 		}[];
 	};
 	color?: Color;
+	report?: {
+		contentType: ContentType;
+		contentId: string;
+		parentId?: string;
+		extraActions?: {
+			text: string;
+			role?: 'destructive' | 'cancel';
+			handler: Function;
+		}[];
+	};
 }>();
 
 const appSettings = useAppSettingsState();
