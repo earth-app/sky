@@ -613,6 +613,22 @@ const settingSections = computed<SettingSection[]>(() => [
 				placeholder: 'View',
 				color: 'tertiary',
 				link: '/tabs/settings/words'
+			},
+			{
+				kind: 'link',
+				title: 'Blocked Users',
+				description: "People you've blocked. Unblock to restore interaction",
+				placeholder: 'Manage',
+				color: 'danger',
+				link: '/tabs/settings/blocked-users'
+			},
+			{
+				kind: 'link',
+				title: 'Moderation Status',
+				description: 'Your account standing and any content removed by moderators',
+				placeholder: 'View',
+				color: 'secondary',
+				link: '/tabs/settings/moderation'
 			}
 		]
 	},
