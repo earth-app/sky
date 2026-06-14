@@ -113,9 +113,7 @@ const authStore = useAuthStore();
 const friendsLoading = ref(false);
 const circleLoading = ref(false);
 const blockBusy = ref(false);
-const blocking = ref<boolean>(
-	Boolean((props.user as User & { is_blocking?: boolean }).is_blocking)
-);
+const blocking = ref<boolean>(props.user.is_blocking);
 const isThisUser = computed(() => {
 	return currentUser.value?.id === props.user.id;
 });
