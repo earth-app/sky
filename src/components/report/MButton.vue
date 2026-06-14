@@ -4,11 +4,18 @@
 		:size="size"
 		:color="color"
 		@click.stop.prevent="openMenu"
+		:class="full ? 'w-full' : ''"
 	>
 		<UIcon
-			name="mdi:menu"
+			v-if="icon"
+			:name="icon"
 			class="size-5"
 		/>
+		<span
+			v-if="label"
+			class="ml-2"
+			>{{ label }}</span
+		>
 	</IonButton>
 
 	<MReportModal
@@ -38,11 +45,14 @@ const props = withDefaults(
 		parentId?: string;
 		// owner actions (Edit/Delete) merged into the action sheet above Report
 		extraActions?: ExtraAction[];
+		label?: string;
+		icon?: string;
 		fill?: 'clear' | 'outline' | 'solid' | 'default';
 		size?: 'small' | 'default' | 'large';
+		full?: boolean;
 		color?: string;
 	}>(),
-	{ fill: 'outline', size: 'small', color: 'medium', extraActions: () => [] }
+	{ fill: 'outline', size: 'small', color: 'medium', icon: 'mdi:menu', extraActions: () => [] }
 );
 
 const modalOpen = ref(false);

@@ -64,12 +64,41 @@
 			/>
 			Remove Friend
 		</IonButton>
+
+		<ReportMButton
+			v-if="!isThisUser && currentUser"
+			content-type="user"
+			:content-id="user.id"
+			fill="solid"
+			icon="mdi:flag"
+			color="warning"
+			label="Report"
+			full
+		/>
+
+		<IonButton
+			v-if="canBlock"
+			:color="blocking ? 'success' : 'medium'"
+			fill="solid"
+			size="small"
+			:disabled="blockBusy"
+			class="w-full"
+			@click="toggleBlock"
+		>
+			<UIcon
+				:name="blocking ? 'mdi:account-check' : 'mdi:account-cancel'"
+				class="size-5 mr-2"
+			/>
+			{{ blocking ? 'Unblock' : 'Block' }}
+		</IonButton>
 	</div>
 </template>
 
 <script setup lang="ts">
+import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
 import type { User } from 'types/user';
+import { makeClientAPIRequest } from 'utils';
 
 const props = defineProps<{
 	user: User;
@@ -79,12 +108,58 @@ const props = defineProps<{
 const { user: currentUser } = useAuth();
 const { addFriend, removeFriend, addToCircle, removeFromCircle } = useFriends();
 const { notifyError } = useAppHaptics();
+const authStore = useAuthStore();
 
 const friendsLoading = ref(false);
 const circleLoading = ref(false);
+const blockBusy = ref(false);
+const blocking = ref<boolean>(
+	Boolean((props.user as User & { is_blocking?: boolean }).is_blocking)
+);
 const isThisUser = computed(() => {
 	return currentUser.value?.id === props.user.id;
 });
+// block anyone but yourself or an admin
+const canBlock = computed(() => !isThisUser.value && !props.user.is_admin);
+
+async function toggleBlock() {
+	if (blockBusy.value) return;
+	const willBlock = !blocking.value;
+
+	if (willBlock) {
+		const { value } = await Dialog.confirm({
+			title: 'Block User',
+			message: `Block @${props.user.username}? They won't be able to see your profile or interact with your content.`,
+			okButtonTitle: 'Block',
+			cancelButtonTitle: 'Cancel'
+		});
+		if (!value) return;
+	}
+
+	blockBusy.value = true;
+	const res = await makeClientAPIRequest(
+		`/v2/users/current/blocked?user=${encodeURIComponent(props.user.id)}`,
+		authStore.sessionToken,
+		{ method: willBlock ? 'PUT' : 'DELETE' }
+	);
+	blockBusy.value = false;
+
+	if (res.success) {
+		blocking.value = willBlock;
+		await Toast.show({
+			text: willBlock
+				? `You have blocked @${props.user.username}.`
+				: `You have unblocked @${props.user.username}.`,
+			duration: 'long'
+		});
+	} else {
+		notifyError();
+		await Toast.show({
+			text: res.message || `Could not update block status for @${props.user.username}.`,
+			duration: 'long'
+		});
+	}
+}
 const atMaxCircle = computed(() => {
 	const count = currentUser.value?.circle_count || 0;
 	const max = currentUser.value?.max_circle_count || 0;
