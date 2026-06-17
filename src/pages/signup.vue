@@ -68,7 +68,6 @@
 import { Preferences } from '@capacitor/preferences';
 import { Share } from '@capacitor/share';
 import { Toast } from '@capacitor/toast';
-import { onIonViewWillEnter } from '@ionic/vue';
 import { OAUTH_PROVIDERS, type User } from 'types/user';
 import slide from '~/animations/slide';
 
@@ -76,7 +75,6 @@ const { user, fetchUser } = useAuth();
 const { notifyError } = useAppHaptics();
 const ionRouter = useIonRouter();
 const route = useRoute();
-const redirectingAfterSubmit = ref(false);
 const wasAuthenticatedAtMount = Boolean(user.value);
 
 const { error } = route.query;
@@ -102,38 +100,24 @@ onMounted(() => {
 	fetchUser();
 });
 
-watch(
-	() => user.value,
-	async (currentUser) => {
-		if (!currentUser) {
-			redirectingAfterSubmit.value = false;
-			return;
-		}
-		if (redirectingAfterSubmit.value) return;
-		redirectingAfterSubmit.value = true;
+// Signing up via OAuth to an existing account should read as a normal login, not a "wrong page"
+// nudge. Welcome the user once when they first become authenticated here (new vs returning by
+// account age); only say "already logged in" if they arrived already signed in.
+function announceWelcome() {
+	let message = 'You are already logged in.';
+	if (!wasAuthenticatedAtMount) {
+		const createdMs = user.value?.created_at ? new Date(user.value.created_at).getTime() : 0;
+		const isNewAccount = createdMs > 0 && Date.now() - createdMs <= 60 * 1000;
+		message = isNewAccount ? 'Welcome to The Earth App!' : 'Welcome back!';
+	}
+	Toast.show({ text: message, duration: 'short' }).catch((err) => {
+		console.warn('[signup] toast failed:', err);
+	});
+}
 
-		let message = 'You are already logged in.';
-		if (!wasAuthenticatedAtMount) {
-			const createdMs = currentUser.created_at ? new Date(currentUser.created_at).getTime() : 0;
-			const isNewAccount = createdMs > 0 && Date.now() - createdMs <= 60 * 1000;
-			message = isNewAccount ? 'Welcome to The Earth App!' : 'Welcome back!';
-		}
-		try {
-			await Toast.show({ text: message, duration: 'short' });
-		} catch (err) {
-			console.warn('[signup] toast failed:', err);
-		}
-		// Ionic router (root replace) so the root outlet swaps to the tabs shell; navigateTo only
-		// updates the URL and leaves the signup page on screen (token persists but no redirect).
-		ionRouter.navigate('/tabs/dashboard', 'root', 'replace');
-	},
-	{ immediate: true }
-);
-
-// page kept alive in the outlet; re-arm on re-entry
-onIonViewWillEnter(() => {
-	if (!user.value) redirectingAfterSubmit.value = false;
-});
+// Self-healing redirect: enters the app when authenticated and retries if a navigation fails to
+// transition the view (covers OAuth deep-link / browser-sheet timing hangs).
+const { redirectNow, suppress } = useAuthRedirect(() => '/tabs/dashboard', announceWelcome);
 
 async function showSignupError(errorType: string) {
 	let description = 'An unknown error occurred during sign up.';
@@ -165,9 +149,10 @@ async function showSignupError(errorType: string) {
 }
 
 async function handleSignupSuccess(_: User, hasEmail: boolean) {
-	redirectingAfterSubmit.value = true;
-
 	if (hasEmail) {
+		// the form flow routes the user to verify their email instead of the dashboard —
+		// stop the auto-redirect so the watchdog doesn't pull them back to /tabs.
+		suppress();
 		try {
 			await Toast.show({
 				text: 'Verification email sent. Please verify your account.',
@@ -178,7 +163,7 @@ async function handleSignupSuccess(_: User, hasEmail: boolean) {
 		}
 		ionRouter.navigate('/verify-email', 'root', 'replace');
 	} else {
-		ionRouter.navigate('/tabs/dashboard', 'root', 'replace');
+		redirectNow();
 	}
 
 	refreshNuxtData();

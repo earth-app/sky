@@ -497,6 +497,11 @@ async function handleIncomingDeepLink(url: string) {
 	const flowState = refreshFlowState();
 
 	if (resolved.type === 'oauth-complete') {
+		console.warn('[oauth] deep link received', {
+			provider: resolved.provider,
+			context: resolved.context,
+			hasToken: Boolean(resolved.sessionToken)
+		});
 		await closeBrowser();
 		clearFlow();
 
@@ -507,25 +512,17 @@ async function handleIncomingDeepLink(url: string) {
 		}
 
 		authStore.setSessionToken(resolved.sessionToken);
-
-		const effectiveContext = resolved.context || flowState.context;
-		// Use the Ionic router (root replace), NOT Nuxt's navigateTo. navigateTo updates the route
-		// but does not drive the root IonRouterOutlet to swap an auth page for the /tabs shell, so
-		// the view never transitions (token persists, page freezes, only a restart recovers). This
-		// is the pattern every working in-app navigation uses (MLoginForm, Back, MEGate, …).
-		router.navigate(resolved.target, 'root', 'replace');
 		notifySuccess();
 
-		void (async () => {
+		await safeHydrateUser();
+		if (!authStore.sessionToken) {
+			authStore.setSessionToken(resolved.sessionToken);
 			await safeHydrateUser();
-			if (!authStore.sessionToken) {
-				authStore.setSessionToken(resolved.sessionToken);
-				await safeHydrateUser();
-			}
-			if (effectiveContext === 'signup' && user.value && !user.value.account?.email_verified) {
-				router.navigate('/verify-email', 'root', 'replace');
-			}
-		})();
+		}
+
+		// if OAuth was started somewhere without an in-outlet `user` watcher,
+		// still attempt a navigation from here
+		router.navigate(resolved.target, 'root', 'replace');
 		return;
 	}
 

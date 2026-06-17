@@ -64,15 +64,13 @@
 </template>
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { onIonViewWillEnter } from '@ionic/vue';
 import { OAUTH_PROVIDERS } from 'types/user';
 import slide from '~/animations/slide';
 
-const { user, fetchUser } = useAuth();
+const { fetchUser } = useAuth();
 const { notifyError } = useAppHaptics();
 const ionRouter = useIonRouter();
 const route = useRoute();
-const redirectingAfterSubmit = ref(false);
 
 const redirectPath = computed(() => {
 	const redirect = route.query.redirect;
@@ -83,6 +81,10 @@ const redirectPath = computed(() => {
 	return '/tabs/dashboard';
 });
 
+// Self-healing redirect: enters the app when authenticated and keeps retrying if a navigation
+// fails to actually transition the view (covers OAuth deep-link / browser-sheet timing hangs).
+const { redirectNow } = useAuthRedirect(() => redirectPath.value);
+
 const { error } = route.query;
 if (typeof error === 'string') {
 	showLoginError(error);
@@ -92,25 +94,6 @@ onMounted(() => {
 	// hydrate from the stored session token on cold launch so an already-signed-in
 	// user doesn't see the login form for a beat before the watcher fires.
 	fetchUser();
-});
-
-watch(
-	() => user.value,
-	async (currentUser) => {
-		if (currentUser && !redirectingAfterSubmit.value) {
-			redirectingAfterSubmit.value = true;
-			ionRouter.navigate(redirectPath.value, 'root', 'replace');
-		} else if (!currentUser) {
-			// re-arm on cleared/failed auth so a retry can navigate (latch is otherwise one-way)
-			redirectingAfterSubmit.value = false;
-		}
-	},
-	{ immediate: true }
-);
-
-// page kept alive in the outlet; re-arm on re-entry
-onIonViewWillEnter(() => {
-	if (!user.value) redirectingAfterSubmit.value = false;
 });
 
 async function showLoginError(errorType: string) {
@@ -146,8 +129,7 @@ async function showLoginError(errorType: string) {
 }
 
 function handleLoginSuccess() {
-	redirectingAfterSubmit.value = true;
-	ionRouter.navigate(redirectPath.value, 'root', 'replace');
+	redirectNow();
 	refreshNuxtData();
 }
 
