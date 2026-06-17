@@ -1,6 +1,8 @@
+import { Preferences } from '@capacitor/preferences';
+
 const PROTECTED_PREFIXES = ['/tabs', '/profile'];
 
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
 	if (import.meta.server) return;
 
 	const requiresAuth = PROTECTED_PREFIXES.some(
@@ -18,7 +20,17 @@ export default defineNuxtRouteMiddleware((to) => {
 			return;
 		}
 	} catch {
-		// localStorage unavailable; treat as unauthenticated
+		// localStorage unavailable; fall through to the durable store
+	}
+
+	try {
+		const { value } = await Preferences.get({ key: 'session_token' });
+		if (value) {
+			authStore.setSessionToken(value);
+			return;
+		}
+	} catch {
+		// Preferences unavailable; treat as unauthenticated
 	}
 
 	return navigateTo(
