@@ -507,21 +507,21 @@ async function handleIncomingDeepLink(url: string) {
 		}
 
 		authStore.setSessionToken(resolved.sessionToken);
-		await safeHydrateUser();
-
-		if (!authStore.sessionToken) {
-			authStore.setSessionToken(resolved.sessionToken);
-			if (!isOffline.value) await safeHydrateUser();
-		}
 
 		const effectiveContext = resolved.context || flowState.context;
-		const destination =
-			effectiveContext === 'signup' && user.value && !user.value.account?.email_verified
-				? '/verify-email'
-				: resolved.target;
-
-		await navigateTo(destination, { replace: true });
+		await navigateTo(resolved.target, { replace: true });
 		notifySuccess();
+
+		void (async () => {
+			await safeHydrateUser();
+			if (!authStore.sessionToken) {
+				authStore.setSessionToken(resolved.sessionToken);
+				await safeHydrateUser();
+			}
+			if (effectiveContext === 'signup' && user.value && !user.value.account?.email_verified) {
+				await navigateTo('/verify-email', { replace: true });
+			}
+		})();
 		return;
 	}
 
