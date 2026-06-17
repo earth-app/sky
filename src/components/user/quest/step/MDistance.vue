@@ -45,6 +45,20 @@
 				<span>0 m</span>
 				<span>{{ formatDistance(targetMeters) }}</span>
 			</div>
+
+			<div
+				v-if="isAppleHealthSource"
+				class="flex items-center gap-2 text-xs! opacity-80 mt-2!"
+			>
+				<UIcon
+					name="mdi:heart-pulse"
+					class="size-4 shrink-0 text-primary"
+				/>
+				<span
+					>Distance for this step is read from Apple Health, including workouts your Apple Watch
+					records.</span
+				>
+			</div>
 		</div>
 
 		<div
@@ -195,6 +209,9 @@ const rmsSamples = ref<{ t: number; mag: number }[]>([]);
 
 let runnerSyncTimer: ReturnType<typeof setInterval> | null = null;
 let lastRunnerSyncAt = 0;
+
+// healthkit only runs on ios, so surface the apple health disclosure there
+const isAppleHealthSource = computed(() => Capacitor.getPlatform() === 'ios');
 
 const goalReached = computed(() => progress.value >= props.targetMeters);
 const progressFraction = computed(() => {

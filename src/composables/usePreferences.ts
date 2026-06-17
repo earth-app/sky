@@ -130,13 +130,12 @@ const COPY: Record<PermKind, { title: string; message: string }> = {
 export async function primePermission(kind: PermKind): Promise<boolean> {
 	const copy = COPY[kind];
 	try {
-		const { value } = await Dialog.confirm({
+		await Dialog.alert({
 			title: copy.title,
 			message: copy.message,
-			okButtonTitle: 'Continue',
-			cancelButtonTitle: 'Not Now'
+			buttonTitle: 'Continue'
 		});
-		return Boolean(value);
+		return true;
 	} catch {
 		// dialog plugin unavailable (web dev) — proceed straight to the real prompt
 		return true;
