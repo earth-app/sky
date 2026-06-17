@@ -435,15 +435,18 @@ if (import.meta.client) {
 		authStore.setSessionToken(persistedSessionToken);
 	}
 
+	let tokenMirrorPrimed = false;
 	watch(
 		() => authStore.sessionToken,
 		(value) => {
 			if (value) {
 				localStorage.setItem('session_token', value);
-				return;
+				void Preferences.set({ key: 'session_token', value }).catch(() => {});
+			} else if (tokenMirrorPrimed) {
+				localStorage.removeItem('session_token');
+				void Preferences.remove({ key: 'session_token' }).catch(() => {});
 			}
-
-			localStorage.removeItem('session_token');
+			tokenMirrorPrimed = true;
 		},
 		{ immediate: true }
 	);
@@ -505,6 +508,11 @@ async function handleIncomingDeepLink(url: string) {
 
 		authStore.setSessionToken(resolved.sessionToken);
 		await safeHydrateUser();
+
+		if (!authStore.sessionToken) {
+			authStore.setSessionToken(resolved.sessionToken);
+			if (!isOffline.value) await safeHydrateUser();
+		}
 
 		const effectiveContext = resolved.context || flowState.context;
 		const destination =
@@ -586,6 +594,15 @@ onMounted(async () => {
 		});
 	}
 
+	if (!authStore.sessionToken) {
+		try {
+			const { value } = await Preferences.get({ key: 'session_token' });
+			if (value) authStore.setSessionToken(value);
+		} catch {
+			// Preferences unavailable — continue unauthenticated
+		}
+	}
+
 	if (!isOffline.value) {
 		await safeHydrateUser();
 	}
@@ -653,6 +670,8 @@ onMounted(async () => {
 			if (!flowState.active) return;
 
 			clearFlow();
+
+			if (!authStore.sessionToken) return;
 			if (!isOffline.value) {
 				await safeHydrateUser();
 			}

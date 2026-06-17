@@ -24,7 +24,7 @@ import type { OAuthProvider } from 'types/user';
 import { capitalizeFully } from 'utils';
 import {
 	isAppleNativeAvailable,
-	isAppleNativeUnavailableError,
+	isAppleSignInCancelled,
 	startAppleNativeAuth
 } from '~/composables/useAppleNativeAuth';
 
@@ -92,42 +92,24 @@ async function startOauth() {
 	try {
 		await impactLight();
 
-		// Narrow the broader OAuthFlowContext down to crust's OAuthContext
-		// ('login' | 'signup' | 'link') so we can pass it to authLink and the
-		// native Apple helper without TS complaints. 'unlink'/'unknown' don't
-		// reach this component in practice, but we default safely.
 		const oauthContext: 'login' | 'signup' | 'link' =
 			props.context === 'signup' || props.context === 'link' ? props.context : 'login';
 
-		// Native iOS Sign in with Apple — bypass the in-app browser and use the
-		// system authentication sheet (Face ID / Touch ID, no browser bounce).
 		if (props.provider === 'apple' && isAppleNativeAvailable()) {
 			try {
 				await startAppleNativeAuth(oauthContext);
 				notifySuccess();
-				// The session token is set inside the composable; pulling the user
-				// triggers the parent page's auth watcher to navigate.
 				await fetchUser(true);
 				return;
 			} catch (error: unknown) {
-				// If the native plugin isn't linked into the iOS binary yet (the
-				// JS shim exists but no native side), fall back to the browser
-				// OAuth flow instead of failing outright.
-				if (!isAppleNativeUnavailableError(error)) {
-					throw error;
+				if (isAppleSignInCancelled(error)) {
+					return;
 				}
-				console.warn(
-					'Native Apple Sign In is not available in this build; falling back to browser flow.'
-				);
+
+				console.warn('[oauth] native Apple Sign In failed; falling back to browser flow:', error);
 			}
 		}
 
-		// Crust's authLink defaults source to 'web', which produces a state like
-		// `<provider>:web:<context>`. Sky is always the mobile client, so pass
-		// 'mobile' explicitly — otherwise applyMobileOAuthState would append a
-		// second `:mobile:<context>` and produce a malformed 5-segment state
-		// that crust parses as source='web' with the trailing segments as a
-		// (bogus) mobile session token.
 		const authUrl = authLink(props.provider, oauthContext, 'mobile');
 		await beginFlow(authUrl, props.context, props.provider);
 	} catch (error: unknown) {

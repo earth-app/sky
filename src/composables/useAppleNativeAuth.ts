@@ -1,5 +1,6 @@
 import { SignInWithApple, type SignInWithAppleResponse } from '@capacitor-community/apple-sign-in';
 import { Capacitor } from '@capacitor/core';
+import type { User } from 'types/user';
 
 type AppleAuthContext = 'login' | 'signup' | 'link';
 
@@ -47,6 +48,15 @@ export function isAppleNativeUnavailableError(error: unknown): boolean {
 	);
 }
 
+// True when the user dismissed the native Apple sheet. `startAppleNativeAuth` tags the
+// cancellation error so callers can distinguish "user backed out" (do nothing) from a real
+// failure (which should fall back to the browser flow).
+export function isAppleSignInCancelled(error: unknown): boolean {
+	return (
+		Boolean((error as { appleCancelled?: boolean } | null)?.appleCancelled) || isCancelError(error)
+	);
+}
+
 export type AppleNativeAuthResult = {
 	sessionToken: string;
 	user: unknown;
@@ -79,8 +89,9 @@ export async function startAppleNativeAuth(
 		});
 	} catch (error) {
 		if (isCancelError(error)) {
-			throw new Error('Sign in cancelled.');
+			throw Object.assign(new Error('Sign in cancelled.'), { appleCancelled: true });
 		}
+		console.warn('[apple-auth] native authorization failed:', error);
 		throw error;
 	}
 
@@ -99,24 +110,37 @@ export async function startAppleNativeAuth(
 	// authorization for an Apple ID + app pair. Forward them so mantle2 can use
 	// them when creating a brand-new account — they are ignored when linking
 	// or when the user already exists.
-	const result = await $fetch<{ session_token: string; user: unknown }>(url, {
-		method: 'POST',
-		body: {
-			id_token: credential.identityToken,
-			authorization_code: credential.authorizationCode || undefined,
-			session_token: currentToken,
-			email: credential.email || undefined,
-			given_name: credential.givenName || undefined,
-			family_name: credential.familyName || undefined,
-			nonce
-		}
-	});
+	let result: { session_token: string; user: unknown };
+	try {
+		result = await $fetch<{ session_token: string; user: unknown }>(url, {
+			method: 'POST',
+			body: {
+				id_token: credential.identityToken,
+				authorization_code: credential.authorizationCode || undefined,
+				session_token: currentToken,
+				email: credential.email || undefined,
+				given_name: credential.givenName || undefined,
+				family_name: credential.familyName || undefined,
+				nonce
+			}
+		});
+	} catch (error) {
+		console.error('[apple-auth] token exchange with the API failed:', error);
+		throw error;
+	}
 
 	if (!result?.session_token) {
 		throw new Error('Apple sign-in succeeded but no session token was returned.');
 	}
 
 	authStore.setSessionToken(result.session_token);
+
+	// Mirror the username/password login path (crust useLogin): set the user object directly
+	// from the response instead of relying on a follow-up /v2/users/current round-trip. This is
+	// what makes the auth-driven redirect fire reliably right after a native Apple sign-in.
+	if (result.user && typeof result.user === 'object') {
+		authStore.currentUser = result.user as User;
+	}
 
 	return {
 		sessionToken: result.session_token,
