@@ -51,7 +51,7 @@
     "@capgo/capacitor-pedometer": "^8.0.32",
     "@capgo/capacitor-watch": "^8.0.20",
     "@codecov/nuxt-plugin": "^2.0.1",
-    "@earth-app/crust": "0.4.2-0df6214",
+    "@earth-app/crust": "0.4.2-d0079a8",
     "@earth-app/ocean": "1.0.1",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "8.8.1",
