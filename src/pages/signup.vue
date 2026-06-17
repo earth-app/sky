@@ -77,6 +77,7 @@ const { notifyError } = useAppHaptics();
 const ionRouter = useIonRouter();
 const route = useRoute();
 const redirectingAfterSubmit = ref(false);
+const wasAuthenticatedAtMount = Boolean(user.value);
 
 const { error } = route.query;
 if (typeof error === 'string') {
@@ -105,14 +106,20 @@ watch(
 	() => user.value,
 	async (currentUser) => {
 		if (!currentUser) {
-			// re-arm on cleared/failed auth so a retry can navigate (latch is otherwise one-way)
 			redirectingAfterSubmit.value = false;
 			return;
 		}
 		if (redirectingAfterSubmit.value) return;
 		redirectingAfterSubmit.value = true;
+
+		let message = 'You are already logged in.';
+		if (!wasAuthenticatedAtMount) {
+			const createdMs = currentUser.created_at ? new Date(currentUser.created_at).getTime() : 0;
+			const isNewAccount = createdMs > 0 && Date.now() - createdMs <= 60 * 1000;
+			message = isNewAccount ? 'Welcome to The Earth App!' : 'Welcome back!';
+		}
 		try {
-			await Toast.show({ text: 'You are already logged in.', duration: 'short' });
+			await Toast.show({ text: message, duration: 'short' });
 		} catch (err) {
 			console.warn('[signup] toast failed:', err);
 		}
