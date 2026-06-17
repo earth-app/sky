@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "generate": "nuxt build",
-    "generate:ios": "nuxt build --dotenv .env.ios",
-    "generate:android": "nuxt build --dotenv .env.android",
+    "generate": "NODE_OPTIONS='--max-old-space-size=8192' nuxt build",
+    "generate:ios": "NODE_OPTIONS='--max-old-space-size=8192' nuxt build --dotenv .env.ios",
+    "generate:android": "NODE_OPTIONS='--max-old-space-size=8192' nuxt build --dotenv .env.android",
     "build:ios": "bun run generate:ios && bunx cap sync ios && bunx cap build ios",
     "build:android": "bun run generate:android && bunx cap sync android && bunx cap build android",
     "dev": "bunx nuxi dev --dotenv .config/local.env --no-restart --public --port 3001",
