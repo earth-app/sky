@@ -82,6 +82,8 @@ import { Toast } from '@capacitor/toast';
 const { user, fetchUser, sendVerificationEmail } = useAuth();
 const { notifySuccess } = useAppHaptics();
 const { startTour, startTourIfNew } = useSiteTour();
+// Ionic router so root-level redirects actually swap the outlet (navigateTo can't enter /tabs).
+const ionRouter = useIonRouter();
 
 onMounted(async () => {
 	await fetchUser();
@@ -112,15 +114,15 @@ async function onEmailVerified() {
 		duration: 'short'
 	});
 
-	await navigateTo('/tabs/profile/editor', { replace: true });
+	ionRouter.navigate('/tabs/profile/editor', 'root', 'replace');
 }
 
 function goToProfileEditor() {
-	navigateTo('/tabs/profile/editor', { replace: true });
+	ionRouter.navigate('/tabs/profile/editor', 'root', 'replace');
 }
 
 function goToLogin() {
-	navigateTo('/login', { replace: true });
+	ionRouter.navigate('/login', 'root', 'replace');
 }
 
 async function resendVerificationFromTour() {

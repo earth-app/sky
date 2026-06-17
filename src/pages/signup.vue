@@ -123,7 +123,9 @@ watch(
 		} catch (err) {
 			console.warn('[signup] toast failed:', err);
 		}
-		await navigateTo('/tabs/dashboard', { replace: true });
+		// Ionic router (root replace) so the root outlet swaps to the tabs shell; navigateTo only
+		// updates the URL and leaves the signup page on screen (token persists but no redirect).
+		ionRouter.navigate('/tabs/dashboard', 'root', 'replace');
 	},
 	{ immediate: true }
 );
@@ -174,9 +176,9 @@ async function handleSignupSuccess(_: User, hasEmail: boolean) {
 		} catch (err) {
 			console.warn('[signup] toast failed:', err);
 		}
-		await navigateTo('/verify-email', { replace: true });
+		ionRouter.navigate('/verify-email', 'root', 'replace');
 	} else {
-		await navigateTo('/tabs/dashboard', { replace: true });
+		ionRouter.navigate('/tabs/dashboard', 'root', 'replace');
 	}
 
 	refreshNuxtData();

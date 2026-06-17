@@ -99,7 +99,7 @@ watch(
 	async (currentUser) => {
 		if (currentUser && !redirectingAfterSubmit.value) {
 			redirectingAfterSubmit.value = true;
-			await navigateTo(redirectPath.value, { replace: true });
+			ionRouter.navigate(redirectPath.value, 'root', 'replace');
 		} else if (!currentUser) {
 			// re-arm on cleared/failed auth so a retry can navigate (latch is otherwise one-way)
 			redirectingAfterSubmit.value = false;
@@ -147,7 +147,7 @@ async function showLoginError(errorType: string) {
 
 function handleLoginSuccess() {
 	redirectingAfterSubmit.value = true;
-	navigateTo(redirectPath.value, { replace: true });
+	ionRouter.navigate(redirectPath.value, 'root', 'replace');
 	refreshNuxtData();
 }
 

@@ -509,7 +509,11 @@ async function handleIncomingDeepLink(url: string) {
 		authStore.setSessionToken(resolved.sessionToken);
 
 		const effectiveContext = resolved.context || flowState.context;
-		await navigateTo(resolved.target, { replace: true });
+		// Use the Ionic router (root replace), NOT Nuxt's navigateTo. navigateTo updates the route
+		// but does not drive the root IonRouterOutlet to swap an auth page for the /tabs shell, so
+		// the view never transitions (token persists, page freezes, only a restart recovers). This
+		// is the pattern every working in-app navigation uses (MLoginForm, Back, MEGate, …).
+		router.navigate(resolved.target, 'root', 'replace');
 		notifySuccess();
 
 		void (async () => {
@@ -519,7 +523,7 @@ async function handleIncomingDeepLink(url: string) {
 				await safeHydrateUser();
 			}
 			if (effectiveContext === 'signup' && user.value && !user.value.account?.email_verified) {
-				await navigateTo('/verify-email', { replace: true });
+				router.navigate('/verify-email', 'root', 'replace');
 			}
 		})();
 		return;
@@ -538,7 +542,7 @@ async function handleIncomingDeepLink(url: string) {
 		return;
 	}
 
-	await navigateTo(resolved.target, { replace: true });
+	router.navigate(resolved.target, 'root', 'replace');
 }
 
 async function handleAppUrlOpen(event: URLOpenListenerEvent) {

@@ -272,7 +272,8 @@ async function submitCode() {
 			const redirect = route.query.redirect;
 			const target =
 				typeof redirect === 'string' && redirect.startsWith('/') ? redirect : '/tabs/dashboard';
-			await navigateTo(target, { replace: true });
+			// Ionic router (root replace) so the outlet swaps into /tabs; navigateTo can't.
+			router.navigate(target, 'root', 'replace');
 			await refreshNuxtData();
 			return;
 		}
@@ -322,7 +323,7 @@ async function resend() {
 			// IP became known between attempts; user is logged in already.
 			clearPending();
 			await fetchUser();
-			await navigateTo('/tabs/dashboard', { replace: true });
+			router.navigate('/tabs/dashboard', 'root', 'replace');
 		} else {
 			// 429 with retry_after — start the cooldown so the resend button stays disabled.
 			if (result.retryAfter && result.retryAfter > 0) {
