@@ -665,18 +665,18 @@ const settingSections = computed<SettingSection[]>(() => [
 					});
 				}
 			},
-			{
-				kind: 'action',
-				title: 'Donate',
-				description: 'Support development by making a donation',
-				placeholder: 'Donate',
-				color: 'tertiary',
-				action: async () => {
-					await Browser.open({
-						url: 'https://patreon.com/gmitch215'
-					});
-				}
-			},
+			// {
+			// 	kind: 'action',
+			// 	title: 'Donate',
+			// 	description: 'Support development by making a donation',
+			// 	placeholder: 'Donate',
+			// 	color: 'tertiary',
+			// 	action: async () => {
+			// 		await Browser.open({
+			// 			url: 'https://patreon.com/gmitch215'
+			// 		});
+			// 	}
+			// },
 			{
 				kind: 'action',
 				title: 'Terms of Service',
