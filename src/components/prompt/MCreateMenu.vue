@@ -73,6 +73,8 @@
 			</div>
 		</div>
 
+		<!-- premium upgrade modal disabled pending app store review (guideline 2.1(b)) -->
+		<!--
 		<IonModal
 			:is-open="premiumOpen"
 			@did-dismiss="premiumOpen = false"
@@ -102,7 +104,7 @@
 				</div>
 			</IonContent>
 		</IonModal>
-	</div>
+		--></div>
 </template>
 
 <script setup lang="ts">
@@ -117,7 +119,6 @@ const emit = defineEmits<{
 const { user, fetchUser } = useAuth();
 const { notifyError, notifySuccess } = useAppHaptics();
 const total = ref(0);
-const premiumOpen = ref(false);
 
 const limit = computed(() => {
 	switch (user.value?.account.account_type) {

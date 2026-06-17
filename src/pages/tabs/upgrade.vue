@@ -9,20 +9,30 @@
 			</IonToolbar>
 		</IonHeader>
 		<IonContent :scroll-y="true">
-			<MRanks :highlighted="highlighted" />
+			<!-- membership purchase UI disabled pending app store review (guideline 2.1(b)) -->
+			<!-- <MRanks :highlighted="highlighted" /> -->
+			<div class="flex flex-col items-center justify-center text-center gap-3 px-8 py-16">
+				<UIcon
+					name="mdi:rocket-launch-outline"
+					class="size-12 text-primary"
+				/>
+				<h2 class="text-xl font-semibold">Memberships Are Coming Soon</h2>
+				<p class="opacity-80 text-sm max-w-xs">
+					Writer, Organizer, and Pro memberships aren't available just yet. Hang tight; we're
+					putting the finishing touches on them.
+				</p>
+			</div>
 		</IonContent>
 	</IonPage>
 </template>
 
 <script setup lang="ts">
-const route = useRoute();
+import { Toast } from '@capacitor/toast';
 
-const highlighted = computed(() => {
-	const param = route.query.highlighted;
-	if (param) {
-		return param.toString().toUpperCase() as 'WRITER' | 'ORGANIZER' | 'PRO';
-	}
-
-	return undefined;
+onMounted(async () => {
+	await Toast.show({
+		text: 'Memberships are coming soon!',
+		duration: 'long'
+	});
 });
 </script>

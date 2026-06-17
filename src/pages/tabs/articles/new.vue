@@ -47,10 +47,10 @@ onMounted(async () => {
 
 	if (user.value.account.account_type === 'FREE' || user.value.account.account_type === 'PRO') {
 		await Toast.show({
-			text: 'Article creation is a Writer-plan feature. Upgrade to continue.',
+			text: 'Article creation is a Writer-plan feature. Writer memberships are coming soon!',
 			duration: 'long'
 		});
-		router.push('/tabs/upgrade?highlighted=WRITER');
+		router.push('/tabs/dashboard');
 	}
 });
 </script>

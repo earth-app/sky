@@ -10,7 +10,7 @@
 					: 'ring-1 ring-neutral-300'
 		"
 		:router-link="canOpenPremium || !quest?.premium ? `/tabs/quests/${quest.id}` : undefined"
-		@click="premiumOpen = !canOpenPremium && !!quest.premium"
+		@click="onCardTap"
 	>
 		<IonCardHeader>
 			<div class="flex justify-between w-full px-2">
@@ -65,6 +65,8 @@
 			</div>
 		</IonCardContent>
 
+		<!-- premium upgrade modal disabled pending app store review (guideline 2.1(b)) -->
+		<!--
 		<IonModal
 			:is-open="premiumOpen"
 			@did-dismiss="premiumOpen = false"
@@ -94,11 +96,14 @@
 				</div>
 			</IonContent>
 		</IonModal>
+		-->
 	</IonCard>
 </template>
 
 <script setup lang="ts">
+import { Toast } from '@capacitor/toast';
 import { DateTime } from 'luxon';
+import { capitalizeFully, comma } from 'utils';
 
 const props = defineProps<{
 	quest: Quest | null;
@@ -148,11 +153,16 @@ const rarityColor = computed(() => {
 	}
 });
 
-const premiumOpen = ref(false);
 const canOpenPremium = computed(() => {
 	if (!quest.value) return false;
 	if (!quest.value.premium) return true;
 
 	return user.value?.account.account_type !== 'FREE';
 });
+
+async function onCardTap() {
+	if (quest.value?.premium && !canOpenPremium.value) {
+		await Toast.show({ text: 'Premium quests are coming soon!', duration: 'long' });
+	}
+}
 </script>

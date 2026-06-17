@@ -139,8 +139,7 @@
 				>
 					<p class="font-medium mb-1">Quiz authoring is an Organizer feature.</p>
 					<p class="text-xs text-muted">
-						Upgrade your account to add interactive quizzes to your articles and earn engagement
-						from readers.
+						Organizer memberships are coming soon — interactive quizzes will be available then.
 					</p>
 				</div>
 				<ArticleMQuizEditor
