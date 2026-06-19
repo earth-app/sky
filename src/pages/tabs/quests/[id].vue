@@ -12,6 +12,16 @@
 		<IonContent :scroll-y="true">
 			<div class="flex flex-col items-center px-4 mt-2">
 				<UAlert
+					v-if="quest && showHealthDisclosure"
+					color="primary"
+					variant="subtle"
+					icon="mdi:heart-pulse"
+					title="Apple Health"
+					description="This quest includes a distance step. Distance is read from Apple Health, including workouts your Apple Watch records. You can manage access anytime in Settings > Health > Data Access & Devices."
+					class="my-3"
+				/>
+
+				<UAlert
 					v-if="quest && isMasteryQuest && !isMasteryQuestCompleted"
 					color="warning"
 					variant="subtle"
@@ -122,6 +132,8 @@
 </template>
 
 <script setup lang="ts">
+import { Capacitor } from '@capacitor/core';
+
 const route = useRoute();
 const { user } = useAuth();
 const userId = computed(() => user.value?.id);
@@ -144,6 +156,16 @@ const progress = computed(() => {
 
 	return questHistory.value.get(quest.value.id)?.progress;
 });
+
+// surface the apple health disclosure on quests that include a distance step (ios reads distance from healthkit)
+const hasDistanceStep = computed(() =>
+	(quest.value?.steps ?? []).some((slot) =>
+		(Array.isArray(slot) ? slot : [slot]).some((s) => s?.type === 'distance_covered')
+	)
+);
+const showHealthDisclosure = computed(
+	() => hasDistanceStep.value && Capacitor.getPlatform() === 'ios'
+);
 
 // count progress slots with at least one entry — matches how the timeline marks a
 // step complete (alt-step groups are an array, regular steps a single entry).
