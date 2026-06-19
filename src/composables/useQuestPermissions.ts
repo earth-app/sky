@@ -185,20 +185,11 @@ export function useQuestPermissions() {
 	/**
 	 * Check + request a permission; on denial, surface the denial dialog (unless
 	 * suppressed) and return false so the caller can halt the flow.
-	 *
-	 * When `prime: true` is passed AND the OS hasn't already granted, shows the
-	 * friendly priming sheet before the OS prompt fires. Denial rates drop because
-	 * users understand the ask in context.
 	 */
 	async function require(
 		permission: QuestPermission,
-		options: { notify?: boolean; prime?: boolean } = {}
+		options: { notify?: boolean } = {}
 	): Promise<boolean> {
-		if (options.prime && permission !== 'healthkit') {
-			const primeKind = permission as 'camera' | 'location' | 'record' | 'motion';
-			const proceed = await primePermission(primeKind);
-			if (!proceed) return false;
-		}
 		const granted = await ensure(permission);
 		if (!granted && options.notify !== false) {
 			await notifyDenied(permission);

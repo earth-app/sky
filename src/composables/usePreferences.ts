@@ -1,4 +1,3 @@
-import { Dialog } from '@capacitor/dialog';
 import { Preferences } from '@capacitor/preferences';
 
 export function usePreferences() {
@@ -93,53 +92,6 @@ export function useMFormDraft<T extends object>(state: T, opts: UseMFormDraftOpt
 			}
 		}
 	};
-}
-
-// permissions priming
-
-type PermKind = 'camera' | 'location' | 'record' | 'motion' | 'mic';
-
-const COPY: Record<PermKind, { title: string; message: string }> = {
-	camera: {
-		title: 'Camera Access',
-		message:
-			'This quest step needs your camera to capture proof of your activity. Tap Continue, then Allow when iOS/Android asks.'
-	},
-	location: {
-		title: 'Location Access',
-		message:
-			"We use your location to verify quest progress and tag where you completed each step. Tap Continue, then choose 'Allow While Using App'."
-	},
-	record: {
-		title: 'Microphone Access',
-		message:
-			'This step records a short voice clip. Tap Continue, then Allow when prompted. We never listen in the background.'
-	},
-	mic: {
-		title: 'Microphone Access',
-		message:
-			'Dictation needs the microphone to hear what you say. Tap Continue, then Allow when iOS asks.'
-	},
-	motion: {
-		title: 'Motion & Fitness',
-		message:
-			'This quest tracks your steps and distance to validate completion. Tap Continue, then Allow when prompted.'
-	}
-};
-
-export async function primePermission(kind: PermKind): Promise<boolean> {
-	const copy = COPY[kind];
-	try {
-		await Dialog.alert({
-			title: copy.title,
-			message: copy.message,
-			buttonTitle: 'Continue'
-		});
-		return true;
-	} catch {
-		// dialog plugin unavailable (web dev) — proceed straight to the real prompt
-		return true;
-	}
 }
 
 // offline storage queue

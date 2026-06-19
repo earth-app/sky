@@ -379,7 +379,7 @@ async function handleStart(override: boolean = false) {
 
 		const perms = props.quest.permissions ?? [];
 		for (const perm of perms) {
-			const granted = await requirePermission(perm, { prime: true });
+			const granted = await requirePermission(perm);
 			if (!granted) return;
 		}
 
