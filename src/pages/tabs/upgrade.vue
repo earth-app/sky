@@ -2,7 +2,7 @@
 	<IonPage>
 		<IonHeader>
 			<IonToolbar>
-				<IonTitle>Upgrade Account</IonTitle>
+				<IonTitle>Memberships</IonTitle>
 				<IonButtons slot="start">
 					<IonBackButton default-href="/tabs/dashboard" />
 				</IonButtons>
