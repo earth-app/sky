@@ -53,6 +53,9 @@
 		>The Earth App does not write or save any data to Apple Health; it only reads your workout distance to update your quest progress.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 The Earth App</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string
+		>The Earth App uses your location only while you are using the app, to verify and tag where you complete a photo-based quest step. It does not track your location in the background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string
 		>The Earth App uses your location to verify where you complete a quest step and to tag the location of photos you submit — for example, confirming you were at a local park for an outdoor quest.</string>
