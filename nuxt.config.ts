@@ -98,7 +98,6 @@ export default defineNuxtConfig({
 				'@capacitor/toast',
 				'@capacitor/geolocation',
 				'@capacitor/motion',
-				'@capacitor/background-runner',
 				'@capgo/capacitor-pedometer',
 				'@capgo/capacitor-audio-recorder',
 				'@capgo/capacitor-watch',

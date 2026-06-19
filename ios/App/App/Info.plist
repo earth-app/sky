@@ -3,10 +3,6 @@
 	"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>com.earthapp.sky.distance</string>
-	</array>
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
@@ -56,12 +52,6 @@
 	<string>The Earth App does not write to Apple Health.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 The Earth App</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string
-		>The Earth App uses your location to verify where you complete a quest step and to tag the location of photos you submit — for example, confirming you were at a local park for an outdoor quest.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string
-		>The Earth App continues measuring your distance in the background during a distance-based quest — for example, tracking how far you walk or run on a route even when your screen is off — so your quest progress keeps counting.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string
 		>The Earth App uses your location to verify where you complete a quest step and to tag the location of photos you submit — for example, confirming you were at a local park for an outdoor quest.</string>
@@ -76,10 +66,7 @@
 		>The Earth App accesses your photo library so you can choose existing photos to attach to events and articles you create — for example, selecting a saved photo of a place to feature in an event.</string>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>fetch</string>
 		<string>remote-notification</string>
-		<string>processing</string>
-		<string>location</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

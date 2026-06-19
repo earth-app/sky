@@ -1,5 +1,4 @@
 /// <reference types="@capacitor/splash-screen" />
-/// <reference types="@capacitor/background-runner" />
 
 import type { CapacitorConfig } from '@capacitor/cli';
 
@@ -23,18 +22,8 @@ const config: CapacitorConfig = {
 		PushNotifications: {
 			presentationOptions: ['badge', 'sound', 'alert']
 		},
-		BackgroundRunner: {
-			label: 'com.earthapp.sky.distance',
-			src: 'runners/distance-tracker.js',
-			event: 'distanceTick',
-			repeat: true,
-			interval: 15,
-			autoStart: true
-		},
 		SplashScreen: {
 			launchShowDuration: 3000,
-			// js controls hide so the splash stays up until hydration finishes
-			// (prevents the white flash on fast networks)
 			launchAutoHide: false,
 			launchFadeOutDuration: 600,
 			backgroundColor: '#174f96ee',
