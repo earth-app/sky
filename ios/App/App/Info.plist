@@ -48,6 +48,9 @@
 	<key>NSHealthShareUsageDescription</key>
 	<string
 		>The Earth App reads workout distance from Apple Health so your quest progress reflects what your Apple Watch already tracks.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string
+		>The Earth App does not write or save any data to Apple Health; it only reads your workout distance to update your quest progress.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 The Earth App</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
