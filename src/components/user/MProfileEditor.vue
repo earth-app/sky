@@ -240,7 +240,7 @@
 				</IonItem>
 			</IonList>
 
-			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Points Shop</h2>
+			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Rewards</h2>
 			<IonList
 				id="cosmetics"
 				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
@@ -295,7 +295,7 @@
 								name="mdi:account-tag"
 								class="size-4 mr-0.5"
 							/>
-							Your rank gives you a {{ cosmeticDiscount }} off all purchases!
+							Your rank gives you a {{ cosmeticDiscount }} discount on everything!
 						</p>
 					</IonText>
 				</IonItem>
@@ -589,10 +589,10 @@
 							@click="handlePurchaseClick(selectedCosmeticForPurchase.key)"
 						>
 							<UIcon
-								name="mdi:cart"
+								name="mdi:lock-open-variant"
 								class="mr-2"
 							/>
-							{{ selectedPurchaseLoading ? 'Purchasing...' : 'Purchase' }}
+							{{ selectedPurchaseLoading ? 'Redeeming...' : 'Redeem' }}
 						</IonButton>
 						<IonButton
 							v-else
@@ -1466,7 +1466,7 @@ async function handlePurchaseClick(cosmeticKey: AvatarCosmetic['key']) {
 		if (res.success) {
 			await Promise.all([fetchPoints(), avatarStore.fetchCosmeticsForUser(props.user.id)]);
 			await notifySuccess();
-			await showInfoToast('Cosmetic purchased.');
+			await showInfoToast('Cosmetic unlocked.');
 			closeCosmeticModal();
 			return;
 		}
