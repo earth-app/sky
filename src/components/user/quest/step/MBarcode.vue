@@ -33,7 +33,7 @@
 				:class="props.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
 				@click="startScan"
 			>
-				Open Scanner
+				Continue
 			</button>
 		</div>
 
@@ -212,7 +212,7 @@ const emit = defineEmits<{
 const { require: requirePermission, prime: primePermission } = useQuestPermissions();
 
 // Pre-warm the camera prompt so the OS dialog appears the moment the step
-// opens rather than after the user taps Open Scanner. The require() call in
+// opens rather than after the user taps Continue. The require() call in
 // startScan() still runs as the source of truth; this just front-loads the
 // friction.
 onMounted(() => {

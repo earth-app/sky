@@ -15,7 +15,7 @@
 				/>
 			</div>
 			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
-				Camera Access Required
+				Take a Photo
 			</p>
 			<p class="text-[0.72rem] text-neutral-500 leading-[1.65]">
 				This component uses your device camera directly.<br />No file uploads are permitted.
@@ -31,7 +31,7 @@
 				class="mt-1! px-6! py-2.5! rounded-xl! bg-neutral-800! text-white text-sm! font-medium! tracking-wide"
 				@click="startCamera"
 			>
-				Open Camera
+				Continue
 			</button>
 		</div>
 
@@ -171,7 +171,7 @@ const {
 } = useQuestPermissions();
 
 // Front-load the camera prompt so the OS dialog appears when the step opens
-// rather than after the user taps Open Camera.
+// rather than after the user taps Continue.
 onMounted(() => {
 	if (props.disabled) return;
 	void primePermission('camera');

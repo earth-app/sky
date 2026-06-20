@@ -15,7 +15,7 @@
 				/>
 			</div>
 			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
-				Microphone Access Required
+				Record Audio
 			</p>
 			<p class="text-[0.72rem]! text-neutral-500! leading-[1.65]!">
 				Direct microphone only.<br />No file uploads permitted.
@@ -24,7 +24,7 @@
 				class="mt-2! px-6! py-2.5! rounded-xl! bg-neutral-800! text-white text-sm! font-medium! tracking-wide!"
 				@click="requestPermission"
 			>
-				Enable Microphone
+				Continue
 			</button>
 		</div>
 
@@ -201,8 +201,8 @@ onMounted(async () => {
 		// listener attach failure is non-fatal; recording errors will surface via the catch in stopRecording instead.
 	}
 
-	// Fire the OS prompt as the step opens rather than gating it behind an
-	// "Enable Microphone" button — the user already opted in by entering the
+	// Fire the OS prompt as the step opens rather than gating it behind a
+	// button — the user already opted in by entering the
 	// audio step, so the second tap is friction without benefit.
 	try {
 		const current = await CapacitorAudioRecorder.checkPermissions();

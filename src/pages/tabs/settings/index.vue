@@ -157,7 +157,6 @@
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
-import { Geolocation } from '@capacitor/geolocation';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Share } from '@capacitor/share';
 import { Toast } from '@capacitor/toast';
@@ -635,24 +634,6 @@ const settingSections = computed<SettingSection[]>(() => [
 	{
 		section: 'Other',
 		items: [
-			{
-				kind: 'action',
-				title: 'Location Permissions',
-				description:
-					'Allow the app to access your location for more relevant content and features (requires permission)',
-				placeholder: 'Request',
-				color: 'secondary',
-				action: async () => {
-					try {
-						await Geolocation.requestPermissions();
-					} catch (error) {
-						await Toast.show({
-							text: `${error instanceof Error ? error.message : 'Failed to request location permissions'}`,
-							duration: 'short'
-						});
-					}
-				}
-			},
 			{
 				kind: 'action',
 				title: 'Submit Feedback',
