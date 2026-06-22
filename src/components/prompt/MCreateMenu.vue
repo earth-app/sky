@@ -48,11 +48,7 @@
 				color="primary"
 				@click="newPrompt"
 				:disabled="
-					disabled ||
-					loading ||
-					newDisabled ||
-					prompt.trim().length < 10 ||
-					prompt.trim().length > 256
+					loading || newDisabled || prompt.trim().length < 10 || prompt.trim().length > 256
 				"
 				:loading="loading"
 			>
@@ -149,7 +145,6 @@ onMounted(async () => {
 });
 
 const loading = ref(false);
-const disabled = ref(true);
 
 // single reactive state so draft autosave snapshots prompt + visibility together
 const state = reactive<{ prompt: string; visibility: string }>({
@@ -202,11 +197,10 @@ async function newPrompt() {
 		loading.value = true;
 
 		const promptStore = usePromptStore();
-		const res = await promptStore.createPrompt({
-			title: text,
-			description: text,
-			visibility: visibility.value
-		});
+		const res = await promptStore.createPrompt(
+			text,
+			com.earthapp.Visibility.valueOf(visibility.value)
+		);
 
 		if (valid(res)) {
 			notifySuccess();
