@@ -64,7 +64,7 @@
 				/>
 
 				<UserQuestMTimeline
-					v-if="quest"
+					v-if="quest && progressReady"
 					:quest="quest"
 					:progress="progress"
 					@select-step="
@@ -157,14 +157,29 @@ const progress = computed(() => {
 	return questHistory.value.get(quest.value.id)?.progress;
 });
 
+const progressChecked = ref(false);
+const progressReady = computed(() => {
+	if (!quest.value) return false;
+	const id = quest.value.id;
+
+	if (currentQuest.value?.questId === id) return true;
+	if (questHistory.value.get(id)?.progress !== undefined) return true;
+
+	return progressChecked.value;
+});
+
 // surface the apple health disclosure on quests that include a distance step (ios reads distance from healthkit)
 const hasDistanceStep = computed(() =>
 	(quest.value?.steps ?? []).some((slot) =>
 		(Array.isArray(slot) ? slot : [slot]).some((s) => s?.type === 'distance_covered')
 	)
 );
+const isActiveQuest = computed(
+	() => !!quest.value && currentQuest.value?.questId === quest.value.id
+);
+
 const showHealthDisclosure = computed(
-	() => hasDistanceStep.value && Capacitor.getPlatform() === 'ios'
+	() => hasDistanceStep.value && Capacitor.getPlatform() === 'ios' && !isActiveQuest.value
 );
 
 // count progress slots with at least one entry — matches how the timeline marks a
@@ -233,14 +248,10 @@ watch(
 		if (!id) return;
 		const { fetchUserQuest, fetchQuestHistory, fetchQuestHistoryEntry, fetchBadges } = useUser(id);
 
-		void fetchUserQuest(true);
-		void fetchQuestHistory();
-		void fetchBadges();
+		// resolve the active quest first; under data saver prefer cache over a forced round-trip
+		await fetchUserQuest(!isDataConstrained.value);
 
-		const viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
-		if (viewedQuestId && currentQuest.value?.questId !== viewedQuestId) {
-			void fetchQuestHistoryEntry(viewedQuestId);
-		}
+		let viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
 
 		// retry the quest fetch now that auth is hydrated — covers the race where
 		// the page mounted before user.value resolved.
@@ -251,8 +262,19 @@ watch(
 					duration: 'short'
 				});
 				await navigateTo('/tabs/quests', { replace: true });
+				return;
 			}
+			viewedQuestId = quest.value?.id ?? viewedQuestId;
 		}
+
+		if (viewedQuestId && currentQuest.value?.questId !== viewedQuestId) {
+			await fetchQuestHistoryEntry(viewedQuestId);
+		}
+		progressChecked.value = true;
+
+		// remaining fetches only feed other surfaces — fire and forget
+		void fetchQuestHistory();
+		void fetchBadges();
 	},
 	{ immediate: true }
 );
@@ -260,8 +282,11 @@ watch(
 const { notifySuccess } = useAppHaptics();
 const sparkleTick = ref(0);
 
+const optimisticApplied = ref(false);
+
 // micro-confetti tick + haptic, then close after the burst plays
 function onStepSubmitted() {
+	optimisticApplied.value = true;
 	sparkleTick.value++;
 	void notifySuccess();
 	setTimeout(() => {
@@ -304,9 +329,14 @@ async function reconcileQuestState() {
 }
 
 function closeStepModal() {
+	if (!stepOpen.value && openStep.value === null) return;
+
+	const skipReconcile = optimisticApplied.value || isDataConstrained.value;
+	optimisticApplied.value = false;
 	stepOpen.value = false;
 	openStep.value = null;
-	void reconcileQuestState();
+
+	if (!skipReconcile) void reconcileQuestState();
 }
 
 const celebration = useQuestCelebration();
@@ -316,6 +346,8 @@ watch(
 		if (!open || !stepOpen.value) return;
 		const celebratedId = celebration.payload.value.questId;
 		if (celebratedId && celebratedId !== quest.value?.id) return;
+
+		optimisticApplied.value = true;
 		closeStepModal();
 	}
 );
