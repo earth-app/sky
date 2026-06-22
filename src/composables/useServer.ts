@@ -155,6 +155,11 @@ export async function makeMServerRequest<T>(
 
 // #region Time on Page Tracking
 
+// pause counted time after this long with no user activity; resume on the next activity event
+const TIMER_IDLE_MS = 60_000;
+// throttle activity-event handling so high-frequency events (scroll/touchmove) stay cheap
+const TIMER_ACTIVITY_THROTTLE_MS = 1_000;
+
 export function useTimeOnPageM(
 	field: string,
 	metadata: MaybeRefOrGetter<Record<string, any>> = {}
@@ -173,9 +178,12 @@ export function useTimeOnPageM(
 			: false
 	);
 	const isAppActive = ref(true);
+	const isUserActive = ref(true);
 	let needsResync = false;
 	let appListener: { remove: () => Promise<void> | void } | null = null;
+	let pauseListener: { remove: () => Promise<void> | void } | null = null;
 	let removeDocumentListeners: (() => void) | null = null;
+	let idleTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const resolveMetadata = () => {
 		const value = toValue(metadata);
@@ -193,7 +201,32 @@ export function useTimeOnPageM(
 			isDocumentVisible.value &&
 			isDocumentFocused.value &&
 			isAppActive.value &&
+			isUserActive.value &&
 			Boolean(authStore.sessionToken);
+	};
+
+	// pause counted time once the user has gone quiet, resume on the next activity event
+	const armIdleTimeout = () => {
+		if (idleTimer) clearTimeout(idleTimer);
+		idleTimer = setTimeout(() => {
+			isUserActive.value = false;
+			recomputeLifecycleState();
+			void syncTimer();
+		}, TIMER_IDLE_MS);
+	};
+
+	let lastActivity = 0;
+	const onActivity = () => {
+		const now = Date.now();
+		if (now - lastActivity < TIMER_ACTIVITY_THROTTLE_MS) return;
+		lastActivity = now;
+
+		if (!isUserActive.value) {
+			isUserActive.value = true;
+			recomputeLifecycleState();
+			void syncTimer();
+		}
+		armIdleTimeout();
 	};
 
 	const startTimer = async () => {
@@ -324,12 +357,29 @@ export function useTimeOnPageM(
 		window.addEventListener('pageshow', handlePageShow);
 		window.addEventListener('pagehide', handlePageHide);
 
+		// idle detection: any of these resumes counted time and re-arms the timeout
+		const activityEvents = [
+			'touchstart',
+			'pointerdown',
+			'keydown',
+			'scroll',
+			'wheel',
+			'click'
+		] as const;
+		for (const evt of activityEvents) {
+			document.addEventListener(evt, onActivity, { passive: true });
+		}
+		armIdleTimeout();
+
 		removeDocumentListeners = () => {
 			document.removeEventListener('visibilitychange', handleVisibilityChange);
 			window.removeEventListener('focus', handleFocus);
 			window.removeEventListener('blur', handleBlur);
 			window.removeEventListener('pageshow', handlePageShow);
 			window.removeEventListener('pagehide', handlePageHide);
+			for (const evt of activityEvents) {
+				document.removeEventListener(evt, onActivity);
+			}
 		};
 
 		// Track whether the component unmounted before the listener finished registering, so we
@@ -338,6 +388,7 @@ export function useTimeOnPageM(
 
 		void App.addListener('appStateChange', ({ isActive }) => {
 			isAppActive.value = isActive;
+			if (isActive) armIdleTimeout();
 			recomputeLifecycleState();
 			void syncTimer();
 		}).then((listener) => {
@@ -346,6 +397,20 @@ export function useTimeOnPageM(
 				return;
 			}
 			appListener = listener;
+		});
+
+		// pause is the explicit native-background backstop for appStateChange; stop here too so a
+		// session can't leak while the app is suspended
+		void App.addListener('pause', () => {
+			isAppActive.value = false;
+			recomputeLifecycleState();
+			void syncTimer();
+		}).then((listener) => {
+			if (didUnmountBeforeListener) {
+				void listener.remove();
+				return;
+			}
+			pauseListener = listener;
 		});
 
 		// Expose the flag to the existing onUnmounted hook via a teardown callback so a late
@@ -373,16 +438,19 @@ export function useTimeOnPageM(
 	});
 
 	onUnmounted(() => {
+		if (idleTimer) clearTimeout(idleTimer);
 		isMounted.value = false;
 		isViewActive.value = false;
 		isDocumentVisible.value = false;
 		isDocumentFocused.value = false;
 		isAppActive.value = false;
+		isUserActive.value = false;
 		desiredRunning.value = false;
 		recomputeLifecycleState();
 		void syncTimer();
 		removeDocumentListeners?.();
 		void appListener?.remove();
+		void pauseListener?.remove();
 	});
 
 	return {
