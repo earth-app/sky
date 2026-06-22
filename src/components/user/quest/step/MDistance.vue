@@ -119,12 +119,28 @@
 					name="i-lucide-upload"
 					class="size-5 animate-bounce mr-2"
 				/>
-				{{ submitting ? 'Submitting…' : 'Submit Distance' }}
+				{{ submitting ? 'Submitting...' : 'Submit Distance' }}
+			</IonButton>
+
+			<IonButton
+				v-if="isAppleHealthSource && !!startedAt && !completed && !goalReached"
+				color="secondary"
+				fill="outline"
+				size="small"
+				:disabled="syncing"
+				@click="manualSync"
+			>
+				<UIcon
+					:name="syncing ? 'i-lucide-loader-circle' : 'mdi:heart-pulse'"
+					class="size-4 mr-2"
+					:class="syncing ? 'animate-spin' : ''"
+				/>
+				{{ syncing ? 'Syncing...' : 'Sync from Apple Health' }}
 			</IonButton>
 
 			<IonButton
 				v-if="progress > 0 && !tracking && !completed && !goalReached"
-				color="neutral"
+				color="danger"
 				fill="outline"
 				size="small"
 				@click="confirmReset"
@@ -181,6 +197,7 @@ const BIKE_FALLBACK_SPEED_MPS = 4.0; // ≈ 14 km/h, conservative average bike p
 const RMS_WINDOW_MS = 3000;
 
 const BACKGROUND_SYNC_TOAST_THRESHOLD_M = 50;
+const FOREGROUND_SYNC_INTERVAL_MS = 10_000;
 
 const storageKey = computed(
 	() => `quest_distance:${props.questId}:${props.stepIndex}:${props.altIndex ?? 0}`
@@ -191,9 +208,11 @@ const startedAt = ref<number | null>(null);
 const anchorCumulativeSteps = ref<number | null>(null);
 const tracking = ref(false);
 const submitting = ref(false);
+const syncing = ref(false);
 const completed = ref(!!props.alreadyCompleted);
 const now = ref(Date.now());
 let nowTimer: ReturnType<typeof setInterval> | null = null;
+let syncTimer: ReturnType<typeof setInterval> | null = null;
 let appStateListener: PluginListenerHandle | null = null;
 
 const pedListener = ref<PluginListenerHandle | null>(null);
@@ -304,6 +323,13 @@ async function clearState() {
 	await cancelExpiryNotifications();
 }
 
+// @capgo/capacitor-pedometer's Measurement type omits cumulativeSteps (the android-only
+// TYPE_STEP_COUNTER field the plugin still returns); read it through a narrow cast
+function readCumulativeSteps(m: Measurement): number | null {
+	const v = (m as Measurement & { cumulativeSteps?: number }).cumulativeSteps;
+	return typeof v === 'number' ? v : null;
+}
+
 async function readPedometerHistory(): Promise<number | null> {
 	if (!Capacitor.isNativePlatform()) return null;
 	if (!startedAt.value || completed.value) return null;
@@ -321,12 +347,9 @@ async function readPedometerHistory(): Promise<number | null> {
 			const anchor = anchorCumulativeSteps.value;
 			if (anchor == null) return null;
 			const m = await CapacitorPedometer.getMeasurement();
-			const cur = typeof m.cumulativeSteps === 'number' ? m.cumulativeSteps : null;
+			const cur = readCumulativeSteps(m);
 			if (cur == null) return null;
 			if (cur < anchor) {
-				// TYPE_STEP_COUNTER resets to 0 on reboot. Re-anchor to the new
-				// value rather than discarding progress so we don't double-count
-				// post-reboot steps as historical.
 				anchorCumulativeSteps.value = cur;
 				await persistState();
 				return null;
@@ -362,9 +385,9 @@ async function readHealthKitDistance(): Promise<number | null> {
 	return null;
 }
 
-async function syncFromBackground(): Promise<void> {
-	if (!Capacitor.isNativePlatform()) return;
-	if (!startedAt.value || completed.value) return;
+async function syncFromBackground(opts: { silent?: boolean } = {}): Promise<number> {
+	if (!Capacitor.isNativePlatform()) return 0;
+	if (!startedAt.value || completed.value) return 0;
 	const before = progress.value;
 
 	const healthkit = await readHealthKitDistance();
@@ -376,22 +399,71 @@ async function syncFromBackground(): Promise<void> {
 	}
 
 	const delta = progress.value - before;
-	if (delta <= 0) return;
+	if (delta <= 0) return 0;
 
 	if (progress.value >= props.targetMeters) {
 		void stopTracking();
-		void Toast.show({
-			text: `Background tracking added ${formatDistance(delta)} — goal reached, tap submit.`,
-			duration: 'long'
-		});
-		return;
+		void notifyGoalReached(delta);
+		return delta;
 	}
 
-	if (delta >= BACKGROUND_SYNC_TOAST_THRESHOLD_M) {
+	// silent path (foreground poll) skips the incidental toast; goal-reached always speaks
+	if (!opts.silent && delta >= BACKGROUND_SYNC_TOAST_THRESHOLD_M) {
 		void Toast.show({
 			text: `Synced ${formatDistance(delta)} from background tracking.`,
 			duration: 'long'
 		});
+	}
+	return delta;
+}
+
+// shared goal-reached feedback — a foreground toast plus an immediate local notification
+// so the user is alerted even if the app was backgrounded when the distance landed
+async function notifyGoalReached(delta = 0) {
+	void Toast.show({
+		text:
+			delta > 0
+				? `Synced ${formatDistance(delta)} from Apple Health — goal reached! Tap Submit Distance.`
+				: 'Distance goal reached — tap Submit Distance to record it.',
+		duration: 'long'
+	});
+	try {
+		const granted = await ensureNotificationPermission();
+		if (!granted) return;
+		await LocalNotifications.schedule({
+			notifications: [
+				{
+					id: notificationIdFor(99),
+					title: 'Distance goal reached',
+					body: 'Your distance goal is complete. Open the quest to submit your step.',
+					schedule: { at: new Date(Date.now() + 500) },
+					channelId: 'quest-distance-expiry'
+				}
+			]
+		});
+	} catch (e) {
+		console.error('[MDistance] goal notification failed:', e);
+	}
+}
+
+async function manualSync() {
+	if (syncing.value || !startedAt.value || completed.value) return;
+	syncing.value = true;
+	const before = progress.value;
+	try {
+		await requirePermission('healthkit', { notify: true });
+		await syncFromBackground({ silent: true });
+		if (progress.value >= props.targetMeters) return; // goal path already gave feedback
+		const delta = progress.value - before;
+		await Toast.show({
+			text:
+				delta > 0
+					? `Synced ${formatDistance(delta)} from Apple Health.`
+					: 'No new distance yet — Apple Watch data can take a moment to reach your iPhone. End your workout, then try again.',
+			duration: 'long'
+		});
+	} finally {
+		syncing.value = false;
 	}
 }
 
@@ -478,10 +550,7 @@ function addDistance(deltaMeters: number, elapsedMs: number) {
 
 	if (progress.value >= props.targetMeters) {
 		void stopTracking();
-		void Toast.show({
-			text: 'Distance goal reached — tap submit to record it.',
-			duration: 'long'
-		});
+		void notifyGoalReached();
 	}
 }
 
@@ -584,15 +653,13 @@ async function startTracking() {
 
 	if (!startedAt.value) {
 		startedAt.value = Date.now();
-		// Anchor the Android cumulative step counter so we can reconstruct
-		// distance taken while the app is killed via getMeasurement on resume.
-		// iOS doesn't need an anchor — CMPedometer accepts arbitrary start/end
-		// dates and queries its own retained history.
+
 		if (Capacitor.getPlatform() === 'android') {
 			try {
 				const m = await CapacitorPedometer.getMeasurement();
-				if (typeof m.cumulativeSteps === 'number') {
-					anchorCumulativeSteps.value = m.cumulativeSteps;
+				const cs = readCumulativeSteps(m);
+				if (cs !== null) {
+					anchorCumulativeSteps.value = cs;
 				}
 			} catch (e) {
 				console.error('[MDistance] failed to anchor cumulative steps:', e);
@@ -656,24 +723,31 @@ async function submit() {
 }
 
 async function reconcileActiveSession() {
-	// On remount with a still-open session, fold in any distance the pedometer
-	// or Apple Health recorded while we were away so the bar reflects reality.
-	// The user taps Resume to continue active foreground tracking.
 	if (!startedAt.value || completed.value || goalReached.value) return;
 	await syncFromBackground();
 }
 
+function startForegroundSync() {
+	if (syncTimer) return;
+	syncTimer = setInterval(() => {
+		if (!startedAt.value || completed.value || goalReached.value) return;
+		void syncFromBackground({ silent: true });
+	}, FOREGROUND_SYNC_INTERVAL_MS);
+}
+
+function stopForegroundSync() {
+	if (syncTimer) {
+		clearInterval(syncTimer);
+		syncTimer = null;
+	}
+}
+
 function onAppStateChange(state: AppState) {
-	// When the user returns to the app, pedometer history and Apple Health may
-	// hold distance the foreground listeners never saw. syncFromBackground merges
-	// it and toasts if the jump is significant.
 	if (!state.isActive) return;
 	if (!tracking.value && !startedAt.value) return;
 	void syncFromBackground();
 }
 
-// cloud signals that the step we were tracking has been removed/changed — stop tracking,
-// wipe local state, and let the user see the migration banner on the next render.
 async function cancelTrackingFromMigration(reason: string) {
 	console.log(`[MDistance] cancelling tracking due to cloud migration: ${reason}`);
 	if (tracking.value) {
@@ -711,21 +785,14 @@ onMounted(async () => {
 	}, 30_000);
 	await loadState();
 	if (Capacitor.isNativePlatform() && !completed.value) {
-		// Pre-warm the CMPedometer (iOS) / ActivityRecognition (Android) prompt
-		// on step open so the OS dialog appears up front rather than after the
-		// user taps Start Tracking. iOS DeviceMotion is not primed here — it
-		// requires a user gesture and is handled inside startTracking() instead.
 		if (!props.disabled) {
 			void primePermission('motion');
-			// HealthKit is iOS-only and silently no-ops elsewhere; priming here
-			// lets the user hit Allow once at step open instead of after we'd
-			// otherwise wait for them to tap Start Tracking.
 			void primePermission('healthkit');
 		}
+
 		await reconcileActiveSession();
-		// Component may stay mounted across background/foreground cycles (Ionic
-		// keeps tab pages alive); reconcile pedometer + Apple Health history each
-		// time we return to the foreground so distance covered while away counts.
+		startForegroundSync();
+
 		try {
 			appStateListener = await App.addListener('appStateChange', onAppStateChange);
 		} catch (e) {
@@ -739,6 +806,7 @@ onBeforeUnmount(async () => {
 		clearInterval(nowTimer);
 		nowTimer = null;
 	}
+	stopForegroundSync();
 	if (appStateListener) {
 		try {
 			await appStateListener.remove();
