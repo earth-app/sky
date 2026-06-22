@@ -351,6 +351,30 @@
 				</div>
 			</template>
 
+			<template v-else-if="readTimeProgress">
+				<div class="flex flex-col items-center gap-4 py-8! w-full max-w-sm">
+					<UIcon
+						name="mdi:book-clock-outline"
+						class="size-10 text-primary"
+					/>
+					<p class="text-sm! text-center opacity-80 m-0!">
+						Keep reading to complete this step — your time is tracked automatically.
+					</p>
+					<div class="flex flex-col gap-1! w-full">
+						<div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+							<div
+								class="h-full rounded-full bg-primary transition-all duration-300"
+								:style="{ width: readTimeProgress.pct + '%' }"
+							/>
+						</div>
+						<div class="flex justify-between text-xs! opacity-70">
+							<span>{{ formatTime(readTimeProgress.accumulated) }} read</span>
+							<span>{{ formatTime(readTimeProgress.target) }} goal</span>
+						</div>
+					</div>
+				</div>
+			</template>
+
 			<template v-else>
 				<div class="flex flex-col items-center gap-3 py-8 text-center opacity-60">
 					<UIcon
@@ -402,6 +426,28 @@ const emit = defineEmits<{
 
 const { user } = useAuth(makeMServerRequest);
 const { require: requirePermission } = useQuestPermissions();
+
+const userId = computed(() => user.value?.id);
+const { quest: activeQuest } = useUser(userId, makeMServerRequest);
+
+const READ_TIME_TYPES = ['article_read_time', 'activity_read_time'];
+
+const readTimeProgress = computed(() => {
+	if (!READ_TIME_TYPES.includes(props.step.type)) return null;
+	if (activeQuest.value?.questId !== props.quest.id) return null;
+	const entry = activeQuest.value?.activeReadTime?.find(
+		(r) =>
+			r.stepIndex === props.step.index &&
+			(r.altIndex ?? undefined) === (props.step.altIndex ?? undefined)
+	);
+	if (!entry) return null;
+	const target =
+		entry.targetSeconds ||
+		(typeof props.step.parameters?.[1] === 'number' ? (props.step.parameters[1] as number) : 0);
+	if (!target) return null;
+	const accumulated = Math.min(entry.accumulatedSeconds, target);
+	return { accumulated, target, pct: Math.round((accumulated / target) * 100) };
+});
 
 const { lat, lng, alt, fetchLocation } = useQuestGeolocation();
 const isNative = computed(() => Capacitor.isNativePlatform());
