@@ -326,6 +326,21 @@ async function confirmMasteryLock(message: string, okTitle: string): Promise<boo
 	return value;
 }
 
+// generic destructive confirm for regular quests — partial progress isn't recoverable
+async function confirmDestructive(
+	title: string,
+	message: string,
+	okTitle: string
+): Promise<boolean> {
+	const { value } = await Dialog.confirm({
+		title,
+		message,
+		okButtonTitle: okTitle,
+		cancelButtonTitle: 'Cancel'
+	});
+	return value;
+}
+
 async function handleEndClick() {
 	if (completed.value) return;
 	if (isCurrentQuest.value && isMasteryQuest.value) {
@@ -342,6 +357,13 @@ async function handleEndClick() {
 		});
 		return;
 	}
+
+	const ok = await confirmDestructive(
+		'End Quest?',
+		`Ending "${props.quest.title}" discards your progress on it — partial quest progress can't be recovered. Are you sure?`,
+		'End Quest'
+	);
+	if (!ok) return;
 	await handleEnd();
 }
 
@@ -361,6 +383,14 @@ async function handleReplaceClick() {
 		await showInfoToast(`Mastery for "${activeTitle}" has been locked.`, { duration: 'long' });
 		return;
 	}
+
+	const activeTitle = quest.value?.quest?.title || 'your active quest';
+	const ok = await confirmDestructive(
+		'Replace Active Quest?',
+		`Starting "${props.quest.title}" ends "${activeTitle}" and discards its progress — partial quest progress can't be recovered. Are you sure?`,
+		'Replace & Start'
+	);
+	if (!ok) return;
 	await handleStart(true);
 }
 
