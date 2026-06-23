@@ -13,7 +13,8 @@
 				borderRadius: `${effectiveRadius}px`,
 				boxShadow: `0 0 0 9999px ${dimColor}`,
 				pointerEvents: allowInteraction ? 'none' : 'auto',
-				transition: 'top 180ms ease, left 180ms ease, width 180ms ease, height 180ms ease',
+				transition:
+					'top 260ms cubic-bezier(0.22, 1, 0.36, 1), left 260ms cubic-bezier(0.22, 1, 0.36, 1), width 260ms cubic-bezier(0.22, 1, 0.36, 1), height 260ms cubic-bezier(0.22, 1, 0.36, 1)',
 				zIndex: dimZIndex
 			}"
 			@click="onBackdropClick"
@@ -52,13 +53,15 @@
 				right: tooltipStyle.right,
 				maxWidth: tooltipStyle.maxWidth,
 				transform: tooltipStyle.transform,
-				transition: 'top 180ms ease, left 180ms ease, right 180ms ease, transform 180ms ease',
+				transition:
+					'top 260ms cubic-bezier(0.22, 1, 0.36, 1), left 260ms cubic-bezier(0.22, 1, 0.36, 1), right 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1)',
 				zIndex: tooltipStyle.zIndex,
 				pointerEvents: 'auto'
 			}"
 		>
 			<IonCard
-				class="shadow-lg min-w-70 w-[90vw] sm:w-[72vw] lg:w-[52vw] max-w-200 p-4 border-4 border-blue-600 rounded-lg site-tour-card"
+				:key="stepAnimKey"
+				class="shadow-lg min-w-70 w-[90vw] sm:w-[72vw] lg:w-[52vw] max-w-200 p-4 border-4 border-blue-600 rounded-lg site-tour-card site-tour-card--enter"
 			>
 				<IonCardHeader class="pb-2">
 					<div class="flex justify-between items-center gap-2">
@@ -118,7 +121,13 @@
 									@click="gotoPreviousStep"
 									class="sm:w-30"
 								>
+									<IonSpinner
+										v-if="regressing"
+										name="crescent"
+										class="size-4 mr-1"
+									/>
 									<UIcon
+										v-else
 										name="i-heroicons-arrow-left"
 										class="size-4 mr-1"
 									/>
@@ -236,6 +245,7 @@ const dimColor = 'rgba(0, 0, 0, 0.55)';
 
 const busy = ref(false);
 const advancing = ref(false);
+const regressing = ref(false);
 const ctaLoading = ref(false);
 
 let currentElementId: string | null = null;
@@ -252,6 +262,26 @@ let missingElementWarningId: string | null = null;
 let lastShadowLookupAt = 0;
 let displayToken = 0;
 const trackedScrollContainers = new Set<HTMLElement>();
+const stepAnimKey = ref(0);
+let safeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+function refreshSafeAreaInsets() {
+	if (!import.meta.client) return;
+
+	const probe = document.createElement('div');
+	probe.style.cssText =
+		'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;' +
+		'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+	document.body.appendChild(probe);
+	const cs = window.getComputedStyle(probe);
+	safeAreaInsets = {
+		top: Number.parseFloat(cs.paddingTop) || 0,
+		right: Number.parseFloat(cs.paddingRight) || 0,
+		bottom: Number.parseFloat(cs.paddingBottom) || 0,
+		left: Number.parseFloat(cs.paddingLeft) || 0
+	};
+	probe.remove();
+}
 
 const ionicOverlaySelector = [
 	'ion-modal',
@@ -491,6 +521,8 @@ async function display() {
 
 		destroyTourHighlight();
 
+		dimStyle.value = { top: '50%', left: '50%', width: '0px', height: '0px' };
+
 		if (currentStep.url) {
 			await navigateToStepRoute(currentStep.url);
 			if (token !== displayToken) return;
@@ -537,6 +569,7 @@ async function display() {
 		if (token === displayToken) {
 			busy.value = false;
 			advancing.value = false;
+			regressing.value = false;
 		}
 	}
 }
@@ -586,6 +619,7 @@ async function gotoNextStep() {
 
 async function gotoPreviousStep() {
 	if (busy.value) return;
+	regressing.value = true;
 	const oldStep = index.value;
 
 	const currentStep = props.steps[oldStep];
@@ -950,6 +984,7 @@ function ensureGlobalPositionObservers() {
 	window.addEventListener('scroll', updateBoxPosition, true);
 	document.addEventListener('scroll', updateBoxPosition, true);
 	window.addEventListener('resize', updateBoxPosition);
+	window.addEventListener('resize', refreshSafeAreaInsets);
 	for (const eventName of ionicOverlayEvents) {
 		document.addEventListener(eventName, updateBoxPosition as EventListener);
 	}
@@ -1070,7 +1105,7 @@ function positionFallbackTooltip() {
 
 	tooltipStyle.value = {
 		...tooltipStyle.value,
-		top: `${padding}px`,
+		top: `${padding + safeAreaInsets.top}px`,
 		left: '50%',
 		right: 'auto',
 		maxWidth: '90vw',
@@ -1087,12 +1122,13 @@ function scrollToFallbackTooltip() {
 
 		const rect = tooltipCard.value.getBoundingClientRect();
 		const padding = 16;
+		const topPadding = padding + safeAreaInsets.top;
 
-		if (rect.top >= padding && rect.bottom <= window.innerHeight - padding) {
+		if (rect.top >= topPadding && rect.bottom <= window.innerHeight - padding) {
 			return;
 		}
 
-		const targetTop = Math.max(0, window.scrollY + rect.top - padding);
+		const targetTop = Math.max(0, window.scrollY + rect.top - topPadding);
 		window.scrollTo({ top: targetTop, behavior: 'smooth' });
 	});
 }
@@ -1107,6 +1143,9 @@ function updateTooltipPosition(
 ) {
 	const tooltipOffset = 12;
 	const padding = 16;
+	// keep the card clear of the notch / dynamic island and the home indicator
+	const topPadding = padding + safeAreaInsets.top;
+	const bottomPadding = padding + safeAreaInsets.bottom;
 	const maxTooltipWidth = Math.max(280, Math.min(viewportWidth - padding * 2, 800));
 
 	let tooltipWidth = 0;
@@ -1124,14 +1163,14 @@ function updateTooltipPosition(
 
 	const belowTop = boxTop + boxHeight + tooltipOffset;
 	const aboveTop = boxTop - tooltipHeight - tooltipOffset;
-	const fitsBelow = belowTop + tooltipHeight <= viewportHeight - padding;
-	const fitsAbove = aboveTop >= padding;
+	const fitsBelow = belowTop + tooltipHeight <= viewportHeight - bottomPadding;
+	const fitsAbove = aboveTop >= topPadding;
 
 	let tooltipTop = belowTop;
 	let tooltipLeft = boxLeft + boxWidth / 2 - tooltipWidth / 2;
 
 	if (placement === 'center') {
-		tooltipTop = Math.max(padding, viewportHeight / 2 - tooltipHeight / 2);
+		tooltipTop = Math.max(topPadding, viewportHeight / 2 - tooltipHeight / 2);
 		tooltipLeft = Math.max(padding, viewportWidth / 2 - tooltipWidth / 2);
 	} else if (placement === 'top' && fitsAbove) {
 		tooltipTop = aboveTop;
@@ -1148,12 +1187,15 @@ function updateTooltipPosition(
 		if (!fitsBelow && fitsAbove) {
 			tooltipTop = aboveTop;
 		} else if (!fitsBelow && !fitsAbove) {
-			tooltipTop = Math.max(padding, viewportHeight - tooltipHeight - padding);
+			tooltipTop = Math.max(topPadding, viewportHeight - tooltipHeight - bottomPadding);
 		}
 	}
 
 	tooltipLeft = Math.max(padding, Math.min(tooltipLeft, viewportWidth - tooltipWidth - padding));
-	tooltipTop = Math.max(padding, Math.min(tooltipTop, viewportHeight - tooltipHeight - padding));
+	tooltipTop = Math.max(
+		topPadding,
+		Math.min(tooltipTop, viewportHeight - tooltipHeight - bottomPadding)
+	);
 
 	tooltipStyle.value = {
 		...tooltipStyle.value,
@@ -1169,6 +1211,8 @@ function createTourHighlight(id?: string) {
 	currentElementId = id ?? null;
 	hasScrolledToFallbackTooltip = false;
 	lastShadowLookupAt = 0;
+	refreshSafeAreaInsets();
+	stepAnimKey.value++;
 
 	const activeElement = document.activeElement;
 	const currentActiveElement = activeElement instanceof HTMLElement ? activeElement : null;
@@ -1220,6 +1264,7 @@ function destroyTourHighlight() {
 		window.removeEventListener('scroll', updateBoxPosition, true);
 		document.removeEventListener('scroll', updateBoxPosition, true);
 		window.removeEventListener('resize', updateBoxPosition);
+		window.removeEventListener('resize', refreshSafeAreaInsets);
 		for (const eventName of ionicOverlayEvents) {
 			document.removeEventListener(eventName, updateBoxPosition as EventListener);
 		}
@@ -1303,12 +1348,27 @@ useBackButton(100, (processNextHandler) => {
 		0 0 14px rgba(59, 130, 246, 0.55);
 	background: transparent;
 	transition:
-		top 180ms ease,
-		left 180ms ease,
-		width 180ms ease,
-		height 180ms ease,
+		top 260ms cubic-bezier(0.22, 1, 0.36, 1),
+		left 260ms cubic-bezier(0.22, 1, 0.36, 1),
+		width 260ms cubic-bezier(0.22, 1, 0.36, 1),
+		height 260ms cubic-bezier(0.22, 1, 0.36, 1),
 		box-shadow 250ms ease;
 	will-change: top, left, width, height;
+}
+
+.site-tour-card--enter {
+	animation: site-tour-card-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes site-tour-card-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
 }
 
 .site-tour-highlight--pulse {
@@ -1331,6 +1391,9 @@ useBackButton(100, (processNextHandler) => {
 
 @media (prefers-reduced-motion: reduce) {
 	.site-tour-highlight--pulse {
+		animation: none;
+	}
+	.site-tour-card--enter {
 		animation: none;
 	}
 	.site-tour-card-wrap {
