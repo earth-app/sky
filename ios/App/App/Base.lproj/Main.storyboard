@@ -29,8 +29,9 @@
 			<objects>
 				<viewController
 					id="BYZ-38-t0r"
-					customClass="CAPBridgeViewController"
-					customModule="Capacitor"
+					customClass="MainViewController"
+					customModule="App"
+					customModuleProvider="target"
 					sceneMemberID="viewController"
 				/>
 				<placeholder

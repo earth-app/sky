@@ -3,6 +3,8 @@
 	"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSSupportsLiveActivities</key>
+	<true />
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
@@ -44,13 +46,13 @@
 	<true />
 	<key>NSCameraUsageDescription</key>
 	<string
-		>The Earth App uses your camera so you can take photos to complete quest steps and attach images to events and articles you create — for example, snapping a photo of a landmark to prove you visited it.</string>
+		>The Earth App uses your camera so you can take photos to complete quest steps and attach images to events and articles you create, for example, snapping a photo of a landmark to prove you visited it.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string
 		>The Earth App reads workout distance from Apple Health so your quest progress reflects what your Apple Watch already tracks.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string
-		>The Earth App does not write or save any data to Apple Health; it only reads your workout distance to update your quest progress.</string>
+		>The Earth App only reads your workout distance from Apple Health to track quest progress; it does not write or modify any data in Apple Health.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright (c) 2026 The Earth App</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -58,16 +60,16 @@
 		>The Earth App uses your location only while you are using the app, to verify and tag where you complete a photo-based quest step. It does not track your location in the background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string
-		>The Earth App uses your location to verify where you complete a quest step and to tag the location of photos you submit — for example, confirming you were at a local park for an outdoor quest.</string>
+		>The Earth App uses your location to verify where you complete a quest step and to tag the location of photos you submit, for example, confirming you were at a local park for an outdoor quest.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string
-		>The Earth App uses your microphone to record short audio clips for quest steps that ask you to speak or capture sound — for example, recording a voice note describing what you discovered.</string>
+		>The Earth App uses your microphone to record short audio clips for quest steps that ask you to speak or capture sound, for example, recording a voice note describing what you discovered.</string>
 	<key>NSMotionUsageDescription</key>
 	<string
-		>The Earth App uses motion and fitness data to count your steps and measure distance for movement-based quest steps — for example, verifying you walked the distance a quest requires.</string>
+		>The Earth App uses motion and fitness data to count your steps and measure distance for movement-based quest steps, for example, verifying you walked the distance a quest requires.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string
-		>The Earth App accesses your photo library so you can choose existing photos to attach to events and articles you create — for example, selecting a saved photo of a place to feature in an event.</string>
+		>The Earth App accesses your photo library so you can choose existing photos to attach to events and articles you create, for example, selecting a saved photo of a place to feature in an event.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

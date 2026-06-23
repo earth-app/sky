@@ -81,7 +81,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             return
         }
 
-        // URL looks valid but the process may still be dead — a terminated process
+        // URL looks valid but the process may still be dead ; a terminated process
         // can't run JS, so a failing ping is our cue to reboot the SPA.
         webView.evaluateJavaScript("1") { _, error in
             if error != nil {

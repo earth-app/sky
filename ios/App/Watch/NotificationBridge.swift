@@ -40,12 +40,12 @@ public final class NotificationBridgeWatchDelegate: NSObject, WKApplicationDeleg
         }
     }
 
-    // Interactive messages — phone is reachable and watch app is running.
+    // Interactive messages; phone is reachable and watch app is running.
     public func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         handleIncoming(message)
     }
 
-    // Queued, durable transfers — survives off-wrist / out-of-range periods.
+    // Queued, durable transfers; survives off-wrist / out-of-range periods.
     public func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         handleIncoming(userInfo)
     }
