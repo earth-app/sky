@@ -31,32 +31,49 @@
 			</p>
 		</div>
 
-		<div class="flex flex-col gap-2 px-2">
+		<div class="relative flex flex-col gap-2 px-2">
+			<div
+				v-if="syncFlash"
+				role="status"
+				aria-live="polite"
+				class="pointer-events-none absolute -top-4 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-success/15 px-3 py-1 text-xs! font-semibold text-success animate-sync-rise"
+			>
+				{{ syncFlashLabel }}
+			</div>
 			<div class="flex justify-between text-xs! opacity-80">
 				<span>{{ progressLabel }}</span>
 				<span>{{ percentLabel }}</span>
 			</div>
-			<IonProgressBar
-				:value="progressFraction"
-				color="success"
-				class="rounded-full overflow-hidden"
-			/>
+			<div :class="['rounded-full', syncFlash ? 'animate-sync-glow' : '']">
+				<IonProgressBar
+					:value="progressFraction"
+					color="success"
+					:aria-label="`Distance progress: ${progressLabel}, ${percentLabel}`"
+					class="rounded-full overflow-hidden"
+				/>
+			</div>
 			<div class="flex justify-between text-[0.65rem]! opacity-50 mt-1!">
-				<span>0 m</span>
+				<span>{{ formatDistance(0) }}</span>
 				<span>{{ formatDistance(targetMeters) }}</span>
 			</div>
 
 			<div
 				v-if="isAppleHealthSource"
-				class="flex items-center gap-2 text-xs! opacity-80 mt-2!"
+				class="flex items-center gap-2 text-xs! mt-2!"
+				:class="healthKitDenied ? 'text-amber-600 dark:text-amber-300' : 'opacity-80'"
 			>
 				<UIcon
-					name="mdi:heart-pulse"
-					class="size-4 shrink-0 text-primary"
+					:name="healthKitDenied ? 'mdi:heart-off' : 'mdi:heart-pulse'"
+					class="size-4 shrink-0"
+					:class="healthKitDenied ? 'text-amber-500' : 'text-primary'"
 				/>
-				<span
-					>Distance for this step is read from Apple Health, including workouts your Apple Watch
-					records.</span
+				<span v-if="healthKitDenied"
+					>Apple Health access is off, so distance is counted by your phone's pedometer only. Allow
+					Health access in Settings to include Apple Watch workouts.</span
+				>
+				<span v-else
+					>Distance for this step is read from Apple Health when allowed, including workouts your
+					Apple Watch records.</span
 				>
 			</div>
 		</div>
@@ -91,7 +108,7 @@
 			<IonButton
 				v-if="!completed && !goalReached"
 				:color="tracking ? 'warning' : 'success'"
-				:disabled="props.disabled || !Capacitor.isNativePlatform()"
+				:disabled="props.disabled || !Capacitor.isNativePlatform() || busy"
 				expand="block"
 				@click="toggleTracking"
 			>
@@ -99,7 +116,15 @@
 					:name="tracking ? 'i-lucide-pause' : 'i-lucide-play'"
 					class="size-5 mr-2"
 				/>
-				{{ tracking ? 'Pause Tracking' : progress > 0 ? 'Resume Tracking' : 'Start Tracking' }}
+				{{
+					busy
+						? busyLabel
+						: tracking
+							? 'Pause Tracking'
+							: progress > 0
+								? 'Resume Tracking'
+								: 'Start Tracking'
+				}}
 			</IonButton>
 
 			<IonButton
@@ -123,17 +148,22 @@
 			</IonButton>
 
 			<IonButton
-				v-if="isAppleHealthSource && !!startedAt && !completed && !goalReached"
+				v-if="isAppleHealthSource && tracking && !completed && !goalReached"
 				color="secondary"
 				fill="outline"
 				size="small"
 				:disabled="syncing"
 				@click="manualSync"
 			>
-				<UIcon
-					:name="syncing ? 'i-lucide-loader-circle' : 'mdi:heart-pulse'"
+				<IonSpinner
+					v-if="syncing"
+					name="crescent"
 					class="size-4 mr-2"
-					:class="syncing ? 'animate-spin' : ''"
+				/>
+				<UIcon
+					v-else
+					name="mdi:heart-pulse"
+					class="size-4 mr-2"
 				/>
 				{{ syncing ? 'Syncing...' : 'Sync from Apple Health' }}
 			</IonButton>
@@ -152,14 +182,9 @@
 </template>
 
 <script setup lang="ts">
-import { App, type AppState } from '@capacitor/app';
-import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
-import { LocalNotifications } from '@capacitor/local-notifications';
-import { Motion, type AccelListenerEvent } from '@capacitor/motion';
-import { Preferences } from '@capacitor/preferences';
 import { Toast } from '@capacitor/toast';
-import { CapacitorPedometer, type Measurement } from '@capgo/capacitor-pedometer';
 
 const props = defineProps<{
 	questId: string;
@@ -177,55 +202,55 @@ const emit = defineEmits<{
 	capture: [distance: number];
 }>();
 
-const { require: requirePermission, prime: primePermission } = useQuestPermissions();
-
-// - 20 mph cap rejects vehicular travel (≈ 8.9408 m/s)
-// - 30-day expiry resets local progress so stale runs do not accumulate forever
-// - notifications fire at 3 days, 1 day, 12 hours, and 1 hour before expiry
-
-const MAX_SPEED_MPS = 8.9408;
 const EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
-const DEFAULT_STRIDE_M = 0.762;
-const NOTIF_OFFSETS_MS = [
-	{ id: 1, label: '3 days', deltaMs: 3 * 24 * 60 * 60 * 1000 },
-	{ id: 2, label: '1 day', deltaMs: 1 * 24 * 60 * 60 * 1000 },
-	{ id: 3, label: '12 hours', deltaMs: 12 * 60 * 60 * 1000 },
-	{ id: 4, label: '1 hour', deltaMs: 1 * 60 * 60 * 1000 }
-];
-const BIKE_RMS_THRESHOLD = 0.45; // m/s² rolling RMS that qualifies as "active"
-const BIKE_FALLBACK_SPEED_MPS = 4.0; // ≈ 14 km/h, conservative average bike pace
-const RMS_WINDOW_MS = 3000;
 
-const BACKGROUND_SYNC_TOAST_THRESHOLD_M = 50;
-const FOREGROUND_SYNC_INTERVAL_MS = 10_000;
+const { prime: primePermission } = useQuestPermissions();
+const { impactLight, impactMedium } = useAppHaptics();
+const { formatDistance } = useUnits();
+const { healthKitGranted } = useHealthKit();
 
-const storageKey = computed(
-	() => `quest_distance:${props.questId}:${props.stepIndex}:${props.altIndex ?? 0}`
-);
+// the tracking ENGINE is a module-level singleton (useDistanceTracker) so the session +
+// native listeners survive this component unmounting; closing the step modal no longer
+// stops tracking; only Pause or app termination does. this component is a thin view.
+const tracker = useDistanceTracker(() => ({
+	questId: props.questId,
+	stepIndex: props.stepIndex,
+	altIndex: props.altIndex,
+	targetMeters: props.targetMeters
+}));
+const { progress, tracking, startedAt, goalReached, syncPulse, lastSyncDelta } = tracker;
 
-const progress = ref(0);
-const startedAt = ref<number | null>(null);
-const anchorCumulativeSteps = ref<number | null>(null);
-const tracking = ref(false);
 const submitting = ref(false);
 const syncing = ref(false);
+// disables the start/pause button + shows a stable label for the whole async start/pause, so a
+// laggy first tap can't be double-fired (which would attach duplicate trackers)
+const busy = ref(false);
+const busyLabel = ref('');
 const completed = ref(!!props.alreadyCompleted);
 const now = ref(Date.now());
 let nowTimer: ReturnType<typeof setInterval> | null = null;
-let syncTimer: ReturnType<typeof setInterval> | null = null;
-let appStateListener: PluginListenerHandle | null = null;
 
-const pedListener = ref<PluginListenerHandle | null>(null);
-const motionListener = ref<PluginListenerHandle | null>(null);
-const lastSteps = ref<number | null>(null);
-const lastPedDistance = ref<number | null>(null);
-const lastSampleAt = ref<number>(0);
-const rmsSamples = ref<{ t: number; mag: number }[]>([]);
+// brief "+Xm from Apple Health" + bar glow whenever a sync (workout-end or manual) folds in distance
+const syncFlash = ref(false);
+const syncFlashLabel = ref('');
+watch(syncPulse, () => {
+	if (lastSyncDelta.value <= 0) return;
+	syncFlashLabel.value = `+${formatDistance(lastSyncDelta.value)} from Apple Health`;
+	syncFlash.value = false;
+	void nextTick(() => {
+		syncFlash.value = true;
+	});
+	setTimeout(() => {
+		syncFlash.value = false;
+	}, 2000);
+});
 
 // healthkit only runs on ios, so surface the apple health disclosure there
 const isAppleHealthSource = computed(() => Capacitor.getPlatform() === 'ios');
+const healthKitDenied = computed(
+	() => isAppleHealthSource.value && healthKitGranted.value === false
+);
 
-const goalReached = computed(() => progress.value >= props.targetMeters);
 const progressFraction = computed(() => {
 	if (!props.targetMeters) return 0;
 	return Math.min(1, progress.value / props.targetMeters);
@@ -245,10 +270,10 @@ const statusDescription = computed(() => {
 	if (completed.value) return 'You have already submitted this step.';
 	if (goalReached.value) return 'Tap submit to record your distance.';
 	if (tracking.value)
-		return 'Keep your phone with you and move on foot or by bike. Vehicle travel will be ignored.';
+		return "Keep moving! Walking, running, and biking count, plus Apple Watch workouts. Closing this step won't stop tracking.";
 	if (progress.value > 0)
 		return 'Resume when you are ready. Progress is saved locally for 30 days.';
-	return 'Tracking uses your pedometer and motion sensors. Walking, running, and biking count toward your goal.';
+	return 'Tracking uses your pedometer and Apple Health. Walking, running, and biking count toward your goal.';
 });
 
 const expiryWarning = computed(() => {
@@ -261,437 +286,17 @@ const expiryWarning = computed(() => {
 	return '';
 });
 
-function formatDistance(meters: number): string {
-	if (meters >= 1000) return `${(meters / 1000).toFixed(meters >= 10_000 ? 0 : 2)} km`;
-	return `${Math.round(meters)} m`;
-}
-
-function notificationIdFor(offset: number): number {
-	// deterministic 32-bit positive id per (step, offset). djb2-ish hash, signed-safe.
-	let h = 5381;
-	const s = storageKey.value;
-	for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i);
-	h = Math.abs((h ^ (offset * 2654435761)) | 0);
-	return (h % 2_000_000_000) + 1;
-}
-
-type StoredState = {
-	progress: number;
-	startedAt: number;
-	anchorCumulativeSteps?: number;
-	version: 1;
-};
-
-async function loadState() {
-	const { value } = await Preferences.get({ key: storageKey.value });
-	if (!value) return;
-	try {
-		const parsed = JSON.parse(value) as Partial<StoredState>;
-		if (typeof parsed.progress !== 'number' || typeof parsed.startedAt !== 'number') return;
-		if (Date.now() - parsed.startedAt > EXPIRY_MS) {
-			await clearState();
-			return;
-		}
-		progress.value = parsed.progress;
-		startedAt.value = parsed.startedAt;
-		anchorCumulativeSteps.value =
-			typeof parsed.anchorCumulativeSteps === 'number' ? parsed.anchorCumulativeSteps : null;
-	} catch {
-		// Corrupt entry — wipe and start over.
-		await clearState();
-	}
-}
-
-async function persistState() {
-	if (!startedAt.value) return;
-	const payload: StoredState = {
-		progress: progress.value,
-		startedAt: startedAt.value,
-		version: 1
-	};
-	if (anchorCumulativeSteps.value != null) {
-		payload.anchorCumulativeSteps = anchorCumulativeSteps.value;
-	}
-	await Preferences.set({ key: storageKey.value, value: JSON.stringify(payload) });
-}
-
-async function clearState() {
-	progress.value = 0;
-	startedAt.value = null;
-	anchorCumulativeSteps.value = null;
-	await Preferences.remove({ key: storageKey.value });
-	await cancelExpiryNotifications();
-}
-
-// @capgo/capacitor-pedometer's Measurement type omits cumulativeSteps (the android-only
-// TYPE_STEP_COUNTER field the plugin still returns); read it through a narrow cast
-function readCumulativeSteps(m: Measurement): number | null {
-	const v = (m as Measurement & { cumulativeSteps?: number }).cumulativeSteps;
-	return typeof v === 'number' ? v : null;
-}
-
-async function readPedometerHistory(): Promise<number | null> {
-	if (!Capacitor.isNativePlatform()) return null;
-	if (!startedAt.value || completed.value) return null;
-	const platform = Capacitor.getPlatform();
-	try {
-		if (platform === 'ios') {
-			const m = await CapacitorPedometer.getMeasurement({
-				start: startedAt.value,
-				end: Date.now()
-			});
-			const distance = typeof m.distance === 'number' ? m.distance : null;
-			return distance != null && Number.isFinite(distance) ? distance : null;
-		}
-		if (platform === 'android') {
-			const anchor = anchorCumulativeSteps.value;
-			if (anchor == null) return null;
-			const m = await CapacitorPedometer.getMeasurement();
-			const cur = readCumulativeSteps(m);
-			if (cur == null) return null;
-			if (cur < anchor) {
-				anchorCumulativeSteps.value = cur;
-				await persistState();
-				return null;
-			}
-			return (cur - anchor) * DEFAULT_STRIDE_M;
-		}
-	} catch (e) {
-		console.error('[MDistance] pedometer history read failed:', e);
-	}
-	return null;
-}
-
-async function readHealthKitDistance(): Promise<number | null> {
-	if (Capacitor.getPlatform() !== 'ios') return null;
-	if (!startedAt.value) return null;
-	try {
-		const { isSupported, getActivityDistance } = useHealthKit();
-		if (!isSupported) return null;
-		const result = await getActivityDistance(startedAt.value, Date.now());
-		if (!result) return null;
-		// Source string lets us log which path won the merge in development.
-		// Production users won't see this; it just keeps the diagnostic in console.
-		if (typeof result.distance === 'number' && Number.isFinite(result.distance)) {
-			console.log(
-				`[MDistance] HealthKit distance: ${result.distance.toFixed(1)}m via ${result.source}` +
-					(result.workoutCount ? ` (${result.workoutCount} workouts)` : '')
-			);
-			return result.distance;
-		}
-	} catch (e) {
-		console.error('[MDistance] HealthKit query failed:', e);
-	}
-	return null;
-}
-
-async function syncFromBackground(opts: { silent?: boolean } = {}): Promise<number> {
-	if (!Capacitor.isNativePlatform()) return 0;
-	if (!startedAt.value || completed.value) return 0;
-	const before = progress.value;
-
-	const healthkit = await readHealthKitDistance();
-	const pedHistory = await readPedometerHistory();
-	const candidate = Math.max(healthkit ?? 0, pedHistory ?? 0);
-	if (candidate > progress.value) {
-		progress.value = Math.min(props.targetMeters, candidate);
-		await persistState();
-	}
-
-	const delta = progress.value - before;
-	if (delta <= 0) return 0;
-
-	if (progress.value >= props.targetMeters) {
-		void stopTracking();
-		void notifyGoalReached(delta);
-		return delta;
-	}
-
-	// silent path (foreground poll) skips the incidental toast; goal-reached always speaks
-	if (!opts.silent && delta >= BACKGROUND_SYNC_TOAST_THRESHOLD_M) {
-		void Toast.show({
-			text: `Synced ${formatDistance(delta)} from background tracking.`,
-			duration: 'long'
-		});
-	}
-	return delta;
-}
-
-// shared goal-reached feedback — a foreground toast plus an immediate local notification
-// so the user is alerted even if the app was backgrounded when the distance landed
-async function notifyGoalReached(delta = 0) {
-	void Toast.show({
-		text:
-			delta > 0
-				? `Synced ${formatDistance(delta)} from Apple Health — goal reached! Tap Submit Distance.`
-				: 'Distance goal reached — tap Submit Distance to record it.',
-		duration: 'long'
-	});
-	try {
-		const granted = await ensureNotificationPermission();
-		if (!granted) return;
-		await LocalNotifications.schedule({
-			notifications: [
-				{
-					id: notificationIdFor(99),
-					title: 'Distance goal reached',
-					body: 'Your distance goal is complete. Open the quest to submit your step.',
-					schedule: { at: new Date(Date.now() + 500) },
-					channelId: 'quest-distance-expiry'
-				}
-			]
-		});
-	} catch (e) {
-		console.error('[MDistance] goal notification failed:', e);
-	}
-}
-
-async function manualSync() {
-	if (syncing.value || !startedAt.value || completed.value) return;
-	syncing.value = true;
-	const before = progress.value;
-	try {
-		await requirePermission('healthkit', { notify: true });
-		await syncFromBackground({ silent: true });
-		if (progress.value >= props.targetMeters) return; // goal path already gave feedback
-		const delta = progress.value - before;
-		await Toast.show({
-			text:
-				delta > 0
-					? `Synced ${formatDistance(delta)} from Apple Health.`
-					: 'No new distance yet — Apple Watch data can take a moment to reach your iPhone. End your workout, then try again.',
-			duration: 'long'
-		});
-	} finally {
-		syncing.value = false;
-	}
-}
-
-async function ensureNotificationPermission(): Promise<boolean> {
-	try {
-		const current = await LocalNotifications.checkPermissions();
-		if (current.display === 'granted') return true;
-		const requested = await LocalNotifications.requestPermissions();
-		return requested.display === 'granted';
-	} catch (e) {
-		console.error('Local notification permission check failed:', e);
-		return false;
-	}
-}
-
-async function scheduleExpiryNotifications() {
-	if (!startedAt.value) return;
-	if (!Capacitor.isNativePlatform()) return;
-
-	const granted = await ensureNotificationPermission();
-	if (!granted) return;
-
-	await cancelExpiryNotifications();
-
-	const expiresAt = startedAt.value + EXPIRY_MS;
-	const toSchedule = NOTIF_OFFSETS_MS.map(({ id, label, deltaMs }) => {
-		const at = new Date(expiresAt - deltaMs);
-		return {
-			id: notificationIdFor(id),
-			title: 'Distance progress expiring',
-			body:
-				deltaMs <= 60 * 60 * 1000
-					? `Less than ${label} until your distance progress resets to 0. Submit your quest step soon!`
-					: `Your distance progress expires in ${label}. Complete your distance goal before it resets.`,
-			schedule: { at },
-			channelId: 'quest-distance-expiry'
-		};
-	}).filter((n) => n.schedule.at.getTime() > Date.now() + 30_000);
-
-	if (toSchedule.length === 0) return;
-
-	try {
-		await LocalNotifications.schedule({ notifications: toSchedule });
-	} catch (e) {
-		console.error('Failed to schedule expiry notifications:', e);
-	}
-}
-
-async function cancelExpiryNotifications() {
-	if (!Capacitor.isNativePlatform()) return;
-	try {
-		await LocalNotifications.cancel({
-			notifications: NOTIF_OFFSETS_MS.map(({ id }) => ({ id: notificationIdFor(id) }))
-		});
-	} catch {
-		// best-effort
-	}
-}
-
-function updateRmsWindow(magnitude: number, t: number) {
-	rmsSamples.value.push({ t, mag: magnitude });
-	const cutoff = t - RMS_WINDOW_MS;
-	while (rmsSamples.value.length > 0 && rmsSamples.value[0]!.t < cutoff) {
-		rmsSamples.value.shift();
-	}
-}
-
-function currentRms(): number {
-	const samples = rmsSamples.value;
-	if (samples.length === 0) return 0;
-	let sumSq = 0;
-	for (const s of samples) sumSq += s.mag * s.mag;
-	return Math.sqrt(sumSq / samples.length);
-}
-
-function addDistance(deltaMeters: number, elapsedMs: number) {
-	if (deltaMeters <= 0 || elapsedMs <= 0) return;
-
-	const maxAllowed = MAX_SPEED_MPS * (elapsedMs / 1000);
-	const accepted = Math.min(deltaMeters, maxAllowed);
-	if (accepted <= 0) return;
-	progress.value = Math.min(props.targetMeters, progress.value + accepted);
-	void persistState();
-
-	if (progress.value >= props.targetMeters) {
-		void stopTracking();
-		void notifyGoalReached();
-	}
-}
-
-function onPedMeasurement(evt: Measurement) {
-	const tNow = Date.now();
-	const elapsed = lastSampleAt.value === 0 ? 0 : tNow - lastSampleAt.value;
-	lastSampleAt.value = tNow;
-
-	let delta = 0;
-	if (typeof evt.distance === 'number' && Number.isFinite(evt.distance)) {
-		// iOS: pedometer reports cumulative distance directly.
-		if (lastPedDistance.value === null) {
-			lastPedDistance.value = evt.distance;
-		} else if (evt.distance > lastPedDistance.value) {
-			delta = evt.distance - lastPedDistance.value;
-			lastPedDistance.value = evt.distance;
-		}
-	}
-
-	if (delta === 0 && typeof evt.numberOfSteps === 'number') {
-		// Android (and iOS fallback): translate step delta via default stride length.
-		if (lastSteps.value === null) {
-			lastSteps.value = evt.numberOfSteps;
-		} else if (evt.numberOfSteps > lastSteps.value) {
-			const stepDelta = evt.numberOfSteps - lastSteps.value;
-			lastSteps.value = evt.numberOfSteps;
-			delta = stepDelta * DEFAULT_STRIDE_M;
-		}
-	}
-
-	if (delta > 0) {
-		addDistance(delta, elapsed || 1000);
-		return;
-	}
-
-	// Pedometer found nothing — check if accelerometer signals biking-like motion.
-	if (elapsed > 0 && currentRms() >= BIKE_RMS_THRESHOLD) {
-		addDistance(BIKE_FALLBACK_SPEED_MPS * (elapsed / 1000), elapsed);
-	}
-}
-
-function onMotion(evt: AccelListenerEvent) {
-	const a = evt.acceleration;
-	const magnitude = Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z);
-	updateRmsWindow(magnitude, Date.now());
-}
-
-async function attachForegroundListeners() {
-	lastSteps.value = null;
-	lastPedDistance.value = null;
-	lastSampleAt.value = Date.now();
-	rmsSamples.value = [];
-
-	pedListener.value = await CapacitorPedometer.addListener('measurement', onPedMeasurement);
-	await CapacitorPedometer.startMeasurementUpdates();
-	motionListener.value = await Motion.addListener('accel', onMotion);
-	tracking.value = true;
-}
-
-async function detachForegroundListeners() {
-	tracking.value = false;
-	try {
-		await CapacitorPedometer.stopMeasurementUpdates();
-	} catch {
-		// ignore
-	}
-	if (pedListener.value) {
-		try {
-			await pedListener.value.remove();
-		} catch {
-			// ignore
-		}
-		pedListener.value = null;
-	}
-	if (motionListener.value) {
-		try {
-			await motionListener.value.remove();
-		} catch {
-			// ignore
-		}
-		motionListener.value = null;
-	}
-}
-
-async function startTracking() {
-	if (props.disabled) return;
-	if (!Capacitor.isNativePlatform()) {
-		await showErrorToast(new Error('Distance tracking requires the mobile app on a device.'), {
-			duration: 'long'
-		});
-		return;
-	}
-
-	const motionOk = await requirePermission('motion');
-	if (!motionOk) return;
-	// HealthKit is best-effort: a denial doesn't block tracking, it just means
-	// we lose access to Apple Watch workout distance for the merge. Ask without
-	// notifying — the user gets a single OS prompt and we move on.
-	void requirePermission('healthkit', { notify: false });
-
-	if (!startedAt.value) {
-		startedAt.value = Date.now();
-
-		if (Capacitor.getPlatform() === 'android') {
-			try {
-				const m = await CapacitorPedometer.getMeasurement();
-				const cs = readCumulativeSteps(m);
-				if (cs !== null) {
-					anchorCumulativeSteps.value = cs;
-				}
-			} catch (e) {
-				console.error('[MDistance] failed to anchor cumulative steps:', e);
-			}
-		}
-		await persistState();
-		void scheduleExpiryNotifications();
-	}
-
-	try {
-		await attachForegroundListeners();
-	} catch (e) {
-		await showErrorToast(e, {
-			fallback: 'Failed to start distance tracking.',
-			duration: 'long'
-		});
-		await stopTracking();
-		return;
-	}
-}
-
-async function stopTracking() {
-	await detachForegroundListeners();
-	await persistState();
-}
-
 async function toggleTracking() {
-	if (tracking.value) {
-		await stopTracking();
-		return;
+	if (busy.value) return;
+	void impactMedium();
+	busy.value = true;
+	busyLabel.value = tracking.value ? 'Pausing...' : 'Starting...';
+	try {
+		if (tracking.value) await tracker.pause();
+		else if (!props.disabled) await tracker.start();
+	} finally {
+		busy.value = false;
 	}
-	await startTracking();
 }
 
 async function confirmReset() {
@@ -702,64 +307,47 @@ async function confirmReset() {
 		cancelButtonTitle: 'Cancel'
 	});
 	if (!value) return;
-	await clearState();
+	void impactMedium();
+	await tracker.reset();
 }
 
 async function submit() {
 	if (props.disabled || submitting.value) return;
 	if (progress.value < props.targetMeters) return;
 
-	const motionOk = await requirePermission('motion');
-	if (!motionOk) return;
-
 	submitting.value = true;
 	try {
 		const submittedMeters = Math.round(progress.value);
-		await stopTracking();
+		// stop the session and its Live Activity, then hand the value to the step submission
+		await tracker.pause();
 		emit('capture', submittedMeters);
+		// step submitted: drop the saved distance + its expiry notifications so stale
+		// "progress expiring" pings don't fire for an already-completed step
+		void tracker.discardSaved();
 	} finally {
 		submitting.value = false;
 	}
 }
 
-async function reconcileActiveSession() {
-	if (!startedAt.value || completed.value || goalReached.value) return;
-	await syncFromBackground();
-}
-
-function startForegroundSync() {
-	if (syncTimer) return;
-	syncTimer = setInterval(() => {
-		if (!startedAt.value || completed.value || goalReached.value) return;
-		void syncFromBackground({ silent: true });
-	}, FOREGROUND_SYNC_INTERVAL_MS);
-}
-
-function stopForegroundSync() {
-	if (syncTimer) {
-		clearInterval(syncTimer);
-		syncTimer = null;
-	}
-}
-
-function onAppStateChange(state: AppState) {
-	if (!state.isActive) return;
-	if (!tracking.value && !startedAt.value) return;
-	void syncFromBackground();
-}
-
-async function cancelTrackingFromMigration(reason: string) {
-	console.log(`[MDistance] cancelling tracking due to cloud migration: ${reason}`);
-	if (tracking.value) {
-		await detachForegroundListeners();
-		tracking.value = false;
-	}
-	await clearState();
-	completed.value = !!props.alreadyCompleted;
+async function manualSync() {
+	if (syncing.value) return;
+	void impactLight();
+	syncing.value = true;
+	const before = progress.value;
 	try {
-		await Toast.show({ text: 'This step was updated by the cloud — distance tracking stopped.' });
-	} catch {
-		// best-effort user toast
+		// engine owns sync feedback (haptic + toast + notification); we only add the no-distance hint
+		await tracker.syncNow();
+		const delta = progress.value - before;
+		if (delta <= 0 && progress.value < props.targetMeters) {
+			Toast.show({
+				text: 'No new distance yet. Apple Watch data can take a moment to reach your iPhone, so try again shortly, or check Settings > Health > Data Access for The Earth App.',
+				duration: 'long'
+			});
+		}
+	} catch (e) {
+		console.error('[MDistance] manual sync failed:', e);
+	} finally {
+		syncing.value = false;
 	}
 }
 
@@ -774,7 +362,7 @@ watch(
 				s.stepIndex === props.stepIndex &&
 				(s.altIndex ?? 0) === (props.altIndex ?? 0)
 		);
-		if (hit) void cancelTrackingFromMigration(`signal for step ${hit.stepIndex}`);
+		if (hit) void tracker.cancelFromMigration(`signal for step ${hit.stepIndex}`);
 	},
 	{ immediate: true, deep: true }
 );
@@ -783,42 +371,29 @@ onMounted(async () => {
 	nowTimer = setInterval(() => {
 		now.value = Date.now();
 	}, 30_000);
-	await loadState();
+
 	if (Capacitor.isNativePlatform() && !completed.value) {
+		// prime the OS permission prompts on step open so they appear up front
 		if (!props.disabled) {
 			void primePermission('motion');
 			void primePermission('healthkit');
 		}
 
-		await reconcileActiveSession();
-		startForegroundSync();
+		await tracker.refreshSnapshot();
+		await tracker.reconcile();
 
-		try {
-			appStateListener = await App.addListener('appStateChange', onAppStateChange);
-		} catch (e) {
-			console.error('[MDistance] failed to register appStateChange listener:', e);
-		}
+		// clear a live activity left on screen by a prior force-quit (no-op while tracking)
+		void tracker.clearOrphanLiveActivity();
 	}
 });
 
-onBeforeUnmount(async () => {
+onBeforeUnmount(() => {
+	// deliberately do NOT pause the tracker here; the engine is a singleton that persists
+	// across modal close; it stops only on Pause or app termination
 	if (nowTimer) {
 		clearInterval(nowTimer);
 		nowTimer = null;
 	}
-	stopForegroundSync();
-	if (appStateListener) {
-		try {
-			await appStateListener.remove();
-		} catch {
-			// best-effort
-		}
-		appStateListener = null;
-	}
-	// Tear down foreground listeners and persist progress. Pedometer history and
-	// Apple Health backfill any distance covered while away on the next return.
-	await detachForegroundListeners();
-	await persistState();
 });
 </script>
 
@@ -835,5 +410,41 @@ onBeforeUnmount(async () => {
 
 .animate-ring-pulse {
 	animation: ring-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sync-rise {
+	0% {
+		opacity: 0;
+		transform: translate(-50%, 8px) scale(0.96);
+	}
+	15% {
+		opacity: 1;
+		transform: translate(-50%, 0) scale(1);
+	}
+	80% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: translate(-50%, -12px);
+	}
+}
+
+.animate-sync-rise {
+	animation: sync-rise 2s ease-out forwards;
+}
+
+@keyframes sync-glow {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 rgb(34 197 94 / 0);
+	}
+	30% {
+		box-shadow: 0 0 12px 2px rgb(34 197 94 / 0.55);
+	}
+}
+
+.animate-sync-glow {
+	animation: sync-glow 1.2s ease-out;
 }
 </style>
