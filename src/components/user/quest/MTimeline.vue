@@ -100,7 +100,7 @@
 						]"
 						:title="
 							!altStep.completed && item.some((s) => s.completed)
-								? 'Bonus step — optional, but earns extra reward'
+								? 'Bonus step, optional, but earns extra reward'
 								: undefined
 						"
 						@click="onStepClick(altStep)"
@@ -326,7 +326,7 @@ async function confirmMasteryLock(message: string, okTitle: string): Promise<boo
 	return value;
 }
 
-// generic destructive confirm for regular quests — partial progress isn't recoverable
+// generic destructive confirm for regular quests; partial progress isn't recoverable
 async function confirmDestructive(
 	title: string,
 	message: string,
@@ -360,7 +360,7 @@ async function handleEndClick() {
 
 	const ok = await confirmDestructive(
 		'End Quest?',
-		`Ending "${props.quest.title}" discards your progress on it — partial quest progress can't be recovered. Are you sure?`,
+		`Ending "${props.quest.title}" discards your progress on it; partial quest progress can't be recovered. Are you sure?`,
 		'End Quest'
 	);
 	if (!ok) return;
@@ -387,7 +387,7 @@ async function handleReplaceClick() {
 	const activeTitle = quest.value?.quest?.title || 'your active quest';
 	const ok = await confirmDestructive(
 		'Replace Active Quest?',
-		`Starting "${props.quest.title}" ends "${activeTitle}" and discards its progress — partial quest progress can't be recovered. Are you sure?`,
+		`Starting "${props.quest.title}" ends "${activeTitle}" and discards its progress; partial quest progress can't be recovered. Are you sure?`,
 		'Replace & Start'
 	);
 	if (!ok) return;
@@ -567,9 +567,9 @@ const timelineTour = computed<SiteTourStep[]>(() => [
 		id: 'quest-button',
 		title: 'Start This Quest',
 		description:
-			'Tap the button above to begin. Only one quest can be active at a time — starting a new one replaces your current active quest.',
+			'Tap the button above to begin. Only one quest can be active at a time; starting a new one replaces your current active quest.',
 		footer:
-			'Heads up: Badge Mastery quests are one-shot. The button color tells you which state you’re in.',
+			"Heads up: Badge Mastery quests are one-shot. The button color tells you which state you're in.",
 		icon: 'mdi:sword-cross',
 		placement: 'bottom',
 		highlightPadding: 6,
@@ -588,7 +588,7 @@ const timelineTour = computed<SiteTourStep[]>(() => [
 		description:
 			'This quest is currently active. Open any step below to submit progress, or tap End Quest above to step away.',
 		footer:
-			'Ending a Badge Mastery quest is permanent — for regular quests you can pick another up later.',
+			'Ending a Badge Mastery quest is permanent; for regular quests you can pick another up later.',
 		icon: 'mdi:shield-sword',
 		placement: 'bottom',
 		highlightPadding: 6,
@@ -600,7 +600,7 @@ const timelineTour = computed<SiteTourStep[]>(() => [
 		description:
 			'Each badge below is a step. Tap one to see what it asks of you and submit your progress. The active step has a ring around it.',
 		footer:
-			'A step with multiple badges side-by-side is an "either/or" — finish any one to advance.',
+			'A step with multiple badges side-by-side is an "either/or": finish any one to advance.',
 		icon: 'mdi:map-marker-path',
 		highlightPadding: 8,
 		waitFor: 'tile-0'
@@ -609,7 +609,7 @@ const timelineTour = computed<SiteTourStep[]>(() => [
 		id: 'tile-1:0',
 		title: 'Either/Or Steps',
 		description:
-			'This quest includes step groups — rows with multiple badges. Complete just one to advance; the rest become optional bonuses you can come back for.',
+			'This quest includes step groups: rows with multiple badges. Complete just one to advance; the rest become optional bonuses you can come back for.',
 		footer: 'Bonus alt-steps stay tappable even after the row finishes.',
 		icon: 'mdi:vector-difference',
 		condition: () => hasAltStepGroup.value
@@ -618,7 +618,7 @@ const timelineTour = computed<SiteTourStep[]>(() => [
 		id: 'tile-end',
 		title: 'Reward & Completion',
 		description:
-			'The gold medal is the finish line. Complete every step to unlock the quest reward — points, a badge, or a feature unlock — and earn a permanent spot in your quest history.',
+			'The gold medal is the finish line. Complete every step to unlock the quest reward, points, a badge, or a feature unlock, and earn a permanent spot in your quest history.',
 		footer: "You're all set. Tap Finish and start your quest!",
 		icon: 'mdi:trophy-outline',
 		waitFor: 'tile-end'

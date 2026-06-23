@@ -55,7 +55,7 @@ function slotDate(dayOffset: number, hour: number): Date {
 function trimText(text: string, max: number): string {
 	const clean = (text ?? '').trim();
 	if (clean.length <= max) return clean;
-	return `${clean.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+	return `${clean.slice(0, Math.max(0, max - 1)).trimEnd()}...`;
 }
 
 function pick<T>(items: T[], day: number): T | null {
@@ -114,7 +114,7 @@ function isEligibleRandomQuest(
 	return true;
 }
 
-// "no step delay active" — the active quest's current step isn't sitting on a cooldown yet.
+// "no step delay active": the active quest's current step isn't sitting on a cooldown yet.
 function isStepDelayActive(progress: UserQuestProgress): boolean {
 	const idx = progress.currentStepIndex;
 	const delay = progress.currentStep?.delay;
@@ -176,7 +176,7 @@ async function buildNotifications(): Promise<LocalNotificationSchema[]> {
 				}
 				if (!hasActiveQuest) {
 					const quest = pick(eligibleQuests, day);
-					if (!quest) return null; // user has nothing eligible left — silently skip
+					if (!quest) return null; // user has nothing eligible left, silently skip
 					return {
 						title: 'Seize the Day',
 						body: `Start your day off with ${quest.title} Quest!`,
@@ -326,7 +326,7 @@ export function initDailyNotifications(): () => void {
 			if (token) void scheduleDailyNotifications(true);
 			else {
 				void clearDailyNotifications();
-				// orphaned step-unlock reminders should die with the session — otherwise
+				// orphaned step-unlock reminders should die with the session; otherwise
 				// they fire after logout and route taps land on a 401 page.
 				void cancelAllStepUnlockNotifications();
 			}

@@ -255,7 +255,7 @@ async function submitUpload() {
 
 	submitting.value = true;
 
-	// preventive client pre-check — server stays authoritative
+	// preventive client pre-check; server stays authoritative
 	for (const file of value.value) {
 		const verdict = await checkImage(file);
 		if (!verdict.allowed) {

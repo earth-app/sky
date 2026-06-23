@@ -53,7 +53,7 @@ function getErrorStatus(error: unknown): number | null {
 
 function isTransientError(error: unknown): boolean {
 	const status = getErrorStatus(error);
-	if (status === null) return true; // network-level error (no HTTP response) — retry
+	if (status === null) return true; // network-level error (no HTTP response), retry
 	if (status === 408 || status === 425 || status === 429) return true;
 	return status >= 500 && status <= 599;
 }

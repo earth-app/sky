@@ -126,7 +126,7 @@ const { fetchState: fetchOnboardingState } = useOnboarding();
 
 const offlineAuthBlocked = ref(false);
 
-// hydration latch — keep the loader spinning until we know whether the user is
+// hydration latch; keep the loader spinning until we know whether the user is
 // authed or anon. Prevents the login/signup CTA flash before user resolves.
 const bootResolved = ref(false);
 const showAuthCta = computed(() => bootResolved.value && user.value === null);
@@ -150,7 +150,7 @@ function goToLogin() {
 }
 
 onMounted(async () => {
-	// app.vue owns initSettings() and hydrateUser() — we just gate splash hide on user resolution
+	// app.vue owns initSettings() and hydrateUser(); we just gate splash hide on user resolution
 	if (isOfflineEntryMode()) {
 		const cachedUser = await validateSessionAllowOffline();
 		if (cachedUser) {
@@ -209,7 +209,7 @@ async function maybeShowOnboarding() {
 	}
 }
 
-// non-blocking preload — never let a slow chunk fetch keep the user on index
+// non-blocking preload; never let a slow chunk fetch keep the user on index
 function preloadHome(destination: string) {
 	if (!appSettings.value.preloadContent) return;
 	void Promise.race([
@@ -234,8 +234,8 @@ async function navigateHome() {
 	}
 }
 
-// safety net for late hydration (anon → authed mid-page, or token refresh); fire on
-// any truthy resolve, not just the null→value edge, so a flaky re-fetch retry still routes
+// safety net for late hydration (anon -> authed mid-page, or token refresh); fire on
+// any truthy resolve, not just the null->value edge, so a flaky re-fetch retry still routes
 watch(user, async (next) => {
 	if (next) {
 		await navigateHome();

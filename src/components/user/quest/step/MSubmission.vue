@@ -358,7 +358,7 @@
 						class="size-10 text-primary"
 					/>
 					<p class="text-sm! text-center opacity-80 m-0!">
-						Keep reading to complete this step — your time is tracked automatically.
+						Keep reading to complete this step; your time is tracked automatically.
 					</p>
 					<div class="flex flex-col gap-1! w-full">
 						<div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
@@ -512,7 +512,7 @@ async function fetchNativeLocation() {
 		nativeLng.value = pos.coords.longitude;
 		nativeAlt.value = pos.coords.altitude ?? null;
 	} catch {
-		// Permission denied or no fix — fall back to whatever useGeolocation() yielded.
+		// Permission denied or no fix; fall back to whatever useGeolocation() yielded.
 	}
 }
 
@@ -617,7 +617,7 @@ function notifyStepComplete(questCompleted = false) {
 }
 
 // match_terms / order_items / describe_text are completed inside their own crust child
-// components, which only emit `submitted` on a validated response — confirm + forward.
+// components, which only emit `submitted` on a validated response: confirm + forward.
 function onDelegatedSubmitted() {
 	notifyStepComplete();
 	emit('submitted');
@@ -646,7 +646,7 @@ async function submitPhoto(file: File) {
 		const locationOk = await requirePermission('location');
 		if (!locationOk) {
 			// requirePermission already shows a Dialog/Toast, but if both fail we
-			// still need to surface something — otherwise the user just sees the
+			// still need to surface something; otherwise the user just sees the
 			// "Submit" tap dead-end with no feedback.
 			submitError.value =
 				'Location permission is required for this step. Enable it in settings to submit.';
@@ -663,7 +663,7 @@ async function submitPhoto(file: File) {
 	try {
 		const rawDataUrl = await fileToDataUrl(file);
 
-		// Drawings must stay EXIF-free — cloud's validateDrawing rejects any
+		// Drawings must stay EXIF-free: cloud's validateDrawing rejects any
 		// submission carrying Make/Model/Software/DateTimeOriginal as a photo
 		// masquerading as a drawing. Only inject EXIF for actual photo steps.
 		const needsExif = category.value === 'photo';

@@ -31,7 +31,7 @@ const OAUTH_COMPLETE_PATHS = new Set([
 
 const REFERRAL_CODE_KEY = 'referral_code';
 
-// best-effort persist — invite resolution must never block on storage
+// best-effort persist; invite resolution must never block on storage
 async function persistReferralCode(code: string) {
 	if (!code) return;
 	try {
@@ -121,7 +121,7 @@ export function useDeepLinkRouting() {
 			return { type: 'internal', target: `/signup?ref=${encodeURIComponent(inviteCode)}` };
 		}
 
-		// OAuth callback completion (universal/app link from the crust callback) — extract token and
+		// OAuth callback completion (universal/app link from the crust callback): extract token and
 		// hand back to the caller so it can populate the auth store and route the user in-app.
 		if (
 			isCustomScheme ||
@@ -160,7 +160,7 @@ export function useDeepLinkRouting() {
 				};
 			}
 
-			// No token — treat as a sign-in error. Route back to the form that started the flow so
+			// No token; treat as a sign-in error. Route back to the form that started the flow so
 			// the existing error toast pipeline can surface a contextual message.
 			const errorCode = parsed.searchParams.get('error') || 'auth_failed';
 			const errorTarget =

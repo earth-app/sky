@@ -272,7 +272,7 @@ const steps: OnboardingQuestStep[] = [
 		type: 'respond_to_prompt',
 		title: 'Answer a Question',
 		description:
-			"Ask and talk about questions! Answer life's big questions or ask your own to connect with others and share your perspective. Prompts only last 2 days — jump on a hot one before it disappears."
+			"Ask and talk about questions! Answer life's big questions or ask your own to connect with others and share your perspective. Prompts only last 2 days, so jump on a hot one before it disappears."
 	},
 	{
 		type: 'draw_picture',
@@ -318,7 +318,7 @@ const steps: OnboardingQuestStep[] = [
 		type: 'scan_barcode',
 		title: 'Scan a Barcode',
 		description:
-			"Scan a barcode from the world around you. Quests can ask for books, music, food, beauty or pet items, a household product, a vehicle's VIN, or a boarding pass — a quick way to turn everyday objects and trips into part of your journey.",
+			"Scan a barcode from the world around you. Quests can ask for books, music, food, beauty or pet items, a household product, a vehicle's VIN, or a boarding pass: a quick way to turn everyday objects and trips into part of your journey.",
 		reward: 25
 	},
 	{

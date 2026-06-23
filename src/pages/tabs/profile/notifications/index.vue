@@ -88,7 +88,7 @@ const notificationsTour = computed<SiteTourStep[]>(() => [
 		id: 'notifications-list',
 		title: 'Notification Feed',
 		description:
-			'Each notification has an action — visit a profile, view a quest, open an event. Notifications older than a few weeks are archived automatically.',
+			'Each notification has an action: visit a profile, view a quest, open an event. Notifications older than a few weeks are archived automatically.',
 		footer:
 			"Manage which kinds of notifications you receive from your profile editor's Email Notifications switch.",
 		icon: 'mdi:format-list-bulleted',

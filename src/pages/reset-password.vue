@@ -35,7 +35,7 @@
 					/>
 					<h1 class="text-xl font-semibold m-0!">Reset Link Expired</h1>
 					<p class="text-sm text-center text-gray-600 dark:text-gray-300">
-						This link is no longer valid. Reset links work for one hour — request a fresh one.
+						This link is no longer valid. Reset links work for one hour; request a fresh one.
 					</p>
 					<IonButton
 						expand="block"
@@ -103,7 +103,7 @@
 									name="crescent"
 									class="mr-2"
 								/>
-								Saving…
+								Saving...
 							</template>
 							<template v-else>
 								<UIcon

@@ -51,7 +51,7 @@
 					:disabled="!reason || loading"
 					@click="submit"
 				>
-					{{ loading ? 'Submitting…' : 'Submit Report' }}
+					{{ loading ? 'Submitting...' : 'Submit Report' }}
 				</IonButton>
 			</div>
 		</IonContent>

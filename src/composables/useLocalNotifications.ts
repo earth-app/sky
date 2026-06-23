@@ -67,7 +67,7 @@ export async function scheduleStepUnlockNotification(opts: {
 }): Promise<void> {
 	if (!Capacitor.isNativePlatform()) return;
 
-	// already unlocked (or about to be) — nothing useful to remind about
+	// already unlocked (or about to be), nothing useful to remind about
 	if (opts.unlockAt <= Date.now() + 30_000) return;
 
 	const granted = await ensureLocalNotificationPermission();

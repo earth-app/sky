@@ -58,7 +58,7 @@
 							name="mdi:email-fast-outline"
 							class="size-5 mr-2"
 						/>
-						{{ sending ? 'Sending…' : sentMessage ? 'Resend Code' : 'Send Verification Code' }}
+						{{ sending ? 'Sending...' : sentMessage ? 'Resend Code' : 'Send Verification Code' }}
 					</IonButton>
 					<IonButton
 						expand="block"
@@ -129,7 +129,7 @@ async function sendCode() {
 		const res = await sendVerificationEmail();
 		if (res.success) {
 			sentMessage.value = res.data?.message || 'Verification code sent.';
-			await Toast.show({ text: 'Code sent — check your email.', duration: 'short' });
+			await Toast.show({ text: 'Code sent, check your email.', duration: 'short' });
 		} else {
 			error.value = res.message || 'Failed to send verification code.';
 		}

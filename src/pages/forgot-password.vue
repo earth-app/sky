@@ -52,7 +52,7 @@
 								name="crescent"
 								class="mr-2"
 							/>
-							Sending…
+							Sending...
 						</template>
 						<template v-else>
 							<UIcon
@@ -92,7 +92,7 @@ async function submit() {
 	loading.value = true;
 	try {
 		const res = await sendResetPasswordEmail(email.value.trim().toLowerCase());
-		// Always show the generic "if account exists" toast — never disclose whether
+		// Always show the generic "if account exists" toast; never disclose whether
 		// the email is on file (anti-enumeration). The mantle2 endpoint already returns
 		// 204 in both cases for the same reason.
 		if (res.success || (res as { status?: number }).status === 204) {

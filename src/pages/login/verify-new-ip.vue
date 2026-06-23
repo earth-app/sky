@@ -108,7 +108,7 @@
 					name="crescent"
 					class="size-10"
 				/>
-				<p class="text-center text-gray-500">Signing you in…</p>
+				<p class="text-center text-gray-500">Signing you in...</p>
 			</div>
 			<div
 				v-else
@@ -187,7 +187,7 @@ function stopCountdown() {
 }
 
 // Ionic keeps pages alive in the navigation stack, so we (re)start the countdown
-// every time this page becomes visible — e.g. after backgrounding the app and
+// every time this page becomes visible, e.g. after backgrounding the app and
 // returning, or after backing into the page from another route.
 onIonViewWillEnter(() => {
 	now.value = Date.now();
@@ -325,7 +325,7 @@ async function resend() {
 			await fetchUser();
 			router.navigate('/tabs/dashboard', 'root', 'replace');
 		} else {
-			// 429 with retry_after — start the cooldown so the resend button stays disabled.
+			// 429 with retry_after: start the cooldown so the resend button stays disabled.
 			if (result.retryAfter && result.retryAfter > 0) {
 				startResendCooldown(result.retryAfter);
 			}

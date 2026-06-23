@@ -947,7 +947,7 @@ const discoverTour = computed<SiteTourStep[]>(() => [
 		title: showSegmentSelector.value ? 'Filtered Results' : 'Your Feed',
 		description: showSegmentSelector.value
 			? 'When you search or land on a specific tab, results are filtered to that type. Tap any card to open it.'
-			: 'Without a search query, you get a shuffled mix of activities, articles, prompts, events, and users — refreshed each load.',
+			: 'Without a search query, you get a shuffled mix of activities, articles, prompts, events, and users, refreshed each load.',
 		footer: 'Scroll to load more, or pull-to-refresh to shuffle a new batch.',
 		icon: 'mdi:compass-outline',
 		highlightPadding: 12,

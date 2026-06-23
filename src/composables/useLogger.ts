@@ -179,7 +179,7 @@ async function ensureLogDir(): Promise<void> {
 		try {
 			await Filesystem.mkdir({ path: LOG_DIR, directory: Directory.Data, recursive: true });
 		} catch {
-			// ignore — write will surface real failure
+			// ignore; write will surface real failure
 		}
 	}
 }
@@ -289,7 +289,7 @@ async function persistOnce(chunk: string): Promise<void> {
 		persistFailureLogged = false;
 	} catch (err) {
 		if (!persistFailureLogged) {
-			// failure to persist must not cascade — single console note then silent
+			// failure to persist must not cascade; single console note then silent
 			console.warn('[logger] persist failed; continuing without disk writes', err);
 			persistFailureLogged = true;
 		}
@@ -395,7 +395,7 @@ export async function exportLogs(): Promise<{ uri?: string; text: string }> {
 		try {
 			await Filesystem.mkdir({ path: LOG_DIR, directory: Directory.Cache, recursive: true });
 		} catch {
-			// already exists or denied — writeFile will surface the real failure
+			// already exists or denied; writeFile will surface the real failure
 		}
 		await Filesystem.writeFile({
 			path: exportPath,

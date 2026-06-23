@@ -956,7 +956,7 @@ onMounted(async () => {
 		void fetchMotd();
 	}
 
-	// kick off onboarding fetch from the parent — the checklist container is
+	// kick off onboarding fetch from the parent; the checklist container is
 	// gated on onboarding.fetched, so we can't rely on the child's onMounted
 	if (user.value) void onboarding.fetchState();
 
@@ -981,7 +981,7 @@ onMounted(async () => {
 		// Text-size prompt fires first; the welcome tour only starts AFTER it
 		// closes (see handleTextSizePromptClosed). If the user has already seen
 		// the prompt, maybeOpen() emits `closed` immediately and the tour fires
-		// on the next tick — no UX regression for returning users.
+		// on the next tick; no UX regression for returning users.
 		await loadResumeStep();
 		setTimeout(() => {
 			if (!user.value) return;

@@ -375,7 +375,7 @@ const { user: currentUser } = useAuth();
 
 const isCurrentUser = computed(() => user.value?.id === currentUser.value?.id);
 
-// friends-only, never self — challenge a friend to one of your own quests
+// friends-only, never self; challenge a friend to one of your own quests
 const canChallenge = computed(
 	() => !!props.user.is_friend && currentUser.value?.id !== props.user.id
 );

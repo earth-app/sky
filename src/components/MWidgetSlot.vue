@@ -42,7 +42,7 @@ const COMPONENTS: Record<FeedWidgetKind, ReturnType<typeof defineAsyncComponent>
 
 const resolved = computed(() => COMPONENTS[props.kind] ?? null);
 
-// server topic regex is /^[a-z0-9_-]{1,64}$/ — pre-sanitize so any id char that escapes
+// server topic regex is /^[a-z0-9_-]{1,64}$/; pre-sanitize so any id char that escapes
 // (space, dot, slash, colon, etc.) becomes a hyphen and the request doesn't 4xx with "Invalid topic"
 function sanitizeTopic(raw: string): string {
 	return raw
@@ -207,8 +207,8 @@ const RAPID_FLASH_POOLS_BY_TYPE: Partial<Record<ActivityType, Pair[]>> = {
 	],
 	ENTERTAINMENT: [
 		{ term: 'Pacing', def: 'rhythm of a story unfolding' },
-		{ term: 'Arc', def: 'shape of a character’s change' },
-		{ term: 'Genre', def: 'a story’s family of conventions' },
+		{ term: 'Arc', def: "shape of a character's change" },
+		{ term: 'Genre', def: "a story's family of conventions" },
 		{ term: 'Cliffhanger', def: 'ends right before the answer' },
 		{ term: 'Easter Egg', def: 'hidden detail for fans' }
 	],
@@ -311,7 +311,7 @@ const extraProps = computed<Record<string, unknown>>(() => {
 			if (pool.length >= 4) {
 				out.pool = pool;
 				out.ctaTitle = `Match 4 ${name} terms to their meanings`;
-				out.ctaSubtitle = `Themed to ${name}. Tap when you’re ready — the timer only starts after you do.`;
+				out.ctaSubtitle = `Themed to ${name}. Tap when you're ready; the timer only starts after you do.`;
 			}
 		}
 	}

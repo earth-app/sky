@@ -102,7 +102,7 @@ export function useQuestPermissions() {
 	}
 
 	// HealthKit is iOS-only. On other platforms we resolve `true` so the calling
-	// flow doesn't gate on it — Android/web simply skips the HealthKit-backed
+	// flow doesn't gate on it; Android/web simply skips the HealthKit-backed
 	// distance source and falls back to pedometer + runner GPS like before.
 	async function ensureHealthKit(): Promise<boolean> {
 		if (Capacitor.getPlatform() !== 'ios') return true;
@@ -177,7 +177,7 @@ export function useQuestPermissions() {
 			try {
 				await Toast.show({ text: message, duration: 'long' });
 			} catch {
-				// swallow — best-effort notification
+				// swallow; best-effort notification
 			}
 		}
 	}

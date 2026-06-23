@@ -108,7 +108,7 @@ export async function startAppleNativeAuth(
 
 	// Apple only returns email / givenName / familyName on the very first
 	// authorization for an Apple ID + app pair. Forward them so mantle2 can use
-	// them when creating a brand-new account — they are ignored when linking
+	// them when creating a brand-new account; they are ignored when linking
 	// or when the user already exists.
 	let result: { session_token: string; user: unknown };
 	try {

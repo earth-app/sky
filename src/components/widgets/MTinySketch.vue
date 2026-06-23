@@ -118,7 +118,7 @@ function persist(dataUrl: string) {
 		list.unshift({ dataUrl, topic: props.topic, at: Date.now() });
 		window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 5)));
 	} catch {
-		// localStorage quota or parse failure — silently skip
+		// localStorage quota or parse failure, silently skip
 	}
 }
 </script>

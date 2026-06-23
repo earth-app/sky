@@ -153,7 +153,7 @@ const loadedBadges = computed(() => {
 
 const completedBadges = computed(() => props.badges.filter((b) => 'granted' in b && b.granted));
 
-// the badge owner can be passed explicitly, otherwise infer from the first granted UserBadge —
+// the badge owner can be passed explicitly, otherwise infer from the first granted UserBadge;
 // mastery surfacing is owner-only either way
 const inferredOwnerId = computed(() => {
 	if (props.userId) return props.userId;
@@ -177,7 +177,7 @@ const masteryCapReached = computed(() => {
 	return list.active >= list.cap;
 });
 
-// hide finished masteries from the active list — completed masteries appear on the badge
+// hide finished masteries from the active list; completed masteries appear on the badge
 // itself (mastered chip + Card.vue can re-open the completed timeline), so listing them
 // here misled users into thinking the slot was still occupied
 const activeMasteryItems = computed(

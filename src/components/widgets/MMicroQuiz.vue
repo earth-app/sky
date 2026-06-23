@@ -75,13 +75,13 @@ const props = withDefaults(
 				question: 'Roughly what percent of the planet is covered by ocean?',
 				options: ['51%', '71%', '83%'],
 				answer: 1,
-				explanation: 'about 71% — most of earth is water.'
+				explanation: 'about 71%, most of earth is water.'
 			},
 			{
 				question: 'Which gas plants release during photosynthesis?',
 				options: ['Carbon dioxide', 'Nitrogen', 'Oxygen'],
 				answer: 2,
-				explanation: 'they take in CO₂ and release O₂.'
+				explanation: 'they take in CO2 and release O2.'
 			},
 			{
 				question: 'The Amazon rainforest is mostly in which country?',

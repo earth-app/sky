@@ -132,7 +132,7 @@ const {
 const { quest: currentQuest, fetchUserQuest } = useUser(userId);
 
 function truncate(t: string): string {
-	return t.length > 30 ? `${t.slice(0, 27).trimEnd()}…` : t;
+	return t.length > 30 ? `${t.slice(0, 27).trimEnd()}...` : t;
 }
 
 const truncatedTitle = computed(() => truncate(dailyQuest.value?.title ?? ''));

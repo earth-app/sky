@@ -108,7 +108,7 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 			return true;
 		}
 
-		// Coalesce concurrent uploads — session watch + registration listener can fire
+		// Coalesce concurrent uploads: session watch + registration listener can fire
 		// near-simultaneously on first install; we only want one in-flight POST.
 		if (pendingUpload) return pendingUpload;
 
@@ -166,7 +166,7 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 
 	const handles: PluginListenerHandle[] = [];
 
-	// Listeners MUST be attached before PushNotifications.register() — the plugin
+	// Listeners MUST be attached before PushNotifications.register(): the plugin
 	// fires `registration` as soon as the OS delivers the token (which can be near-
 	// instant on a warm Firebase cache), and any event fired before the JS listener
 	// is attached is dropped silently. See @capacitor/push-notifications README.
@@ -244,21 +244,21 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 
 	// Any sessionToken transition (login, re-login as same user, login as different
 	// user) needs a re-upload because mantle2 deletes the push_tokens row on /logout
-	// and keys the row by (user_id, platform). Without this, a logout → re-login in
+	// and keys the row by (user_id, platform). Without this, a logout -> re-login in
 	// the same app process never restores the row and pushes stay silent until the
 	// next cold start.
 	const stopSessionWatch = watch(
 		() => authStore.sessionToken,
 		async (newToken) => {
 			if (!newToken) {
-				// logged out — force the next session to re-upload even if same user/token.
+				// logged out; force the next session to re-upload even if same user/token.
 				lastUploadKey = null;
 				return;
 			}
 			if (cachedToken) {
 				await uploadToken(cachedToken.token);
 			} else {
-				// no cached token yet (first install + first login) — kick the OS to
+				// no cached token yet (first install + first login); kick the OS to
 				// deliver one; the registration listener will pick up the upload.
 				await triggerRegister();
 			}

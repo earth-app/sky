@@ -345,7 +345,7 @@ function acceptPhoto() {
 </script>
 
 <style scoped>
-/* Keyframe animations — cannot be expressed as inline Tailwind utility classes */
+/* Keyframe animations: cannot be expressed as inline Tailwind utility classes */
 @keyframes ring-pulse {
 	0%,
 	100% {

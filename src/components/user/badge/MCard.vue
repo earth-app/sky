@@ -165,7 +165,7 @@ const showDetails = ref(false);
 // provided by MProfile's badges drawer; absent when MCard renders outside that drawer
 const closeBadgesDrawer = inject(BADGES_DRAWER_CLOSE, () => Promise.resolve());
 
-// await the drawer's dismiss before letting the caller router.push — otherwise the
+// await the drawer's dismiss before letting the caller router.push; otherwise the
 // route change preempts the IonModal animation and the teleported drawer can orphan
 // onto the destination page (which reads as "the close fix doesn't work")
 async function dismissForNavigation() {
@@ -212,7 +212,7 @@ const {
 	ensureMasteryListFetched
 } = useBadgeMastery(() => props.badge, SKY_MASTERY_BUTTON_THEME);
 
-// gradient flow only animates while progress is in motion — at 100% the bar stays solid
+// gradient flow only animates while progress is in motion; at 100% the bar stays solid
 const isProgressActive = computed(() => {
 	if (!('progress' in props.badge)) return false;
 	if ('granted' in props.badge && props.badge.granted) return false;
@@ -233,7 +233,7 @@ const ionRarityColor = computed(() => {
 	}
 });
 
-// hardware back button is swallowed while generating — bailing mid-call burns the slot with no quest
+// hardware back button is swallowed while generating; bailing mid-call burns the slot with no quest
 let backHandle: PluginListenerHandle | null = null;
 watch(masteryLoading, async (loading) => {
 	if (loading) {
@@ -329,7 +329,7 @@ async function generateAndOpen() {
 					router.push(`/tabs/quests/badge_mastery_${props.badge.id}`);
 					break;
 				case 'cap_reached':
-					// don't mark badge as exempt — the slot is just temporarily full. store
+					// don't mark badge as exempt: the slot is just temporarily full. store
 					// already refreshed the list, so the disabled state will catch up on next open
 					await showInfoToast(
 						extractServerMessage(
@@ -363,7 +363,7 @@ const masteryTour = buildBadgeMasteryTour({
 </script>
 
 <style scoped>
-/* easeOutBack float-in for the badge header — parity with crust modal */
+/* easeOutBack float-in for the badge header, parity with crust modal */
 @keyframes badge-header-enter {
 	0% {
 		opacity: 0.4;
@@ -382,7 +382,7 @@ const masteryTour = buildBadgeMasteryTour({
 	animation: badge-header-enter 600ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-/* moving sheen on the in-progress badge bar — stops at 100% via class gate */
+/* moving sheen on the in-progress badge bar, stops at 100% via class gate */
 .progress-flow-wrap {
 	position: relative;
 	border-radius: 9999px;

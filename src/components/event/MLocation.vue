@@ -112,7 +112,7 @@
 						name="mdi:map-search-outline"
 						class="size-10 text-gray-400"
 					/>
-					<p class="text-sm text-gray-500 m-0!">No matches for “{{ searchTerm.trim() }}”</p>
+					<p class="text-sm text-gray-500 m-0!">No matches for "{{ searchTerm.trim() }}"</p>
 					<p class="text-xs text-gray-400 m-0!">
 						Try a more general name, or enter coordinates below.
 					</p>
@@ -217,7 +217,7 @@ const results = ref<LocationItem[]>([]);
 const loading = ref(false);
 const searchAttempted = ref(false);
 
-// staged selection inside the modal until user hits Save — prevents accidental writes when canceling
+// staged selection inside the modal until user hits Save; prevents accidental writes when canceling
 const draft = ref<{
 	latitude: number;
 	longitude: number;

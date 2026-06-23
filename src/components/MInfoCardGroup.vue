@@ -182,7 +182,7 @@ const progress = computed(() => {
 	return currentSlide.value / (totalSlides.value - 1);
 });
 
-// dots become unmanageable and progress is noisy past ~10 items — fall back to a compact counter
+// dots become unmanageable and progress is noisy past ~10 items; fall back to a compact counter
 const MAX_INDICATOR_SLIDES = 10;
 const indicatorOverflow = computed(() => totalSlides.value > MAX_INDICATOR_SLIDES);
 

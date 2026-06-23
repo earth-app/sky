@@ -25,7 +25,7 @@
 			<div class="flex flex-col w-full px-4 pb-8 max-w-3xl mx-auto">
 				<p class="text-sm opacity-80 text-center mt-4 mb-4">
 					API keys let scripts and third-party tools act on your behalf, scoped to the permissions
-					you grant. Tokens are shown once — copy them immediately. Revoke any key at any time.
+					you grant. Tokens are shown once; copy them immediately. Revoke any key at any time.
 				</p>
 
 				<div
@@ -129,7 +129,7 @@
 									</div>
 								</div>
 
-								<code class="font-mono text-xs opacity-80">{{ key.token_prefix }}…</code>
+								<code class="font-mono text-xs opacity-80">{{ key.token_prefix }}...</code>
 
 								<div
 									v-if="key.description"
@@ -284,7 +284,7 @@
 							v-if="!catalog"
 							class="text-xs opacity-70"
 						>
-							Loading scopes…
+							Loading scopes...
 						</div>
 						<div
 							v-else
@@ -503,7 +503,7 @@
 						<div class="text-sm">
 							<div class="font-semibold">This is the only time you'll see this token.</div>
 							<div class="opacity-80">
-								Copy it now and store it somewhere secure. The Earth App stores only a hash — we
+								Copy it now and store it somewhere secure. The Earth App stores only a hash; we
 								can't show it again, and we can't recover it.
 							</div>
 						</div>
@@ -629,7 +629,7 @@ const expiryOptions = computed(() => {
 	for (const [k, v] of Object.entries(presets)) {
 		items.push({ label: `${v.days} Days`, value: k as ApiKeyExpiryPresetKey });
 	}
-	items.push({ label: 'Custom Date…', value: 'custom' });
+	items.push({ label: 'Custom Date...', value: 'custom' });
 	items.push({ label: 'Never Expires (Warning)', value: 'never' });
 	return items;
 });
@@ -716,10 +716,10 @@ function closeReveal() {
 }
 
 function onRevealDismiss() {
-	// only fires when iOS swipe-down or backdrop close — gate is enforced by
+	// only fires when iOS swipe-down or backdrop close; gate is enforced by
 	// backdrop-dismiss=acknowledged but be defensive
 	if (!acknowledged.value) {
-		void showInfoToast('Copy the token first so it isn’t lost.');
+		void showInfoToast("Copy the token first so it isn't lost.");
 		revealOpen.value = true;
 		return;
 	}
@@ -850,7 +850,7 @@ async function copyToken() {
 }
 
 function relative(iso: string | null): string {
-	if (!iso) return '—';
+	if (!iso) return '-';
 	const t = new Date(iso).getTime();
 	if (Number.isNaN(t)) return iso;
 	const diffMs = t - Date.now();

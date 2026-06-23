@@ -298,7 +298,7 @@ async function handleSignup() {
 		await safeToast(error.value, 'long');
 		notifyError();
 	} catch (err) {
-		// network blip / unexpected throw — never leak it as raw JS to the user.
+		// network blip / unexpected throw; never leak it as raw JS to the user.
 		console.error('[signup] unexpected error:', err);
 		error.value = formatApiError(err, 'Sign up failed. Please try again.');
 		await safeToast(error.value, 'long');

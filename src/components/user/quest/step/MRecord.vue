@@ -202,7 +202,7 @@ onMounted(async () => {
 	}
 
 	// Fire the OS prompt as the step opens rather than gating it behind a
-	// button — the user already opted in by entering the
+	// button; the user already opted in by entering the
 	// audio step, so the second tap is friction without benefit.
 	try {
 		const current = await CapacitorAudioRecorder.checkPermissions();
@@ -377,7 +377,7 @@ function startAmplitudePolling() {
 			const { value } = await CapacitorAudioRecorder.getCurrentAmplitude();
 			pushAmplitude(value);
 		} catch {
-			// Skip this tick — transient bridge errors should not kill the meter.
+			// Skip this tick; transient bridge errors should not kill the meter.
 		}
 	}, AMPLITUDE_POLL_MS);
 }
@@ -411,7 +411,7 @@ async function deleteRecordedFile() {
 	try {
 		await Filesystem.deleteFile({ path: uri });
 	} catch {
-		// best-effort — temp files are scoped to the app sandbox and will be cleared by the OS.
+		// best-effort: temp files are scoped to the app sandbox and will be cleared by the OS.
 	}
 }
 

@@ -148,7 +148,7 @@ function bind() {
 }
 
 // rebind (its immediate watcher paints any cached rows), then only hit the network when
-// this keyed state has nothing cached yet — switching back to a loaded tab is instant.
+// this keyed state has nothing cached yet; switching back to a loaded tab is instant.
 async function load(force = false) {
 	bind();
 	if (!force && data.value.length > 0) {

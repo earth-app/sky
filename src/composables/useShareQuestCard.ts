@@ -24,12 +24,12 @@ export function useShareQuestCard() {
 	function buildText(questTitle?: string, points?: number): string {
 		const title = questTitle || 'a quest';
 		return points
-			? `I just completed "${title}" on The Earth App — earned ${points} Impact Points!`
+			? `I just completed "${title}" on The Earth App, earned ${points} Impact Points!`
 			: `I just completed "${title}" on The Earth App!`;
 	}
 
 	// useReferral is inherited from crust; the published build may predate it, so
-	// resolve defensively — share without a ref code rather than throwing. the
+	// resolve defensively: share without a ref code rather than throwing. the
 	// direct reference may read as unresolved until crust is republished + bumped.
 	async function resolveReferralCode(): Promise<string | undefined> {
 		try {
@@ -92,11 +92,11 @@ export function useShareQuestCard() {
 			});
 			await Toast.show({ text: 'Shared your achievement!', duration: 'short' });
 		} catch {
-			// image path failed (offline, fetch error, no filesystem) — share the link instead
+			// image path failed (offline, fetch error, no filesystem); share the link instead
 			try {
 				await shareLinkOnly(args, code);
 			} catch {
-				// the share sheet itself was dismissed or unavailable — stay quiet on cancel
+				// the share sheet itself was dismissed or unavailable; stay quiet on cancel
 				return;
 			}
 		}

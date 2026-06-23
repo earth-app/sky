@@ -53,7 +53,7 @@ const pickableQuests = computed<Quest[]>(() => {
 
 const sending = ref(false);
 
-// resolve which quest to challenge with — auto-select a single option, else an
+// resolve which quest to challenge with: auto-select a single option, else an
 // action sheet. returns null when the user cancels.
 async function pickQuestId(): Promise<string | null> {
 	const quests = pickableQuests.value;

@@ -11,7 +11,7 @@
 			variant="subtle"
 			icon="mdi:sword-cross"
 			:title="`${challengerHandle} challenged you to this quest`"
-			description="Accept to start a co-op run — you'll both work through it side by side."
+			description="Accept to start a co-op run; you'll both work through it side by side."
 		>
 			<template #actions>
 				<IonButton
@@ -102,7 +102,7 @@
 				v-if="otherCompleted"
 				class="text-xs text-warning mt-3"
 			>
-				They finished — catch up!
+				They finished, catch up!
 			</p>
 		</div>
 	</div>
@@ -153,7 +153,7 @@ async function onAccept() {
 	try {
 		const res = await accept();
 		await Toast.show({
-			text: valid(res) ? "You're in — race you to the finish." : res.message || 'Please try again.',
+			text: valid(res) ? "You're in, race you to the finish." : res.message || 'Please try again.',
 			duration: 'long'
 		});
 	} finally {

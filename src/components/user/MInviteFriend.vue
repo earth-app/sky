@@ -10,7 +10,7 @@
 			<h3 class="text-lg font-semibold m-0!">Invite Friends</h3>
 		</div>
 		<p class="text-sm text-gray-500 mb-4">
-			Share your link — when a friend joins, you both move up the Recruiter ranks.
+			Share your link; when a friend joins, you both move up the Recruiter ranks.
 		</p>
 
 		<div class="flex flex-col gap-2 mb-4">
@@ -79,7 +79,7 @@
 import { Toast } from '@capacitor/toast';
 import { IonCard } from '@ionic/vue';
 
-// recruiter tiers — friends-joined thresholds
+// recruiter tiers, friends-joined thresholds
 const TIERS = [1, 5, 25] as const;
 
 const { inviteUrl, stats, fetchCode, fetchStats, copyLink } = useReferral();
@@ -90,7 +90,7 @@ const conversions = computed(() => stats.value?.conversions ?? 0);
 
 const sharePayload = computed(() => ({
 	title: 'Join me on The Earth App',
-	text: 'I’m exploring activities, quests, and events on The Earth App — come join me.',
+	text: "I'm exploring activities, quests, and events on The Earth App; come join me.",
 	url: inviteUrl.value
 }));
 

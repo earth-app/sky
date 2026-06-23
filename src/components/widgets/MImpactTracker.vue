@@ -116,7 +116,7 @@ function check() {
 	try {
 		window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ lastDay: today, streak: newStreak }));
 	} catch {
-		// quota — display still updates, just not persisted
+		// quota, display still updates, just not persisted
 	}
 	emit('complete', { outcome: newStreak });
 }

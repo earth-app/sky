@@ -97,7 +97,7 @@ const codeInput = ref('');
 const errorMessage = ref('');
 const loading = ref(false);
 
-// server TTL is 15min — we only show the countdown after a successful resend,
+// server TTL is 15min; we only show the countdown after a successful resend,
 // since we don't know the original send time on first mount
 const CODE_TTL_MS = 15 * 60 * 1000;
 const codeExpiresAt = ref<number | null>(null);
@@ -110,7 +110,7 @@ const codeExpired = computed(
 const codeCountdownLabel = computed(() => {
 	if (codeExpiresAt.value === null) return '';
 	const remainingMs = codeExpiresAt.value - now.value;
-	if (remainingMs <= 0) return 'This code expired — request a new one.';
+	if (remainingMs <= 0) return 'This code expired; request a new one.';
 	const total = Math.floor(remainingMs / 1000);
 	const m = Math.floor(total / 60)
 		.toString()

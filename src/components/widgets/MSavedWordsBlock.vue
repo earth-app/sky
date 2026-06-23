@@ -10,7 +10,7 @@
 			/>
 			<div class="flex flex-col min-w-0 flex-1">
 				<h2 class="text-base! font-semibold m-0!">Your Saved Words</h2>
-				<p class="text-xs opacity-70 m-0! mt-0.5">{{ list.length }} saved · tap to revisit any</p>
+				<p class="text-xs opacity-70 m-0! mt-0.5">{{ list.length }} saved | tap to revisit any</p>
 			</div>
 			<IonButton
 				size="small"

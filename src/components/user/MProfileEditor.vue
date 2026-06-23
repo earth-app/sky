@@ -1741,7 +1741,7 @@ const userProfileTour: SiteTourStep[] = [
 		title: 'Your Activities',
 		description:
 			'Activities are the engine behind your recommendations. The more accurately you list what you care about, the better your articles, prompts, and event suggestions become.',
-		footer: 'Aim for at least 3–5 activities. Update them whenever your interests shift.',
+		footer: 'Aim for at least 3-5 activities. Update them whenever your interests shift.',
 		icon: 'mdi:run',
 		highlightPadding: 12
 	},
@@ -1749,7 +1749,7 @@ const userProfileTour: SiteTourStep[] = [
 		id: 'cosmetics',
 		title: 'Avatar Cosmetics',
 		description:
-			'Spend Impact Points to unlock visual flair for your avatar — frames, accents, themed sets. Selected cosmetics show on your profile and on every comment you make.',
+			'Spend Impact Points to unlock visual flair for your avatar: frames, accents, themed sets. Selected cosmetics show on your profile and on every comment you make.',
 		footer: 'Tap any locked cosmetic to see the price and preview. Reset is one button away.',
 		icon: 'mdi:palette',
 		highlightPadding: 12
@@ -1758,7 +1758,7 @@ const userProfileTour: SiteTourStep[] = [
 		id: 'visibility',
 		title: 'Account Visibility',
 		description:
-			'Three modes:\n• Private — only you and your circle\n• Unlisted — hidden from search, but visible to anyone with the link\n• Public — anyone can find and view\n\nYou can change this anytime.',
+			'Three modes:\n- Private - only you and your circle\n- Unlisted - hidden from search, but visible to anyone with the link\n- Public - anyone can find and view\n\nYou can change this anytime.',
 		footer: 'This is the master switch. Per-field privacy below gives you finer control.',
 		icon: 'mdi:shield-account'
 	},
@@ -1766,7 +1766,7 @@ const userProfileTour: SiteTourStep[] = [
 		id: 'privacy',
 		title: 'Field-Level Privacy',
 		description:
-			'For each field — email, address, country, etc. — pick exactly who can see it: just you, your circle of friends, all users, or fully public.\n\nAdministrators can always see all fields for moderation purposes.',
+			'For each field, email, address, country, etc., pick exactly who can see it: just you, your circle of friends, all users, or fully public.\n\nAdministrators can always see all fields for moderation purposes.',
 		footer: "Only fill in fields you're comfortable sharing per your chosen privacy level.",
 		icon: 'mdi:lock-outline'
 	},
@@ -1790,7 +1790,7 @@ const userProfileTour: SiteTourStep[] = [
 		id: 'password-change',
 		title: 'Change Password',
 		description:
-			"Update your password here. Use something long and unique — a password manager makes this painless. If you signed up via OAuth, you don't need a password at all.",
+			"Update your password here. Use something long and unique; a password manager makes this painless. If you signed up via OAuth, you don't need a password at all.",
 		footer: 'Changing your password signs you out of all other sessions.',
 		icon: 'mdi:shield-lock-outline',
 		cta: {
@@ -1807,7 +1807,7 @@ const userProfileTour: SiteTourStep[] = [
 		id: 'account-deletion',
 		title: 'Account Deletion',
 		description:
-			"Deleting your account is permanent — your profile, content, and history are removed and cannot be recovered. If you're unsure, we recommend setting your profile to Private instead.",
+			"Deleting your account is permanent; your profile, content, and history are removed and cannot be recovered. If you're unsure, we recommend setting your profile to Private instead.",
 		footer:
 			'Before deleting, consider exporting anything you want to keep. Reach out to support if you need help.',
 		icon: 'mdi:account-remove-outline'

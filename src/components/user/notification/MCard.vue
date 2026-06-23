@@ -65,7 +65,7 @@
 		>
 			<div class="flex flex-col mt-2">
 				<p class="text-xs! md:text-sm text-gray-400 light:text-gray-800">
-					{{ timestamp }} • {{ fullTimestamp }}
+					{{ timestamp }} | {{ fullTimestamp }}
 				</p>
 				<p class="text-xs! md:text-sm text-gray-600 light:text-gray-300">
 					{{ notification.source }} | ID: {{ notification.id }}
@@ -105,7 +105,7 @@ const fullTimestamp = computed(() => {
 
 const routerLink = computed(() => `/tabs/profile/notifications/${props.notification.id}`);
 
-// source-driven matrix — same shape as crust but Ionic-friendly (no canvas, CSS only)
+// source-driven matrix, same shape as crust but Ionic-friendly (no canvas, CSS only)
 const isQuestSource = computed(() => {
 	const src = (props.notification.source || '').toLowerCase();
 	return src === 'quest' || /quest/i.test(props.notification.title);
@@ -167,7 +167,7 @@ async function removeNotification() {
 	});
 	if (!value) return;
 
-	// queue the delete if offline so the dispatch happens on reconnect — the UI
+	// queue the delete if offline so the dispatch happens on reconnect, the UI
 	// emits 'deleted' immediately either way for optimistic feel
 	const queued = await runOrQueueM('mark-notification-delete', { id: props.notification.id }, () =>
 		deleteNotification(props.notification.id)
@@ -214,7 +214,7 @@ async function removeNotification() {
 	filter: grayscale(0.2);
 }
 
-/* default enter — plain fade */
+/* default enter, plain fade */
 @keyframes notif-fade-in {
 	0% {
 		opacity: 0;
@@ -229,7 +229,7 @@ async function removeNotification() {
 	animation: notif-fade-in 320ms ease-out both;
 }
 
-/* quest enter — fade + soft glow pulse (once) */
+/* quest enter, fade + soft glow pulse (once) */
 @keyframes notif-quest-in {
 	0% {
 		opacity: 0;
@@ -252,7 +252,7 @@ async function removeNotification() {
 	border-left: 3px solid rgba(250, 204, 21, 0.7);
 }
 
-/* badge enter — conic-gradient border via pseudo for unread.
+/* badge enter, conic-gradient border via pseudo for unread.
    rotate the gradient angle, not the element. rotating the pseudo with inset:-2px
    and no overflow clip paints diagonal streaks across the page. */
 @property --notif-badge-angle {
@@ -297,7 +297,7 @@ async function removeNotification() {
 	}
 }
 
-/* friend enter — small pulse on the dot via class on unread span */
+/* friend enter, small pulse on the dot via class on unread span */
 @keyframes notif-friend-in {
 	0% {
 		opacity: 0;
@@ -326,7 +326,7 @@ async function removeNotification() {
 	animation: notif-dot-friend-pulse 1.6s ease-out infinite;
 }
 
-/* error/mention enter — one-shot shake */
+/* error/mention enter, one-shot shake */
 @keyframes notif-shake {
 	0%,
 	100% {

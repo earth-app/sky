@@ -170,7 +170,7 @@ const cellFill = (matched: Set<number>, selected: number | null, i: number) =>
 function start() {
 	if (started.value) return;
 	selection();
-	// pool can be smaller than ROUND on degenerate activity pools — fall back to default to stay playable
+	// pool can be smaller than ROUND on degenerate activity pools; fall back to default to stay playable
 	const sourcePool = props.pool.length >= ROUND ? props.pool : DEFAULT_POOL;
 	const round = shuffle(sourcePool).slice(0, ROUND);
 	terms.value = round;

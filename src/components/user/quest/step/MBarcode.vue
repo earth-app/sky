@@ -259,7 +259,7 @@ const kindLabel = computed(() => {
 const kindInstructions = computed(() => {
 	switch (props.kind) {
 		case 'vehicle':
-			return 'Scan a VIN barcode — usually on the driver-side door jamb or under the windshield. 17 alphanumeric characters.';
+			return 'Scan a VIN barcode, usually on the driver-side door jamb or under the windshield. 17 alphanumeric characters.';
 		case 'flight':
 			return 'Scan the barcode on a boarding pass (PDF417 stripe or QR-style square).';
 		case 'beauty':
@@ -449,7 +449,7 @@ async function startWebScan() {
 		formatsToSupport: html5FormatsForKind(props.kind),
 		verbose: false,
 		// Chrome/Edge ship a native BarcodeDetector that is dramatically more
-		// reliable than the pure-JS ZXing fallback html5-qrcode uses by default —
+		// reliable than the pure-JS ZXing fallback html5-qrcode uses by default,
 		// especially for UPC/EAN under poor focus or laptop webcams. The library
 		// falls back to ZXing automatically where it isn't supported.
 		useBarCodeDetectorIfSupported: true

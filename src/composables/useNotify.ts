@@ -144,7 +144,7 @@ export async function showErrorToast(
 	const { fallback, duration = 'long' } = options;
 	const text = formatApiError(error, fallback);
 
-	// surface in logs before the toast — toast plugin can fail on web
+	// surface in logs before the toast; toast plugin can fail on web
 	logWarn('toast.error', text);
 
 	try {

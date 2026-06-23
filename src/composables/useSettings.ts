@@ -142,7 +142,7 @@ export function applyAppSettingsToDocument(settings: AppSettings) {
 		// Ignore storage errors.
 	}
 
-	// Sync the native status bar — without this iOS shows a white-on-white status
+	// Sync the native status bar; without this iOS shows a white-on-white status
 	// bar in dark mode (or vice versa) until the next app launch.
 	void syncStatusBarStyle(appliedTheme);
 }
@@ -156,7 +156,7 @@ async function syncStatusBarStyle(appliedTheme: 'light' | 'dark') {
 			style: appliedTheme === 'dark' ? Style.Dark : Style.Light
 		});
 	} catch {
-		// status bar plugin may not be available on this build — ignore
+		// status bar plugin may not be available on this build, ignore
 	}
 }
 

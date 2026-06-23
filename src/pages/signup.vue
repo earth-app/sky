@@ -96,7 +96,7 @@ async function bridgeReferralCode() {
 
 onMounted(() => {
 	void bridgeReferralCode();
-	// kick off hydration, but don't await — the watcher below handles redirect.
+	// kick off hydration, but don't await; the watcher below handles redirect.
 	fetchUser();
 });
 
@@ -150,7 +150,7 @@ async function showSignupError(errorType: string) {
 
 async function handleSignupSuccess(_: User, hasEmail: boolean) {
 	if (hasEmail) {
-		// the form flow routes the user to verify their email instead of the dashboard —
+		// the form flow routes the user to verify their email instead of the dashboard,
 		// stop the auto-redirect so the watchdog doesn't pull them back to /tabs.
 		suppress();
 		try {
@@ -190,7 +190,7 @@ const signupTour: SiteTourStep[] = [
 		title: 'Sign Up with a Provider',
 		description:
 			'The fastest path: sign in with Google, Microsoft, or GitHub. No password to remember, and you can link more providers later.',
-		footer: 'We only request the bare minimum — your email and basic profile.',
+		footer: 'We only request the bare minimum: your email and basic profile.',
 		icon: 'mdi:link-variant',
 		highlightPadding: 8
 	},
@@ -227,7 +227,7 @@ const signupTour: SiteTourStep[] = [
 						dialogTitle: 'Invite a Friend'
 					});
 				} catch {
-					// user dismissed the share sheet or it's unavailable — stay quiet
+					// user dismissed the share sheet or it's unavailable: stay quiet
 				}
 			}
 		}

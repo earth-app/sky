@@ -62,7 +62,7 @@ import { useAppHaptics } from '~/composables/useHaptics';
 
 const props = withDefaults(defineProps<{ prompt?: string; questHint?: string }>(), {
 	prompt: 'What surprised you about today?',
-	questHint: 'Reflect deeper → Try a related quest'
+	questHint: 'Reflect deeper -> Try a related quest'
 });
 
 const emit = defineEmits<{
@@ -96,7 +96,7 @@ function persist(reflection: string) {
 		list.unshift({ text: reflection, at: Date.now() });
 		window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 10)));
 	} catch {
-		// localStorage quota or parse failure — silently skip
+		// localStorage quota or parse failure, silently skip
 	}
 }
 </script>

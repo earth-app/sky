@@ -46,7 +46,7 @@
 						v-else-if="allDownloads.length === 0"
 						icon="material-symbols:download-for-offline-outline"
 						title="No downloads yet"
-						description="Save articles, prompts, or activities here from their detail pages — they'll stay readable without internet."
+						description="Save articles, prompts, or activities here from their detail pages; they'll stay readable without internet."
 						cta-label="Browse Articles"
 						cta-icon="mdi:book-open-page-variant-outline"
 						cta-to="/tabs/discover?tab=article"
@@ -183,7 +183,7 @@ async function refreshUsedSpace() {
 	try {
 		usedSpace.value = await downloads.usedSpace();
 	} catch {
-		// best-effort — leave the previous value visible
+		// best-effort; leave the previous value visible
 	}
 }
 

@@ -144,7 +144,7 @@ const loginTour: SiteTourStep[] = [
 		id: 'login',
 		title: 'Welcome Back',
 		description:
-			'Glad to have you again. You can sign in with the same method you used to sign up — OAuth provider, or username + password.',
+			'Glad to have you again. You can sign in with the same method you used to sign up: OAuth provider, or username + password.',
 		footer: 'Forgot your password? You can reset it from the form below.',
 		icon: 'mdi:login-variant'
 	},
@@ -160,7 +160,7 @@ const loginTour: SiteTourStep[] = [
 		id: 'login-form',
 		title: 'Username & Password',
 		description:
-			'Use the username or email you signed up with, plus your password. We never email your password — if asked to "confirm" it via email, that\'s a phishing attempt.',
+			'Use the username or email you signed up with, plus your password. We never email your password; if asked to "confirm" it via email, that\'s a phishing attempt.',
 		footer: 'Trouble logging in? Use the password reset link to get back in via email.',
 		icon: 'mdi:form-textbox-password'
 	}

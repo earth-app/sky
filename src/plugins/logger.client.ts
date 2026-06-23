@@ -16,7 +16,7 @@ export default defineNuxtPlugin(() => {
 		});
 	});
 
-	// uncaught errors and rejections — keep meta minimal to avoid leaking payloads
+	// uncaught errors and rejections; keep meta minimal to avoid leaking payloads
 	window.addEventListener('error', (event) => {
 		logError('window.error', event.message || 'unknown error', {
 			filename: event.filename,

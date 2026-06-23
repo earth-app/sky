@@ -33,7 +33,7 @@
 				<span class="font-medium text-sm"
 					>Syncing {{ pendingMutationCount }} change{{
 						pendingMutationCount === 1 ? '' : 's'
-					}}…</span
+					}}...</span
 				>
 			</div>
 		</div>
@@ -160,16 +160,16 @@ async function shareCelebration() {
 			points: payload?.points
 		});
 	} else {
-		// no questId/self id (e.g. fresh hydration) — share a plain text win
+		// no questId/self id (e.g. fresh hydration): share a plain text win
 		const title = payload?.questTitle || 'a quest';
 		const points = payload?.points;
 		const text = points
-			? `I just completed "${title}" on The Earth App — earned ${points} Impact Points!`
+			? `I just completed "${title}" on The Earth App: earned ${points} Impact Points!`
 			: `I just completed "${title}" on The Earth App!`;
 		try {
 			await Share.share({ title: 'Quest Complete', text, dialogTitle: 'Share Your Quest Win' });
 		} catch {
-			// user cancelled or plugin unavailable — silently swallow
+			// user cancelled or plugin unavailable; silently swallow
 		}
 	}
 
@@ -185,7 +185,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'title',
 		title: 'Welcome to The Earth App',
 		description:
-			'A new kind of social experience: discover hobbies, dive into articles, answer thoughtful prompts, and meet people with similar interests.\n\nThis short tour will walk you through the highlights — feel free to skip it at any time with the X button or by tapping outside.',
+			'A new kind of social experience: discover hobbies, dive into articles, answer thoughtful prompts, and meet people with similar interests.\n\nThis short tour will walk you through the highlights: feel free to skip it at any time with the X button or by tapping outside.',
 		footer: 'Tap Next to continue, or use the hardware back button to exit.',
 		icon: 'mdi:earth',
 		placement: 'center',
@@ -203,7 +203,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 	{
 		url: '/tabs/discover?tab=activity',
 		id: 'discover-search',
-		title: 'Activities — Find What You Love',
+		title: 'Activities: Find What You Love',
 		description:
 			'Activities are hobbies, sports, and interests you can explore. Each one has curated guides, resources, and even quests you can complete to level up.',
 		footer: 'Tip: pick a few activities on your profile to get personalized recommendations.',
@@ -221,9 +221,9 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 	{
 		url: '/tabs/discover?tab=article',
 		id: 'discover-search',
-		title: 'Articles — Read & Learn',
+		title: 'Articles: Read & Learn',
 		description:
-			'Bite-sized articles tailored to your interests. Read about science, culture, sustainability, and more — then take a quick quiz to lock in what you learned.\n\nArticles auto-archive after 2 weeks, so the catalog stays fresh. Writers: publish now while readers are looking.',
+			'Bite-sized articles tailored to your interests. Read about science, culture, sustainability, and more: then take a quick quiz to lock in what you learned.\n\nArticles auto-archive after 2 weeks, so the catalog stays fresh. Writers: publish now while readers are looking.',
 		footer: 'Articles personalize over time as you engage with the community.',
 		icon: 'mdi:book-open-page-variant-outline',
 		prerendered: true
@@ -231,10 +231,10 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 	{
 		url: '/tabs/discover?tab=prompt',
 		id: 'discover-search',
-		title: 'Prompts — Get Creative',
+		title: 'Prompts: Get Creative',
 		description:
-			"Daily creative prompts to spark your imagination. Share a short response, browse what others wrote, and discover new perspectives from the community.\n\nPrompts vanish after 2 days — if you've got something to say, say it now.",
-		footer: 'Your answers can be public, friends-only, or private — your call.',
+			"Daily creative prompts to spark your imagination. Share a short response, browse what others wrote, and discover new perspectives from the community.\n\nPrompts vanish after 2 days: if you've got something to say, say it now.",
+		footer: 'Your answers can be public, friends-only, or private: your call.',
 		icon: 'mdi:lightbulb-on-outline',
 		prerendered: true
 	},
@@ -262,7 +262,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'profile-title',
 		title: 'Your Profile',
 		description:
-			'Your profile is the heart of your Earth App experience. The activities you pick power your recommendations across the entire app — articles, prompts, and events.',
+			'Your profile is the heart of your Earth App experience. The activities you pick power your recommendations across the entire app: articles, prompts, and events.',
 		footer: 'A complete profile gets far more friend requests and replies.',
 		anonymous: false,
 		icon: 'mdi:account-circle-outline'
@@ -271,7 +271,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'avatar',
 		title: 'Your Avatar',
 		description:
-			'Your avatar is generated from the activities you choose — no boring placeholder! Regenerate it any time, or unlock decorative cosmetics with Impact Points.',
+			'Your avatar is generated from the activities you choose: no boring placeholder! Regenerate it any time, or unlock decorative cosmetics with Impact Points.',
 		footer: 'Customize it to match your vibe.',
 		anonymous: false,
 		icon: 'mdi:face-man-shimmer-outline'
@@ -317,7 +317,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		title: 'Quests',
 		description:
 			'Quests are guided journeys that turn an activity into a structured adventure with steps, rewards, and a satisfying finish. Start with one tied to an activity you already love.',
-		footer: 'You can only have one active quest at a time — choose wisely!',
+		footer: 'You can only have one active quest at a time: choose wisely!',
 		anonymous: false,
 		icon: 'mdi:map-marker-path',
 		cta: {
@@ -333,7 +333,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'badges',
 		title: 'Badges',
 		description:
-			'Badges celebrate your milestones — first article read, first quest completed, streaks, mastery achievements, and more. They show on your public profile.',
+			'Badges celebrate your milestones: first article read, first quest completed, streaks, mastery achievements, and more. They show on your public profile.',
 		footer: 'Some badges have a "Mastery" path that goes way deeper if you commit.',
 		anonymous: false,
 		icon: 'mdi:shield-star-outline'
@@ -342,7 +342,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'points-history',
 		title: 'Impact Points',
 		description:
-			'Impact Points reward you for engaging with the Earth App and the world around you — reading, writing, completing quests, helping others. Spend them on cosmetics, or watch them climb the leaderboard.',
+			'Impact Points reward you for engaging with the Earth App and the world around you: reading, writing, completing quests, helping others. Spend them on cosmetics, or watch them climb the leaderboard.',
 		footer: 'Tap "Points History" to see exactly how you earned them.',
 		anonymous: false,
 		icon: 'mdi:chart-line'
@@ -352,7 +352,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		title: 'Your Activities Showcase',
 		description:
 			"Your selected activities appear here on your profile, giving friends an at-a-glance look at what you're into.",
-		footer: 'Keep this list current — recommendations follow these choices closely.',
+		footer: 'Keep this list current: recommendations follow these choices closely.',
 		anonymous: false,
 		icon: 'mdi:format-list-bulleted-square'
 	},
@@ -368,10 +368,10 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 	{
 		url: profilePath.value,
 		id: 'user-invite',
-		title: 'Invite Friends — Earn Rewards',
+		title: 'Invite Friends: Earn Rewards',
 		description:
-			'Share your personal invite link to bring friends onto the Earth App. When they join, you BOTH earn Impact Points — and you climb the Recruiter badge tiers as more friends sign up.',
-		footer: 'Tap Share to send your invite anywhere — messages, social, wherever your people are.',
+			'Share your personal invite link to bring friends onto the Earth App. When they join, you BOTH earn Impact Points: and you climb the Recruiter badge tiers as more friends sign up.',
+		footer: 'Tap Share to send your invite anywhere: messages, social, wherever your people are.',
 		anonymous: false,
 		icon: 'mdi:account-arrow-right'
 	},
@@ -379,7 +379,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'user-journeys',
 		title: 'Your Journeys',
 		description:
-			'Journeys summarize how you engage with prompts, articles, events, and activities — and reward streaks of meaningful engagement.',
+			'Journeys summarize how you engage with prompts, articles, events, and activities: and reward streaks of meaningful engagement.',
 		footer: 'Daily login alone is enough to keep most journeys going.',
 		anonymous: false,
 		icon: 'mdi:walk'
@@ -388,8 +388,8 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'user-content',
 		title: 'Your Content',
 		description:
-			"Every article and prompt response you publish lives here. It's your portfolio on the Earth App — and a great way for others to discover your perspective.",
-		footer: 'One last stop — the leaderboard.',
+			"Every article and prompt response you publish lives here. It's your portfolio on the Earth App: and a great way for others to discover your perspective.",
+		footer: 'One last stop: the leaderboard.',
 		anonymous: false,
 		icon: 'mdi:notebook-multiple'
 	},
@@ -398,7 +398,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'leaderboard-hero',
 		title: 'Friendly Competition',
 		description:
-			'See how you stack up on Impact Points and journey streaks — globally, among your friends, or inside your circle. Challenge a friend to a quest right from their row.',
+			'See how you stack up on Impact Points and journey streaks: globally, among your friends, or inside your circle. Challenge a friend to a quest right from their row.',
 		footer: "That's the tour! Tap Finish and start climbing.",
 		anonymous: false,
 		icon: 'mdi:trophy-variant',
@@ -505,7 +505,7 @@ async function handleIncomingDeepLink(url: string) {
 		await closeBrowser();
 		clearFlow();
 
-		// offline check before persisting the token — otherwise we land "logged in but no user"
+		// offline check before persisting the token: otherwise we land "logged in but no user"
 		if (isOffline.value) {
 			await showErrorToast('You appear to be offline. Reconnect and try signing in again.');
 			return;
@@ -600,7 +600,7 @@ onMounted(async () => {
 			const { value } = await Preferences.get({ key: 'session_token' });
 			if (value) authStore.setSessionToken(value);
 		} catch {
-			// Preferences unavailable — continue unauthenticated
+			// Preferences unavailable; continue unauthenticated
 		}
 	}
 
@@ -620,7 +620,7 @@ onMounted(async () => {
 
 		registerMMutationDispatcher('mark-read', async (m) => {
 			const id = typeof m.payload?.id === 'string' ? m.payload.id : null;
-			if (!id) return true; // malformed entry — drop it
+			if (!id) return true; // malformed entry; drop it
 			const res = await markNotificationRead(id);
 			return res.success === true;
 		});
@@ -775,7 +775,7 @@ useBackButton(10, () => {
 		router.back(slide);
 		return;
 	}
-	// no history — let the OS minimize the app instead of nav stack pop
+	// no history; let the OS minimize the app instead of nav stack pop
 	if (isNative) {
 		void App.minimizeApp().catch(() => App.exitApp());
 	}

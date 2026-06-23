@@ -174,7 +174,7 @@ async function postResponse() {
 	if (posting.value || isOfflineMode.value) return;
 	if (!emailGate.requireVerified('post a prompt response')) return;
 
-	// preventive client pre-check — server stays authoritative
+	// preventive client pre-check; server stays authoritative
 	const verdict = await checkText(newResponse.value);
 	if (!verdict.allowed) {
 		const reason =
@@ -261,7 +261,7 @@ const promptTour: SiteTourStep[] = [
 	{
 		title: 'Welcome to Prompts',
 		description:
-			'Prompts are short, creative or thoughtful questions designed to make you think — and to spark conversation. Read the prompt above, then scroll to see what the community wrote.',
+			'Prompts are short, creative or thoughtful questions designed to make you think and to spark conversation. Read the prompt above, then scroll to see what the community wrote.',
 		footer: "There's no right answer. The best responses are honest and specific.",
 		icon: 'mdi:lightbulb-on-outline',
 		placement: 'center',
@@ -271,7 +271,7 @@ const promptTour: SiteTourStep[] = [
 		id: 'response-input',
 		title: 'Write Your Response',
 		description:
-			'Tap here to share your thoughts. Keep it as short or as long as you like — a sentence is fine, an essay is fine.',
+			'Tap here to share your thoughts. Keep it as short or as long as you like: a sentence is fine, an essay is fine.',
 		footer: 'You must be signed in to post. Responses inherit your account privacy settings.',
 		icon: 'mdi:text-box-edit-outline',
 		actions: user.value ? [{ type: 'focus', target: 'response-input', delay: 300 }] : undefined

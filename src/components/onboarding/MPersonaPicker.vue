@@ -39,7 +39,7 @@
 
 				<div>
 					<p class="text-xs font-medium text-muted mb-2 uppercase tracking-wide">
-						I'm here mostly to…
+						I'm here mostly to...
 					</p>
 					<div class="grid grid-cols-2 gap-2">
 						<button
@@ -118,7 +118,7 @@
 							name="mdi:check"
 							class="size-4 mr-1"
 						/>
-						{{ saving ? 'Saving…' : 'Save & Start' }}
+						{{ saving ? 'Saving...' : 'Save & Start' }}
 					</IonButton>
 				</div>
 			</div>
@@ -201,7 +201,7 @@ async function save() {
 	try {
 		await onboarding.setPersona(persona.value, interests.value);
 		await Toast.show({
-			text: "Personalized — we'll tailor what you see next.",
+			text: "Personalized: we'll tailor what you see next.",
 			duration: 'short'
 		});
 		emit('done');

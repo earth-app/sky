@@ -110,7 +110,7 @@ watch(user, (u) => {
 	if (u) onboarding.fetchState();
 });
 
-// same auto-detection watchers crust uses — the composable + checklist data
+// same auto-detection watchers crust uses; the composable + checklist data
 // are shared, so completion semantics stay consistent across web and mobile
 watch(
 	() => user.value?.account?.email_verified,
@@ -210,7 +210,7 @@ const percent = computed(() =>
 	progress.value.total === 0 ? 0 : Math.round((progress.value.done / progress.value.total) * 100)
 );
 
-// wait for the first fetch before rendering — `state` is null on mount, which
+// wait for the first fetch before rendering; `state` is null on mount, which
 // makes isDismissed/isComplete read false and produces a one-frame flash on
 // users who have already dismissed or finished the checklist
 const show = computed(() => {
@@ -237,7 +237,7 @@ function invoke(step: (typeof ONBOARDING_CHECKLIST)[number]) {
 	if (step.completeOnClick) {
 		void onboarding.completeStep(step.id);
 	}
-	// sky routes live under /tabs/* — prefer the mobile-specific link when set
+	// sky routes live under /tabs/*; prefer the mobile-specific link when set
 	const target = step.mLink ?? step.link;
 	if (target) router.navigate(target, 'forward');
 }

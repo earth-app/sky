@@ -266,7 +266,7 @@ async function handleLogin() {
 		}
 
 		if (result.success && !result.verified) {
-			// guard against a partial 2FA payload — server should always return all three,
+			// guard against a partial 2FA payload; server should always return all three,
 			// but if it doesn't we'd push the user into a broken verify screen
 			if (!result.ticket || !result.email || typeof result.expiresIn !== 'number') {
 				error.value = 'Login response was incomplete. Please try again or contact support.';

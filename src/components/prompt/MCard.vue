@@ -14,7 +14,7 @@
 					: undefined
 			}"
 			:link="noLink ? undefined : `/tabs/prompts/${prompt.id}`"
-			:footer="`${footer} • ${prompt.responses_count ? withSuffix(prompt.responses_count) + ' Responses' : 'No Responses'}`"
+			:footer="`${footer} | ${prompt.responses_count ? withSuffix(prompt.responses_count) + ' Responses' : 'No Responses'}`"
 			:secondary-footer="secondaryFooter"
 			:report="
 				canReport

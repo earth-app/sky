@@ -987,7 +987,7 @@ function updateBoxPosition() {
 		if (!hasVisibleBounds) {
 			if (missingElementWarningId !== currentElementId) {
 				console.warn(
-					`Element with id "${currentElementId}" has no visible bounds — falling back to centered tour tooltip.`
+					`Element with id "${currentElementId}" has no visible bounds, falling back to centered tour tooltip.`
 				);
 				missingElementWarningId = currentElementId;
 			}

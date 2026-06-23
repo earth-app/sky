@@ -27,7 +27,7 @@ export function useAuthRedirect(getTarget: () => string, onFirstAuth?: () => voi
 	const redirectNow = (attempt = 0) => {
 		clearRetry();
 		// Nothing to do if a form flow took over, the user signed out, or the view already left
-		// (which means a previous navigate succeeded — we're done).
+		// (which means a previous navigate succeeded, we're done).
 		if (suppressed || !user.value || !viewActive.value) return;
 		ionRouter.navigate(getTarget(), 'root', 'replace');
 		if (attempt < MAX_RETRIES) {

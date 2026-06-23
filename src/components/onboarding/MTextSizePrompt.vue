@@ -162,7 +162,7 @@ async function maybeOpen() {
 			return;
 		}
 	} catch {
-		// preferences read failed — open anyway, the prompt is cheap to dismiss
+		// preferences read failed, open anyway, the prompt is cheap to dismiss
 	}
 
 	// seed with whatever the user already has (or normal)
