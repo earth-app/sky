@@ -608,6 +608,11 @@ onMounted(async () => {
 		await safeHydrateUser();
 	}
 
+	if (isNative) {
+		// keep a quest Live Activity (iOS) in sync with the active quest + schedule step-unlock reminders
+		useQuestLiveActivity().init();
+	}
+
 	if (import.meta.client && !questCelebrationTeardown) {
 		questCelebrationTeardown = initQuestCelebrationListener();
 	}
