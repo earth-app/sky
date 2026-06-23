@@ -34,7 +34,7 @@ public class MainActivity extends BridgeActivity {
         applyAdaptiveBackground();
 
         // Capacitor doesn't recover the WebView when Android kills its render process
-        // (OOM) — without this the app shows a blank, dead screen until a full
+        // (OOM) ; without this the app shows a blank, dead screen until a full
         // restart. Rebuild the activity so a fresh WebView is created.
         getBridge()
             .addWebViewListener(
@@ -43,11 +43,11 @@ public class MainActivity extends BridgeActivity {
                     public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
                         long now = SystemClock.elapsedRealtime();
                         if (now - lastRecreateAt < 5_000) {
-                            return false; // crash loop — let the OS handle it
+                            return false; // crash loop ; let the OS handle it
                         }
                         lastRecreateAt = now;
                         runOnUiThread(MainActivity.this::recreate);
-                        return true; // handled — don't let Android kill the app
+                        return true; // handled ; don't let Android kill the app
                     }
                 }
             );

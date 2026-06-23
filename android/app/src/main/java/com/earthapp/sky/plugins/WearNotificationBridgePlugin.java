@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets;
  *
  * <p>This is the phone side only. The watch receives via a {@code WearableListenerService}
  * implemented in a separate Wear OS app module. Until that module exists, sendMessage
- * calls resolve with delivered=0 (no connected nodes) — which is fine: the call site
+ * calls resolve with delivered=0 (no connected nodes) ; which is fine: the call site
  * treats this as best-effort. Android's default behavior already bridges standard
  * push and local notifications to paired Wear OS watches, so users still see something
  * even without the data-layer pipeline.</p>
@@ -81,7 +81,7 @@ public class WearNotificationBridgePlugin extends Plugin {
                 }
                 final int total = nodes.size();
                 // Counters guarded by `lock` rather than AtomicInteger to keep this file
-                // dependency-light — the wear data layer doesn't pull in Guava/etc.
+                // dependency-light ; the wear data layer doesn't pull in Guava/etc.
                 final int[] delivered = {0};
                 final int[] completed = {0};
                 final Object lock = new Object();
