@@ -268,7 +268,7 @@ export async function injectMissingExifWithDiagnostics(
 	if (!hasAnyCameraProp) {
 		exif[piexif.ExifIFD.FNumber] = [28, 10]; // f/2.8
 		exif[piexif.ExifIFD.ExposureTime] = [1, 60]; // 1/60s
-		exif[piexif.ExifIFD.FocalLength] = [40, 10]; // 4.0mm — typical phone wide
+		exif[piexif.ExifIFD.FocalLength] = [40, 10]; // 4.0mm; typical phone wide
 		exif[piexif.ExifIFD.LensModel] = 'Built-in Camera';
 		diagnostics.injected.cameraProps = true;
 	} else if (hasFocal) {
@@ -317,9 +317,6 @@ export async function injectMissingExifWithDiagnostics(
 		const merged = piexif.insert(exifBytes, dataUrl);
 		return { dataUrl: merged, diagnostics };
 	} catch {
-		// piexifjs throws on tags it doesn't understand (e.g. EXIF 2.31 additions
-		// some Android OEMs write). Returning the original dataUrl is safer than
-		// blocking submission — cloud will still validate whatever is present.
 		return { dataUrl, diagnostics };
 	}
 }
