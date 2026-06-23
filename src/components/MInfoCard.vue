@@ -500,7 +500,7 @@ const isValidYoutubeId = computed(
 	() => typeof props.youtubeId === 'string' && /^[A-Za-z0-9_-]{11}$/.test(props.youtubeId)
 );
 
-// web-only — native renders a thumbnail card + tap-to-open instead because WKWebView
+// web-only; native renders a thumbnail card + tap-to-open instead because WKWebView
 // drops cross-origin iframes silently (no @error). see template for the native branch.
 const youtubeEmbedSrc = computed(() => {
 	if (!isValidYoutubeId.value) return '';

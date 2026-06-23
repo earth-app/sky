@@ -67,7 +67,7 @@ const props = withDefaults(
 		ctaTo?: string;
 		secondaryLabel?: string;
 		dense?: boolean;
-		// 'success' | 'primary' | 'warning' — sets the illustration tint
+		// 'success' | 'primary' | 'warning'; sets the illustration tint
 		variant?: 'success' | 'primary' | 'warning' | 'neutral';
 	}>(),
 	{ variant: 'primary' }

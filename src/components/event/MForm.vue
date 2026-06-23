@@ -319,7 +319,7 @@ const state = reactive<EventData>({
 	fields: props.event?.fields || {}
 });
 
-// draft autosave for the create flow only — edit drafts get confusing
+// draft autosave for the create flow only; edit drafts get confusing
 const userId = computed(() => user.value?.id);
 const draft =
 	props.mode === 'create' ? useMFormDraft(state, { kind: 'event', userId, scope: 'create' }) : null;

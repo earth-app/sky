@@ -852,10 +852,7 @@ const describeSubmission = computed<string | null>(() => {
 	return typeof entry?.text === 'string' && entry.text.trim().length > 0 ? entry.text : null;
 });
 
-function formatDistance(meters: number): string {
-	if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
-	return `${Math.round(meters)} m`;
-}
+const { formatDistance } = useUnits();
 
 const stepArticle = ref<Article | undefined | null>(null);
 const stepArticleLoadFailed = ref(false);

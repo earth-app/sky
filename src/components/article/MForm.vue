@@ -139,7 +139,7 @@
 				>
 					<p class="font-medium mb-1">Quiz authoring is an Organizer feature.</p>
 					<p class="text-xs text-muted">
-						Organizer memberships are coming soon — interactive quizzes will be available then.
+						Organizer memberships are coming soon; interactive quizzes will be available then.
 					</p>
 				</div>
 				<ArticleMQuizEditor
@@ -212,7 +212,7 @@ watch(
 	}
 );
 
-// draft autosave for the create flow — edit drafts get confusing so skip them
+// draft autosave for the create flow; edit drafts get confusing so skip them
 const userId = computed(() => user.value?.id);
 const draft =
 	props.mode === 'create'
@@ -255,7 +255,7 @@ async function handleSubmit() {
 	if (props.mode === 'create' && !emailGate.requireVerified('publish articles')) return;
 	loading.value = true;
 	if (props.mode === 'create') {
-		// preventive client pre-check — server stays authoritative
+		// preventive client pre-check; server stays authoritative
 		const verdict = await checkText(`${state.title}\n${state.content}`);
 		if (!verdict.allowed) {
 			loading.value = false;

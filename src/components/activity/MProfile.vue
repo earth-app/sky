@@ -299,7 +299,7 @@ const activityTour: SiteTourStep[] = [
 		id: 'activity-icon',
 		title: `Welcome to ${props.activity.name}`,
 		description:
-			"Activities are hobbies, sports, and interests you can explore on the Earth App. Each one has its own page with curated guides, resources, and — if you're up for it — a quest.",
+			"Activities are hobbies, sports, and interests you can explore on the Earth App. Each one has its own page with curated guides, resources, and; if you're up for it; a quest.",
 		footer: 'Even if this one is new to you, give it a few cards and see if it sticks.',
 		icon: 'mdi:run-fast',
 		placement: 'bottom'
@@ -317,7 +317,7 @@ const activityTour: SiteTourStep[] = [
 		waitFor: 'card-0',
 		waitTimeout: 4000,
 		description:
-			'Each card is a curated resource — a guide, a video, an article, a useful link, or a quick how-to. Tap a card to open it.',
+			'Each card is a curated resource; a guide, a video, an article, a useful link, or a quick how-to. Tap a card to open it.',
 		footer: 'Cards load progressively. Pull to refresh for a fresh shuffle.',
 		icon: 'mdi:cards-outline',
 		highlightPadding: 12

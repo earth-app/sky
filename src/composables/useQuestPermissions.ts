@@ -107,11 +107,14 @@ export function useQuestPermissions() {
 	async function ensureHealthKit(): Promise<boolean> {
 		if (Capacitor.getPlatform() !== 'ios') return true;
 		try {
-			const { requestAuthorization } = useHealthKit();
+			const { isAvailable, requestAuthorization } = useHealthKit();
+			// plugin missing (UNIMPLEMENTED) or no health data -> don't block or prompt;
+			// distance still accrues from the pedometer. only a real grant/deny gates here.
+			if (!(await isAvailable())) return true;
 			return await requestAuthorization();
 		} catch (e) {
 			console.error('HealthKit authorization request failed:', e);
-			return false;
+			return true;
 		}
 	}
 

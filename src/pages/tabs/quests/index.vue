@@ -100,7 +100,7 @@ const { quests, fetchQuests } = useQuests();
 const search = ref('');
 const isRefreshing = ref(false);
 
-// challenge / deep-link entry — /tabs/quests?open=<questId> jumps straight to that quest.
+// challenge / deep-link entry; /tabs/quests?open=<questId> jumps straight to that quest.
 // guard against re-firing on tab re-entry by clearing the query once handled.
 function maybeOpenQuest() {
 	const open = typeof route.query.open === 'string' ? route.query.open : '';
@@ -117,6 +117,8 @@ async function refreshQuestData() {
 			fetchUserQuest(true),
 			fetchQuestHistory({ force: true, limit: HISTORY_PAGE_LIMIT, search: search.value })
 		]);
+		// manual checker: re-arm the quest Live Activity now that the active quest is fresh
+		void useQuestLiveActivity().forceResync();
 	} finally {
 		isRefreshing.value = false;
 	}
@@ -134,7 +136,7 @@ watch(
 );
 
 // merge static catalog with history so dynamic quests (badge_mastery, activity, custom)
-// — which never appear in the catalog — still show up once they've been started/completed
+//; which never appear in the catalog; still show up once they've been started/completed
 const allQuests = computed<Quest[]>(() => {
 	const merged = new Map<string, Quest>();
 	for (const q of quests.value ?? []) merged.set(q.id, q);

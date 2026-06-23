@@ -104,7 +104,7 @@ const onView = () => {
 const footerCopy = computed(() => {
 	if (!current.value) return '';
 	return current.value.trackerId
-		? 'Keep going — more badges are waiting in your quests.'
+		? 'Keep going; more badges are waiting in your quests.'
 		: 'Earned through your quest progress. Keep going.';
 });
 
@@ -113,7 +113,7 @@ watch(
 	(next, prev) => {
 		clearTimers();
 		if (!next) return;
-		// success haptic on appear — capacitor swallows on web
+		// success haptic on appear; capacitor swallows on web
 		void notifySuccess();
 		if (prev) {
 			gapTimer = setTimeout(() => {

@@ -86,7 +86,7 @@ export async function scheduleStepUnlockNotification(opts: {
 					body: `Your next step in "${opts.questTitle}" is ready to complete.`,
 					schedule: { at: new Date(opts.unlockAt) },
 					channelId: LOCAL_NOTIF_CHANNELS.QUEST_REMINDERS,
-					extra: { route: `/tabs/quests/${opts.questId}` }
+					extra: { route: `/tabs/quests/${opts.questId}?step=${opts.stepIndex}` }
 				}
 			]
 		});

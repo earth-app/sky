@@ -25,7 +25,7 @@
 		<IonContent :scroll-y="true">
 			<div class="flex flex-col w-full px-4 pb-8 max-w-3xl mx-auto">
 				<p class="text-sm opacity-80 text-center mt-4 mb-4">
-					Words you’ve saved from Word of the Day. Stored on this device — up to {{ cap }} entries.
+					Words you've saved from Word of the Day. Stored on this device, up to {{ cap }} entries.
 				</p>
 
 				<div

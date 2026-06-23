@@ -278,14 +278,14 @@ const articleTour = computed<SiteTourStep[]>(() => [
 		id: 'author-avatar',
 		title: 'Welcome to Articles',
 		description:
-			'Articles are short, focused reads on hobbies, sciences, places, and ideas. Anyone can publish — and our @cloud account adapts scientific papers into approachable summaries.',
+			'Articles are short, focused reads on hobbies, sciences, places, and ideas. Anyone can publish; and our @cloud account adapts scientific papers into approachable summaries.',
 		footer: "Tap the avatar to visit the author's profile.",
 		icon: 'mdi:book-open-page-variant-outline'
 	},
 	{
 		id: 'article-tags',
 		title: props.article.title,
-		description: `By @${props.article.author.username}.\n\n"${props.article.description}"\n\nTags below describe what this piece covers — useful for finding more like it.`,
+		description: `By @${props.article.author.username}.\n\n"${props.article.description}"\n\nTags below describe what this piece covers; useful for finding more like it.`,
 		footer: 'Tap any tag chip to find related articles.',
 		icon: 'mdi:tag-multiple-outline'
 	},
@@ -312,7 +312,7 @@ const articleTour = computed<SiteTourStep[]>(() => [
 	{
 		id: 'article-time',
 		title: 'Sources & Citations',
-		description: `Published on ${time.value}.\n\nIf this article is based on a paper or external source, you'll find the citation and a short summary right below — perfect for going deeper.`,
+		description: `Published on ${time.value}.\n\nIf this article is based on a paper or external source, you'll find the citation and a short summary right below; perfect for going deeper.`,
 		footer: 'Enjoy the read!',
 		icon: 'mdi:link-variant'
 	}

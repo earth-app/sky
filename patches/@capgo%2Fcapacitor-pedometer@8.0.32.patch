@@ -14,14 +14,14 @@ index 1294299c16855ac8ec6eed96d1cbe8ee792c512d..4efabb257d9a4f7a179b022c44587b65
  import com.getcapacitor.PermissionState;
  import com.getcapacitor.Plugin;
 @@ -38,10 +41,13 @@ public class CapacitorPedometerPlugin extends Plugin implements SensorEventListe
- 
+
      private int initialStepCount = -1;
      private int currentStepCount = 0;
 +    private int lastCumulativeSteps = -1;
      private long measurementStartTime = 0;
- 
+
      private boolean updatesActive = false;
- 
+
 +    private static final long ONE_SHOT_TIMEOUT_MS = 3000;
 +
      @Override
@@ -30,7 +30,7 @@ index 1294299c16855ac8ec6eed96d1cbe8ee792c512d..4efabb257d9a4f7a179b022c44587b65
 @@ -63,8 +69,57 @@ public class CapacitorPedometerPlugin extends Plugin implements SensorEventListe
              return;
          }
- 
+
 -        JSObject result = createMeasurementObject();
 -        call.resolve(result);
 +        // Updates already running: onSensorChanged keeps lastCumulativeSteps fresh.
@@ -41,7 +41,7 @@ index 1294299c16855ac8ec6eed96d1cbe8ee792c512d..4efabb257d9a4f7a179b022c44587b65
 +
 +        // Otherwise do a one-shot read. TYPE_STEP_COUNTER is an on-change sensor
 +        // whose first delivery after registration is the cumulative value held by
-+        // the OS — including steps taken while our process was dead — so a brief
++        // the OS; including steps taken while our process was dead; so a brief
 +        // listener gives us the authoritative snapshot needed for reconciliation.
 +        final AtomicBoolean done = new AtomicBoolean(false);
 +        final SensorEventListener oneShot = new SensorEventListener() {
@@ -85,14 +85,14 @@ index 1294299c16855ac8ec6eed96d1cbe8ee792c512d..4efabb257d9a4f7a179b022c44587b65
 +        result.put("endDate", System.currentTimeMillis());
 +        return result;
      }
- 
+
      @PluginMethod
 @@ -179,6 +234,7 @@ public class CapacitorPedometerPlugin extends Plugin implements SensorEventListe
          }
- 
+
          int totalSteps = (int) event.values[0];
 +        lastCumulativeSteps = totalSteps;
- 
+
          if (initialStepCount == -1) {
              initialStepCount = totalSteps;
 @@ -199,6 +255,9 @@ public class CapacitorPedometerPlugin extends Plugin implements SensorEventListe

@@ -94,7 +94,7 @@ const relatedLoaded = ref(false);
 const relatedEvents = ref<Event[]>([]);
 const unavailableOffline = ref(false);
 
-// event auto-deletion happens once the event has already ended — only show the
+// event auto-deletion happens once the event has already ended; only show the
 // countdown after end_date has passed so we don't confuse "the event is over"
 // with "the event is starting soon."
 const eventExpiresAt = computed(() => {
