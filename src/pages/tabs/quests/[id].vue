@@ -51,7 +51,7 @@
 						variant="subtle"
 						icon="mdi:lightning-bolt"
 						size="sm"
-						:title="`Your rank unlocks quest steps faster — ${delayReductionLabel.toLowerCase()}.`"
+						:title="`Your rank unlocks quest steps faster; ${delayReductionLabel.toLowerCase()}.`"
 						>{{ delayReductionLabel }}</UBadge
 					>
 				</div>
@@ -144,7 +144,7 @@ const {
 	fetchUserQuest,
 	fetchQuestHistoryEntry
 } = useUser(userId);
-const { fetchQuest } = useQuests();
+const { fetchQuest, getStepIcon } = useQuests();
 
 const quest = ref<Quest | null>(null);
 const progress = computed(() => {
@@ -182,16 +182,13 @@ const showHealthDisclosure = computed(
 	() => hasDistanceStep.value && Capacitor.getPlatform() === 'ios' && !isActiveQuest.value
 );
 
-// count progress slots with at least one entry — matches how the timeline marks a
-// step complete (alt-step groups are an array, regular steps a single entry).
+// count progress slots with at least one entry; matches how the timeline marks
 const completedStepCount = computed(() => {
 	const slots = progress.value;
 	if (!Array.isArray(slots)) return 0;
 	return slots.filter((slot) => (Array.isArray(slot) ? slot.length > 0 : !!slot)).length;
 });
 
-// only pass through cloud cancel signals when the open quest matches the active one.
-// history quests can't have a live in-progress runner, so signals there are irrelevant.
 const migrationSignals = computed(() => {
 	if (!quest.value || currentQuest.value?.questId !== quest.value.id) return [];
 	return currentQuest.value?.migrationSignals ?? [];
@@ -233,9 +230,6 @@ if (route.params.id) {
 	const id = route.params.id as string;
 	quest.value = await fetchQuest(id);
 
-	// Mastery quests are user-scoped. If auth hasn't hydrated yet, fetchQuest may
-	// legitimately return null even though the quest exists for the eventual user.
-	// Defer the 404 redirect to the auth watcher below.
 	if (!quest.value && id.startsWith(MASTERY_PREFIX) && user.value) {
 		await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
 		await navigateTo('/tabs/quests', { replace: true });
@@ -253,7 +247,7 @@ watch(
 
 		let viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
 
-		// retry the quest fetch now that auth is hydrated — covers the race where
+		// retry the quest fetch now that auth is hydrated; covers the race where
 		// the page mounted before user.value resolved.
 		if (!quest.value && viewedQuestId) {
 			quest.value = await fetchQuest(viewedQuestId);
@@ -272,7 +266,7 @@ watch(
 		}
 		progressChecked.value = true;
 
-		// remaining fetches only feed other surfaces — fire and forget
+		// remaining fetches only feed other surfaces; fire and forget
 		void fetchQuestHistory();
 		void fetchBadges();
 	},
@@ -307,6 +301,53 @@ const openStep = ref<
 	| null
 >(null);
 const stepOpen = ref(false);
+
+// open a step modal directly from its index; used by deep links / notification taps
+// (?step=N&alt=M), mirroring what tapping the timeline tile would do
+function openStepByIndex(stepIndex: number, altIndex?: number) {
+	if (!quest.value) return;
+	const slot = quest.value.steps[stepIndex];
+	if (!slot) return;
+	const step = Array.isArray(slot) ? (slot[altIndex ?? 0] ?? slot[0]) : slot;
+	if (!step) return;
+	const isCurrent = currentQuest.value?.questId === quest.value.id;
+	const currentIdx = isCurrent
+		? (currentQuest.value?.currentStepIndex ?? 0)
+		: quest.value.steps.length;
+	const progSlot = progress.value?.[stepIndex];
+	const completed = Array.isArray(progSlot)
+		? progSlot.some((p) => (p.altIndex ?? 0) === (altIndex ?? 0))
+		: !!progSlot;
+	openStep.value = {
+		...step,
+		icon: getStepIcon(step.type),
+		index: stepIndex,
+		...(altIndex !== undefined ? { altIndex } : {}),
+		completed,
+		isCurrentQuest: isCurrent,
+		isUnlocked: stepIndex <= currentIdx
+	};
+	stepOpen.value = true;
+}
+
+const stepQueryHandled = ref(false);
+watch(
+	[quest, progressReady, () => route.query.step],
+	() => {
+		if (stepQueryHandled.value || !quest.value || !progressReady.value) return;
+		const raw = route.query.step;
+		const idxStr = Array.isArray(raw) ? raw[0] : raw;
+		if (idxStr == null) return;
+		const stepIndex = Number(idxStr);
+		if (!Number.isInteger(stepIndex) || stepIndex < 0) return;
+		const altRaw = route.query.alt;
+		const altStr = Array.isArray(altRaw) ? altRaw[0] : altRaw;
+		const altIndex = altStr != null && altStr !== '' ? Number(altStr) : undefined;
+		stepQueryHandled.value = true;
+		openStepByIndex(stepIndex, Number.isInteger(altIndex) ? altIndex : undefined);
+	},
+	{ immediate: true }
+);
 
 let reconciling = false;
 async function reconcileQuestState() {
