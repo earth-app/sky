@@ -64,6 +64,7 @@ function isKnownTabsPath(pathname: string) {
 	if (pathname.startsWith('/tabs/articles/')) return true;
 	if (pathname.startsWith('/tabs/events/')) return true;
 	if (pathname.startsWith('/tabs/prompts/')) return true;
+	if (pathname.startsWith('/tabs/quests/')) return true;
 
 	return false;
 }
