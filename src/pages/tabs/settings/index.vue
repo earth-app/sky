@@ -274,7 +274,7 @@ async function connectProvider(provider: OAuthProvider) {
 				});
 				return;
 			} catch (error) {
-				// Plugin JS shim is present but native side isn't linked yet — fall
+				// Plugin JS shim is present but native side isn't linked yet; fall
 				// through to the browser flow so the user can still connect Apple.
 				if (!isAppleNativeUnavailableError(error)) {
 					throw error;
@@ -406,7 +406,7 @@ async function exportLogsAction() {
 			await showInfoToast('Logs Shared');
 			return;
 		} catch (err) {
-			// share sheet cancel throws — treat as a silent no-op
+			// share sheet cancel throws; treat as a silent no-op
 			const message = err instanceof Error ? err.message : String(err);
 			if (/cancel/i.test(message)) return;
 			await showInfoToast(`Logs Saved To ${result.uri}`);
@@ -414,7 +414,7 @@ async function exportLogsAction() {
 		}
 	}
 
-	// web fallback — trigger a blob download
+	// web fallback; trigger a blob download
 	if (typeof document !== 'undefined') {
 		const blob = new Blob([result.text], { type: 'text/plain' });
 		const url = URL.createObjectURL(blob);
@@ -491,11 +491,22 @@ const settingSections = computed<SettingSection[]>(() => [
 				]
 			},
 			{
+				kind: 'select',
+				key: 'units',
+				title: 'Units',
+				description: 'Show distances in imperial (mi, ft) or metric (km, m)',
+				placeholder: 'Select Units',
+				options: [
+					{ label: 'Imperial (mi, ft)', value: 'imperial' },
+					{ label: 'Metric (km, m)', value: 'metric' }
+				]
+			},
+			{
 				kind: 'toggle',
 				key: 'cardThumbnails',
 				title: 'Card Thumbnails',
 				description: 'Show thumbnails on content cards for a more visual experience',
-				placeholder: 'Show thumbnails'
+				placeholder: 'Show Thumbnails'
 			},
 			{
 				kind: 'toggle',
