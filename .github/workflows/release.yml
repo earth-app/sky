@@ -43,7 +43,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ env.VERSION }}${{ github.event.inputs.suffix }}
-          name: crust v${{ env.VERSION }}${{ github.event.inputs.suffix }}
+          name: sky v${{ env.VERSION }}${{ github.event.inputs.suffix }}
           body: ${{ steps.changelog.outputs.changelog || github.event.inputs.changelog }}
           draft: false
           prerelease: ${{ github.ref_name != 'master' }}
