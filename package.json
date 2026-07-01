@@ -50,11 +50,11 @@
     "@capgo/capacitor-pedometer": "^8.0.36",
     "@capgo/capacitor-watch": "^8.0.24",
     "@codecov/nuxt-plugin": "^2.0.1",
-    "@earth-app/crust": "0.4.2-634db10",
-    "@earth-app/ocean": "1.0.1",
+    "@earth-app/crust": "0.4.2-f6a6517",
+    "@earth-app/ocean": "1.1.0",
     "@ionic/pwa-elements": "^3.4.0",
-    "@ionic/vue": "8.8.1",
-    "@ionic/vue-router": "8.8.1",
+    "@ionic/vue": "8.8.13",
+    "@ionic/vue-router": "8.8.13",
     "@nuxt/icon": "^2.2.3",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.9.0",
@@ -77,16 +77,16 @@
     "vue": "^3.5.38"
   },
   "overrides": {
-    "@ionic/core": "8.8.1",
-    "@ionic/vue": "8.8.1",
-    "@ionic/vue-router": "8.8.1"
+    "@ionic/core": "8.8.13",
+    "@ionic/vue": "8.8.13",
+    "@ionic/vue-router": "8.8.13"
   },
   "patchedDependencies": {
     "@capacitor-community/apple-sign-in@7.1.0": "patches/@capacitor-community%2Fapple-sign-in@7.1.0.patch",
     "@capgo/capacitor-pedometer@8.0.32": "patches/@capgo%2Fcapacitor-pedometer@8.0.32.patch"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.1.0",
+    "@capacitor/cli": "8.4.1",
     "@iconify-json/line-md": "^1.2.16",
     "@iconify-json/logos": "^1.2.11",
     "@ionic/cli": "^7.2.1",
@@ -97,7 +97,7 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "prettier-plugin-tailwindcss": "^0.7.4",
+    "prettier-plugin-tailwindcss": "^0.8.0",
     "vue-tsc": "^3.3.5"
   },
   "lint-staged": {
