@@ -151,7 +151,7 @@ jobs:
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
       - name: Build Test Build
-        run: bun run build:test
+        run: bun run build:e2e
       - name: Run E2E tests with Coverage
         run: bun run test:e2e:coverage
         env:
