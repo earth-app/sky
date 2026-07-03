@@ -95,6 +95,26 @@
 						</IonItem>
 					</IonList>
 				</template>
+
+				<div
+					v-else
+					class="w-full rounded-xl border border-black/20 light:border-gray-300 px-6 py-10 text-center"
+				>
+					<UIcon
+						name="mdi:cloud-alert-outline"
+						class="size-10 text-warning mb-2"
+					/>
+					<h2 class="text-base! font-semibold m-0! mb-2!">Status Unavailable</h2>
+					<p class="text-sm opacity-80 m-0! mb-4!">
+						We could not load your moderation status. It may be a connection hiccup.
+					</p>
+					<IonButton
+						size="small"
+						fill="outline"
+						@click="retry"
+						>Try Again</IonButton
+					>
+				</div>
 			</div>
 		</IonContent>
 	</IonPage>
@@ -202,6 +222,15 @@ async function fetchModeration() {
 		status.value = res.data;
 	} else {
 		await showErrorToast(res.message, { fallback: 'Could not load your moderation status.' });
+	}
+}
+
+async function retry() {
+	loading.value = true;
+	try {
+		await fetchModeration();
+	} finally {
+		loading.value = false;
 	}
 }
 
