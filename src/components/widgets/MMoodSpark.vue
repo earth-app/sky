@@ -14,7 +14,7 @@
 		</IonCardHeader>
 		<IonCardContent class="pt-2 pb-3">
 			<div
-				v-if="!hasVoted"
+				v-if="!showResults"
 				class="grid grid-cols-3 gap-2"
 			>
 				<button
@@ -119,6 +119,9 @@ const MOOD_LABELS: Record<MoodEmoji, string> = {
 const myVote = ref<MoodEmoji | null>(null);
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
+
+// localStorage-backed hasVoted isn't reactive to a fresh vote, so also flip on myVote
+const showResults = computed(() => hasVoted.value || myVote.value !== null);
 
 const percentages = computed<Record<MoodEmoji, number>>(() => {
 	const counts = snapshot.value?.counts;
