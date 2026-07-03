@@ -110,13 +110,17 @@
 import slide from '~/animations/slide';
 
 const { user, avatar128, fetchUser } = useAuth();
+const authStore = useAuthStore();
 const route = useRoute();
 const dashboardRefreshSignal = useState<number>('dashboard-refresh-signal', () => 0);
 const discoverScrollSignal = useState<number>('discover-scroll-signal', () => 0);
 
-const profileHref = computed(() =>
-	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/profile'
-);
+const profileHref = computed(() => {
+	if (user.value?.username) return `/tabs/profile/@${user.value.username}`;
+	if (authStore.sessionToken) return '/tabs/profile/editor';
+
+	return '/profile';
+});
 
 function handleHomeButtonClick(event: Event) {
 	if (route.path.startsWith('/tabs/dashboard')) {
