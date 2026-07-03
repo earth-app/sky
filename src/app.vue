@@ -118,8 +118,14 @@ const isNative = Capacitor.isNativePlatform();
 
 const WELCOME_TOUR_RESUME_KEY = 'sky:welcome-tour-resume-step';
 
-// save the current step on close so the dashboard can offer a "Continue tour" chip;
-// MSiteTour already marks complete internally on the Finish path
+// compact last-known user, persisted so cold launch paints the avatar tab before the network resolves
+const CURRENT_USER_KEY = 'current_user';
+type CachedCurrentUser = {
+	id: string;
+	username: string;
+	avatar_url: string | null;
+};
+
 function handleWelcomeTourClosed() {
 	if (tourCompleted('welcome')) {
 		void Preferences.remove({ key: WELCOME_TOUR_RESUME_KEY }).catch(() => {});
@@ -450,6 +456,28 @@ if (import.meta.client) {
 		},
 		{ immediate: true }
 	);
+
+	let userMirrorPrimed = false;
+	watch(
+		() => authStore.currentUser,
+		(value) => {
+			if (value) {
+				const snapshot: CachedCurrentUser = {
+					id: value.id,
+					username: value.username,
+					avatar_url: value.account?.avatar_url ?? null
+				};
+				void Preferences.set({
+					key: CURRENT_USER_KEY,
+					value: JSON.stringify(snapshot)
+				}).catch(() => {});
+			} else if (userMirrorPrimed) {
+				void Preferences.remove({ key: CURRENT_USER_KEY }).catch(() => {});
+			}
+			userMirrorPrimed = true;
+		},
+		{ immediate: true }
+	);
 }
 
 const appName = config.name;
@@ -514,10 +542,13 @@ async function handleIncomingDeepLink(url: string) {
 		authStore.setSessionToken(resolved.sessionToken);
 		notifySuccess();
 
-		await safeHydrateUser();
+		// oauth is the only flow that hydrates purely via /v2/users/current; force
+		// the fetch so currentUser populates (avatar + username + profileHref) even
+		// though a token was just set (the default shouldForce heuristic would skip it)
+		await safeHydrateUser(true);
 		if (!authStore.sessionToken) {
 			authStore.setSessionToken(resolved.sessionToken);
-			await safeHydrateUser();
+			await safeHydrateUser(true);
 		}
 
 		// if OAuth was started somewhere without an in-outlet `user` watcher,
@@ -548,21 +579,57 @@ async function handleAppUrlOpen(event: URLOpenListenerEvent) {
 
 // settings & other
 
-async function hydrateUser() {
+async function hydrateUser(force?: boolean) {
 	const hasToken = Boolean(authStore.sessionToken);
-	const shouldForce = !hasToken;
+	const shouldForce = force ?? !hasToken;
+
 	await fetchUser(shouldForce);
 }
 
-async function safeHydrateUser() {
+async function safeHydrateUser(force?: boolean) {
 	try {
-		await hydrateUser();
+		await hydrateUser(force);
 	} catch (error) {
 		console.warn('User hydration failed:', error);
 	}
 }
 
+async function bootstrapAuth() {
+	if (!authStore.sessionToken) {
+		try {
+			const { value } = await Preferences.get({ key: 'session_token' });
+			if (value) authStore.setSessionToken(value);
+		} catch {
+			// Preferences unavailable; continue unauthenticated
+		}
+	}
+
+	if (authStore.sessionToken && !authStore.currentUser) {
+		try {
+			const { value } = await Preferences.get({ key: CURRENT_USER_KEY });
+			if (value) {
+				const cached = JSON.parse(value) as Partial<CachedCurrentUser>;
+				if (cached?.id && cached?.username) {
+					authStore.currentUser = {
+						id: cached.id,
+						username: cached.username,
+						account: { avatar_url: cached.avatar_url ?? undefined }
+					} as unknown as NonNullable<typeof authStore.currentUser>;
+				}
+			}
+		} catch {
+			// no cached user or parse failure; the fetch below will populate it
+		}
+	}
+
+	if (!(await isOfflineModePreferred())) {
+		await safeHydrateUser(true);
+	}
+}
+
 onMounted(async () => {
+	const authReady = bootstrapAuth();
+
 	try {
 		await initSettings();
 	} catch (error) {
@@ -595,18 +662,9 @@ onMounted(async () => {
 		});
 	}
 
-	if (!authStore.sessionToken) {
-		try {
-			const { value } = await Preferences.get({ key: 'session_token' });
-			if (value) authStore.setSessionToken(value);
-		} catch {
-			// Preferences unavailable; continue unauthenticated
-		}
-	}
-
-	if (!isOffline.value) {
-		await safeHydrateUser();
-	}
+	// settled by now on the fast path; awaited so downstream native/notification
+	// setup still sees a resolved currentUser
+	await authReady;
 
 	if (isNative) {
 		// keep a quest Live Activity (iOS) in sync with the active quest + schedule step-unlock reminders
