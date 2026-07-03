@@ -284,7 +284,10 @@ async function handleSignup() {
 		const status = statusMatch ? Number(statusMatch[1]) : null;
 
 		if (status === 409) {
-			error.value = 'That username is already taken. Please choose another.';
+			// backend returns 409 for both duplicate username and duplicate email
+			error.value = /email/i.test(result.message ?? '')
+				? 'An account with this email already exists. Try logging in instead.'
+				: 'That username is already taken. Please choose another.';
 		} else if (status === 400 || status === 422) {
 			error.value = 'Some of the sign up details look invalid. Please review them and try again.';
 		} else if (status === 429) {
