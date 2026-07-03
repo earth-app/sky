@@ -323,22 +323,12 @@ let lastSteps: number | null = null;
 let lastPedDistance: number | null = null;
 let lastSampleAt = 0;
 let rmsSamples: { t: number; mag: number }[] = [];
-// active-tracking window, re-anchored on each attach. the poll's HealthKit/pedometer queries run
-// over [windowStart, now] (+ windowBaseM = progress at attach) so they fold in ONLY the current
-// active session, never paused/closed/incidental periods or old workouts (the "large old chunk" bug)
 let windowStart = 0;
 let windowBaseM = 0;
 let lastSyncNotifyAt = 0;
-// re-entry guards: `tracking` only flips true at the END of start(), so a rapid second tap would
-// re-enter and attach a SECOND set of listeners (-> doubled distance); concurrent syncs (observer +
-// poll + resume) could merge/notify the same workout twice
 let startInFlight = false;
 let syncInFlight = false;
-// one-shot so the live pedometer AND a HealthKit sync crossing the goal in the same tick don't
-// both fire the success toast/haptic; re-armed per session in adoptKey/reset
 let goalNotified = false;
-
-// ---- haptics ----------------------------------------------------------------
 
 async function hapticImpact() {
 	try {
@@ -355,8 +345,6 @@ async function hapticSuccess() {
 		// no haptics on this device/platform
 	}
 }
-
-// ---- persistence ------------------------------------------------------------
 
 function notificationIdFor(key: string, offset: number): number {
 	let h = 5381;
@@ -406,8 +394,6 @@ async function clearKey(key: string) {
 	await Preferences.remove({ key });
 	await cancelExpiryNotifications(key);
 }
-
-// ---- notifications ----------------------------------------------------------
 
 async function ensureNotificationPermission(): Promise<boolean> {
 	try {
@@ -523,8 +509,6 @@ async function notifyGoalReached(delta = 0) {
 	}
 }
 
-// ---- live activity ----------------------------------------------------------
-
 // the live activity is owned by the quest controller below (driven by the active quest);
 // the distance engine only feeds it the live fraction and re-syncs; it never owns the LA
 function currentDistanceFraction(): number {
@@ -544,6 +528,12 @@ function liveActivityUpdate(force = false) {
 function liveActivityEnd() {
 	setDistanceFraction(currentDistanceFraction());
 	void syncQuestLiveActivity();
+}
+
+function resyncQuestLiveActivityAfterAdvance() {
+	setTimeout(() => {
+		void syncQuestLiveActivity();
+	}, 0);
 }
 
 async function clearOrphanLiveActivity() {
@@ -581,6 +571,9 @@ function addDistance(deltaMeters: number, elapsedMs: number) {
 		void pause();
 		void liveActivityEnd();
 		void notifyGoalReached();
+		// foreground auto-submit (MDistance watch on goalReached) advances the step right after this;
+		// re-sync so the LA moves to the next step instead of sticking on the just-completed one
+		resyncQuestLiveActivityAfterAdvance();
 	}
 }
 
@@ -730,14 +723,14 @@ async function syncFromBackground(opts: { manual?: boolean } = {}): Promise<numb
 			void pause();
 			void liveActivityEnd();
 			void notifyGoalReached(delta);
+
+			resyncQuestLiveActivityAfterAdvance();
 		}
 		return delta;
 	} finally {
 		syncInFlight = false;
 	}
 }
-
-// ---- listener lifecycle -----------------------------------------------------
 
 function onAppStateChange(state: AppState) {
 	if (!state.isActive) return;
@@ -830,8 +823,6 @@ async function detachListeners() {
 		void useHealthKit().stopObserving();
 	}
 }
-
-// ---- engine controls --------------------------------------------------------
 
 async function adoptKey(stepRef: DistanceStepRef) {
 	const key = distanceStorageKey(stepRef);
@@ -1339,6 +1330,9 @@ export function useDistanceTracker(getStepRef: () => DistanceStepRef) {
 		refreshSnapshot,
 		// drop the persisted distance + its expiry notifications once the step is submitted
 		discardSaved: () => clearKey(distanceStorageKey(getStepRef())),
+		// call AFTER a successful step submit (once the store's currentStepIndex has advanced) so the
+		// LA jumps to the next step immediately, instead of waiting on the deep watcher's next tick
+		resyncLiveActivityAfterSubmit: () => resyncQuestLiveActivityAfterAdvance(),
 		syncPulse,
 		lastSyncDelta
 	};
