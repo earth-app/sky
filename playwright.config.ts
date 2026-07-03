@@ -33,6 +33,12 @@ const coverage = process.env.COVERAGE === '1';
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3001';
 const prodServer = process.env.PLAYWRIGHT_PROD === '1';
 
+const chromiumArgs = [
+	'--disable-background-timer-throttling',
+	'--disable-backgrounding-occluded-windows',
+	'--disable-renderer-backgrounding'
+];
+
 const reporters: any[] = [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]];
 
 if (isCI) {
@@ -85,13 +91,13 @@ export default defineConfig<ConfigOptions>({
 			name: 'chromium',
 			// mobile/responsive specs belong to the Pixel 7 project
 			testIgnore: /\.(mobile|responsive)\.spec\.ts$/,
-			use: { ...devices['Desktop Chrome'] }
+			use: { ...devices['Desktop Chrome'], launchOptions: { args: chromiumArgs } }
 		},
 		{
 			// Android System WebView + Android Chrome both run Chromium (Blink)
 			name: 'mobile-chromium',
 			testMatch: /\.(mobile|responsive)\.spec\.ts$/,
-			use: { ...devices['Pixel 7'] }
+			use: { ...devices['Pixel 7'], launchOptions: { args: chromiumArgs } }
 		}
 	]
 });

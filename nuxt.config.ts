@@ -22,7 +22,9 @@ export default defineNuxtConfig({
 			appleClientId: process.env.NUXT_PUBLIC_APPLE_CLIENT_ID || '',
 			appleTeamId: process.env.NUXT_PUBLIC_APPLE_TEAM_ID || '',
 			// public keys
-			mapsApiKey: process.env.NUXT_PUBLIC_MAPS_API_KEY || ''
+			mapsApiKey: process.env.NUXT_PUBLIC_MAPS_API_KEY || '',
+			// gates test-only pages (__test__/*) + the client-moderation e2e signature hook
+			testBuild: process.env.NUXT_PUBLIC_TEST_BUILD === '1'
 		}
 	},
 	ssr: false,
@@ -72,7 +74,8 @@ export default defineNuxtConfig({
 		server: {
 			hmr: {
 				host: '127.0.0.1',
-				clientPort: 3001,
+				// match dev:test's --port so HMR connects when e2e runs on a dedicated port
+				clientPort: Number(process.env.SKY_PORT) || 3001,
 				protocol: 'ws'
 			}
 		},
