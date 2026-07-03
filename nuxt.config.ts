@@ -28,6 +28,11 @@ export default defineNuxtConfig({
 		}
 	},
 	ssr: false,
+	// emit client sourcemaps only in test builds so the e2e V8->istanbul merge can remap
+	// coverage onto src/*
+	sourcemap: {
+		client: process.env.NUXT_PUBLIC_TEST_BUILD === '1'
+	},
 	// Disable devtools in production to reduce client bundle size and overhead
 	devtools: { enabled: process.env.NODE_ENV !== 'production' },
 	srcDir: 'src',
