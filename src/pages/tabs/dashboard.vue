@@ -351,6 +351,17 @@ import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
 import { theme } from '~/composables/useSettings';
 
+// run non-critical work after first paint; idle callback when available, microtask-ish fallback otherwise
+function whenIdle(cb: () => void) {
+	const ric = (globalThis as any).requestIdleCallback as
+		((c: () => void, opts?: { timeout?: number }) => number) | undefined;
+	if (typeof ric === 'function') {
+		ric(cb, { timeout: 2000 });
+	} else {
+		setTimeout(cb, 1);
+	}
+}
+
 const onboardingOpen = ref(false);
 const personaOpen = ref(false);
 const onboarding = useOnboarding();
@@ -1002,14 +1013,21 @@ onMounted(async () => {
 			fetchEventSubmissions
 		} = useUser(user.value.id, makeMServerRequest);
 
+		// critical: active quest (primes the quests tab via the shared store) + points feed the
+		// above-the-fold hero; everything else is below-the-fold and can wait for idle time
 		fetchUserQuest();
-		fetchQuestHistory();
-		fetchCosmetics();
 		fetchPoints();
-		fetchBadges();
-		fetchMasteryList();
-		fetchAttendingEvents();
-		fetchEventSubmissions();
+
+		// deferred: cosmetics/badges/mastery/events render lower in the page, so don't compete
+		// with first paint or the feed; run them once the main thread is idle
+		whenIdle(() => {
+			fetchQuestHistory();
+			fetchCosmetics();
+			fetchBadges();
+			fetchMasteryList();
+			fetchAttendingEvents();
+			fetchEventSubmissions();
+		});
 	}
 });
 
