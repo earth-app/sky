@@ -46,6 +46,7 @@
 							<div class="flex flex-col w-full my-1">
 								<IonSelect
 									v-if="item.kind === 'select'"
+									:id="`setting-${item.key}`"
 									:label="item.title"
 									:aria-label="item.title"
 									label-placement="fixed"
@@ -90,6 +91,7 @@
 								>
 									<IonLabel>{{ item.title }}</IonLabel>
 									<IonButton
+										:id="`setting-link-${item.title.toLowerCase().replace(/\s+/g, '-')}`"
 										:router-link="item.link"
 										fill="clear"
 										:color="item.color || 'secondary'"

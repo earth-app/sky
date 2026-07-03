@@ -195,7 +195,10 @@
 					</div>
 				</Transition>
 
-				<div class="flex w-full justify-center gap-3 mt-6">
+				<div
+					id="quiz-nav"
+					class="flex w-full justify-center gap-3 mt-6"
+				>
 					<IonButton
 						color="primary"
 						size="small"
