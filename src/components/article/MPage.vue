@@ -89,9 +89,14 @@
 				mode="edit"
 				ref="editor"
 			/>
+		</div>
 
+		<div
+			v-if="quiz && quiz.length > 0"
+			class="flex gap-2 mb-4"
+		>
 			<IonButton
-				v-if="quiz && quiz.length > 0 && !score"
+				v-if="!score"
 				id="quiz-button"
 				color="secondary"
 				size="small"
@@ -105,7 +110,7 @@
 			>
 
 			<IonButton
-				v-else-if="quiz && quiz.length > 0 && score"
+				v-else
 				id="quiz-button"
 				:color="theme"
 				size="small"
@@ -182,7 +187,10 @@ const props = defineProps<{
 }>();
 
 const router = useIonRouter();
-const { quiz, fetchQuiz, score, fetchQuizScore, remove } = useArticle(props.article.id);
+const { quiz, fetchQuiz, score, fetchQuizScore, remove } = useArticle(
+	props.article.id,
+	makeMServerRequest
+);
 
 const contentParagraphs = computed(() => {
 	return props.article.content.split('\n').filter((p) => p.trim().length > 0);

@@ -46,7 +46,7 @@
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
 
 const route = useRoute();
-const { article, fetch } = useArticle(route.params.id as string);
+const { article, fetch } = useArticle(route.params.id as string, makeMServerRequest);
 
 onMounted(() => {
 	fetch();
