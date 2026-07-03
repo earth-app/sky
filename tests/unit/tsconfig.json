@@ -1,0 +1,13 @@
+{
+	"extends": "../../.nuxt/tsconfig.json",
+	"comment": "unit specs are excluded from ../tsconfig.json (the light e2e config lacks Nuxt's ambient auto-imports). this inherits the full Nuxt paths + pulls the auto-import globals (types/imports.d.ts) so the editor + vue-tsc resolve ~/ imports and composables' ref/useRuntimeConfig/etc, WITHOUT rooting nuxt.d.ts -> components.d.ts (which drags in the whole .vue graph)",
+	"compilerOptions": {
+		"types": ["node", "vitest/globals", "@nuxt/test-utils"]
+	},
+	"include": [
+		"./**/*.ts",
+		"../../.nuxt/types/imports.d.ts",
+		"../../.nuxt/types/runtime-config.d.ts",
+		"../../.nuxt/types/app.config.d.ts"
+	]
+}
