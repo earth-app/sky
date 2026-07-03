@@ -40,6 +40,7 @@
 					v-if="showSegmentSelector"
 					id="discover-segments"
 					v-model="selectedSegment"
+					@ion-change="onSegmentChange"
 					color="primary"
 					class="flex items-center py-1 w-full max-w-2xl mb-4 *:flex *:items-center *:min-w-12! *:max-w-1/6 *:text-secondary"
 				>
@@ -190,6 +191,7 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
+import { onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
 import { type Event } from 'types/event';
 import { capitalizeFully, comma } from 'utils';
 import { theme } from '~/composables/useSettings';
@@ -220,6 +222,10 @@ const SEGMENT_LABELS: Record<SegmentType, string> = {
 };
 
 const route = useRoute();
+const router = useRouter();
+// ionic freezes a tab page's useRoute() snapshot, so read the live router route for the
+// ?tab / ?tour pins (falls back to useRoute() during ssr / before the router resolves)
+const liveQuery = computed(() => router.currentRoute.value.query ?? route.query);
 
 const search = ref('');
 const activeSearch = ref('');
@@ -277,16 +283,32 @@ function parseRouteSegment(value: unknown): SegmentType | null {
 
 const isSearchMode = computed(() => activeSearch.value.length > 0);
 const routeSegment = computed<SegmentType | null>(() => {
-	const tabSegment = parseRouteSegment(route.query.tab);
+	const tabSegment = parseRouteSegment(liveQuery.value.tab);
 	if (tabSegment) return tabSegment;
 
 	// Backward compatibility with older tour query usage.
-	return parseRouteSegment(route.query.tour);
+	return parseRouteSegment(liveQuery.value.tour);
 });
 const isSegmentPinnedByRoute = computed(() => routeSegment.value !== null);
+// once the user manually taps a segment, their pick overrides the route ?tab pin (but the
+// selector stays visible - it was revealed by the pin/search and must not vanish on tap)
+const manualSegmentOverride = ref(false);
 const showSegmentSelector = computed(() => isSearchMode.value || isSegmentPinnedByRoute.value);
 const showResultsSummary = computed(() => isSearchMode.value || isSegmentPinnedByRoute.value);
-const activeSegment = computed<SegmentType>(() => routeSegment.value ?? selectedSegment.value);
+const activeSegment = computed<SegmentType>(() =>
+	manualSegmentOverride.value
+		? selectedSegment.value
+		: (routeSegment.value ?? selectedSegment.value)
+);
+
+function onSegmentChange(ev: CustomEvent) {
+	const value = parseRouteSegment((ev.detail as { value?: string }).value);
+	if (!value) return;
+	selectedSegment.value = value;
+	if (isSegmentPinnedByRoute.value && value !== routeSegment.value) {
+		manualSegmentOverride.value = true;
+	}
+}
 
 const hasMoreForSelectedSegment = computed(() => {
 	if (activeSegment.value === 'user') return hasMoreUsers.value;
@@ -365,8 +387,19 @@ watch(
 	{ flush: 'post' }
 );
 
-onMounted(() => {
-	void loadMore();
+// ionic keeps tab pages alive, so use view-enter to refresh cheaply on every re-entry
+onIonViewWillEnter(() => {
+	if (results.value.length === 0) {
+		void loadMore();
+	}
+});
+
+// leaving the kept-alive tab bumps the epoch so any in-flight fetch resolves stale and is ignored
+// (the request helpers take no AbortSignal, so the generation token is the cancellation mechanism)
+onIonViewWillLeave(() => {
+	queryGeneration.value += 1;
+	loadingGeneration.value = null;
+	isLoading.value = false;
 });
 
 onBeforeUnmount(() => {
