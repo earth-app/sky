@@ -88,6 +88,7 @@
 						: 'border-red-500/30 opacity-40 cursor-not-allowed'
 				"
 				:disabled="!canStop"
+				aria-label="Stop Recording"
 				@click="stopRecording"
 			>
 				<span class="w-5 h-5 bg-red-500 rounded-sm" />
@@ -101,6 +102,7 @@
 						: 'border-primary active:scale-90 cursor-pointer'
 				"
 				:disabled="props.disabled"
+				aria-label="Start Recording"
 				@click="startRecording"
 			>
 				<span class="w-5 h-5 bg-primary rounded-full" />
