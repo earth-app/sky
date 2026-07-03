@@ -125,15 +125,15 @@ const props = defineProps<{
 }>();
 const isOfflineMode = computed(() => Boolean(props.offlineMode));
 
-let promptResponses: ReturnType<typeof usePromptResponses> | null = null;
-const responses = computed(() => promptResponses?.responses.value || []);
+const promptResponses = shallowRef<ReturnType<typeof usePromptResponses> | null>(null);
+const responses = computed(() => promptResponses.value?.responses.value || []);
 
 function ensurePromptResponses() {
-	if (!promptResponses) {
-		promptResponses = usePromptResponses(props.prompt.id);
+	if (!promptResponses.value) {
+		promptResponses.value = usePromptResponses(props.prompt.id);
 	}
 
-	return promptResponses;
+	return promptResponses.value;
 }
 
 async function loadResponses() {
@@ -194,12 +194,12 @@ async function postResponse() {
 
 		// Tap Prompts Journey
 		const journeyRes = await tapCurrentJourney('prompt');
-		if (valid(journeyRes)) {
+		if (valid(journeyRes) && Number.isFinite(journeyRes.data.count)) {
 			await Toast.show({
 				text: `Your prompts streak is now at ${journeyRes.data.count} prompts on your journey!`,
 				duration: 'long'
 			});
-		} else {
+		} else if (!valid(journeyRes)) {
 			await Toast.show({
 				text: journeyRes.message || 'An unknown error occurred.',
 				duration: 'long'
