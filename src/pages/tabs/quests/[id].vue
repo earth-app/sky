@@ -251,11 +251,14 @@ watch(
 		// the page mounted before user.value resolved.
 		if (!quest.value && viewedQuestId) {
 			quest.value = await fetchQuest(viewedQuestId);
-			if (!quest.value && viewedQuestId.startsWith(MASTERY_PREFIX)) {
-				await showErrorToast(new Error('Badge mastery quest not found.'), {
-					duration: 'short'
-				});
-				await navigateTo('/tabs/quests', { replace: true });
+			if (!quest.value) {
+				if (viewedQuestId.startsWith(MASTERY_PREFIX)) {
+					await showErrorToast(new Error('Badge mastery quest not found.'), {
+						duration: 'short'
+					});
+					await navigateTo('/tabs/quests', { replace: true });
+				}
+				progressChecked.value = true;
 				return;
 			}
 			viewedQuestId = quest.value?.id ?? viewedQuestId;
@@ -392,4 +395,30 @@ watch(
 		closeStepModal();
 	}
 );
+
+// self-heal - reconcile on enter to pull quest state if server side is ahead
+function maybeReconcileOnEnter() {
+	if (stepOpen.value || optimisticApplied.value) return;
+	void reconcileQuestState();
+}
+
+onIonViewWillEnter(() => maybeReconcileOnEnter());
+
+// app foreground resume; reconcileQuestState mutexes itself so overlap with the view hook is safe
+let removeResumeListener: (() => void) | null = null;
+onMounted(async () => {
+	if (!Capacitor.isNativePlatform()) return;
+	const { App } = await import('@capacitor/app');
+	const handle = await App.addListener('appStateChange', ({ isActive }) => {
+		if (isActive) maybeReconcileOnEnter();
+	});
+	removeResumeListener = () => void handle.remove();
+});
+
+function teardownResume() {
+	removeResumeListener?.();
+	removeResumeListener = null;
+}
+onIonViewWillLeave(() => teardownResume());
+onBeforeUnmount(() => teardownResume());
 </script>
