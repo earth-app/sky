@@ -128,7 +128,7 @@
 			</IonButton>
 
 			<IonButton
-				v-if="goalReached && !completed"
+				v-if="goalReached && !completed && !submitted"
 				color="primary"
 				:disabled="props.disabled || submitting"
 				expand="block"
@@ -222,6 +222,9 @@ const { progress, tracking, startedAt, goalReached, syncPulse, lastSyncDelta } =
 
 const submitting = ref(false);
 const syncing = ref(false);
+const submitted = ref(false);
+const autoSubmitTried = ref(false);
+
 // disables the start/pause button + shows a stable label for the whole async start/pause, so a
 // laggy first tap can't be double-fired (which would attach duplicate trackers)
 const busy = ref(false);
@@ -309,6 +312,10 @@ async function confirmReset() {
 	if (!value) return;
 	void impactMedium();
 	await tracker.reset();
+	// fresh session can submit again
+	submitted.value = false;
+	completed.value = false;
+	autoSubmitTried.value = false;
 }
 
 async function submit() {
@@ -321,13 +328,31 @@ async function submit() {
 		// stop the session and its Live Activity, then hand the value to the step submission
 		await tracker.pause();
 		emit('capture', submittedMeters);
-		// step submitted: drop the saved distance + its expiry notifications so stale
-		// "progress expiring" pings don't fire for an already-completed step
+
+		// hide the Submit button right away; don't wait for alreadyCompleted to round-trip
+		submitted.value = true;
+		completed.value = true;
+
 		void tracker.discardSaved();
 	} finally {
 		submitting.value = false;
 	}
 }
+
+// best-effort auto-submit
+watch(goalReached, async (reached) => {
+	if (!reached || autoSubmitTried.value) return;
+	if (props.disabled || !Capacitor.isNativePlatform()) return;
+	if (completed.value || submitted.value || submitting.value) return;
+	if (progress.value < props.targetMeters) return;
+	autoSubmitTried.value = true;
+	try {
+		await submit();
+	} catch (e) {
+		// best-effort: keep the manual Submit button available, no error toast
+		console.error('[MDistance] auto-submit failed:', e);
+	}
+});
 
 async function manualSync() {
 	if (syncing.value) return;
@@ -362,7 +387,12 @@ watch(
 				s.stepIndex === props.stepIndex &&
 				(s.altIndex ?? 0) === (props.altIndex ?? 0)
 		);
-		if (hit) void tracker.cancelFromMigration(`signal for step ${hit.stepIndex}`);
+		if (hit) {
+			void tracker.cancelFromMigration(`signal for step ${hit.stepIndex}`);
+			// server cancelled this step's tracking; let a fresh session submit + auto-submit again
+			submitted.value = false;
+			autoSubmitTried.value = false;
+		}
 	},
 	{ immediate: true, deep: true }
 );
