@@ -94,9 +94,7 @@ const relatedLoaded = ref(false);
 const relatedEvents = ref<Event[]>([]);
 const unavailableOffline = ref(false);
 
-// event auto-deletion happens once the event has already ended; only show the
-// countdown after end_date has passed so we don't confuse "the event is over"
-// with "the event is starting soon."
+// event auto-deletion happens once the event has already ended
 const eventExpiresAt = computed(() => {
 	const e = event.value;
 	if (!e?.end_date || !e.timing?.has_passed) return null;
@@ -104,13 +102,14 @@ const eventExpiresAt = computed(() => {
 });
 
 const { event, fetch, fetchSimilar } = useEvent(route.params.id as string, makeMServerRequest);
-onMounted(() => {
+const eventStore = useEventStore();
+onMounted(async () => {
 	if (isOffline.value) {
 		unavailableOffline.value = true;
 		return;
 	}
 
-	fetch();
+	await eventStore.fetchEvent(route.params.id as string, true);
 });
 
 watch(isOffline, (offline) => {

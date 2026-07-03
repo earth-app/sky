@@ -58,6 +58,7 @@ const props = defineProps<{
 }>();
 
 const { user } = useAuth();
+const eventStore = useEventStore();
 const {
 	event: eventState,
 	attendees,
@@ -69,6 +70,16 @@ const {
 	fetchThumbnail,
 	unloadThumbnail
 } = useEvent(props.event.id || '', makeMServerRequest);
+
+function afterRsvp(attending: boolean) {
+	const id = props.event.id;
+	if (!id) return;
+	const current = eventStore.get(id) ?? props.event;
+	eventStore.updateEvent(id, {
+		is_attending: attending,
+		attendee_count: Math.max(0, (current.attendee_count ?? 0) + (attending ? 1 : -1))
+	});
+}
 
 onMounted(() => {
 	if (!isDataConstrained.value && !isOffline.value) {
@@ -134,14 +145,7 @@ const badges = computed(() => {
 	const array: {
 		text: string;
 		color?:
-			| 'primary'
-			| 'secondary'
-			| 'success'
-			| 'info'
-			| 'warning'
-			| 'danger'
-			| 'tertiary'
-			| 'light';
+			'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'danger' | 'tertiary' | 'light';
 		icon: string;
 		size: 'small' | 'default' | 'large';
 		link?: string;
@@ -231,39 +235,41 @@ const buttons = computed(() => {
 		disabled?: boolean;
 	}[] = [];
 
+	const ev = reactiveEvent.value;
 	const isAtCapacity = computed(() => {
-		const maxInPerson = props.event.fields?.['max_in_person'] as number | undefined;
-		const maxOnline = props.event.fields?.['max_online'] as number | undefined;
+		const maxInPerson = ev.fields?.['max_in_person'] as number | undefined;
+		const maxOnline = ev.fields?.['max_online'] as number | undefined;
 
-		if (props.event.type === 'IN_PERSON' && maxInPerson) {
+		if (ev.type === 'IN_PERSON' && maxInPerson) {
 			// skips undefined or 0
-			return props.event.attendee_count >= maxInPerson;
-		} else if (props.event.type === 'ONLINE' && maxOnline) {
+			return ev.attendee_count >= maxInPerson;
+		} else if (ev.type === 'ONLINE' && maxOnline) {
 			// skips undefined or 0
-			return props.event.attendee_count >= maxOnline;
-		} else if (props.event.type === 'HYBRID') {
+			return ev.attendee_count >= maxOnline;
+		} else if (ev.type === 'HYBRID') {
 			const totalMax = (maxInPerson || 0) + (maxOnline || 0);
 			if (totalMax > 0) {
-				return props.event.attendee_count >= totalMax;
+				return ev.attendee_count >= totalMax;
 			}
 		}
 
-		const { user: hostUser, maxEventAttendees } = useUser(props.event.hostId);
+		const { user: hostUser, maxEventAttendees } = useUser(ev.hostId);
 		if (hostUser.value) {
-			return props.event.attendee_count >= maxEventAttendees.value;
+			return ev.attendee_count >= maxEventAttendees.value;
 		}
 
 		return false;
 	});
 
-	if (props.event.hostId !== user.value?.id) {
-		if (props.event.is_attending) {
+	if (ev.hostId !== user.value?.id) {
+		if (ev.is_attending) {
 			array.push({
 				text: 'Leave Event',
 				color: 'danger',
 				size: 'small',
 				onClick: async () => {
-					await leaveEvent();
+					const res = await leaveEvent();
+					if (res?.success) afterRsvp(false);
 				}
 			});
 		} else {
@@ -281,13 +287,14 @@ const buttons = computed(() => {
 						return;
 					}
 
-					await signUpForEvent();
+					const res = await signUpForEvent();
+					if (res?.success) afterRsvp(true);
 				}
 			});
 		}
 	}
 
-	if (props.event.can_edit || props.event.is_attending) {
+	if (ev.can_edit || ev.is_attending) {
 		array.push({
 			text: `Attendees (${withSuffix(reactiveEvent.value.attendee_count)})`,
 			color: 'medium',
@@ -296,13 +303,13 @@ const buttons = computed(() => {
 		});
 	}
 
-	if (props.event.can_edit) {
+	if (ev.can_edit) {
 		array.push({
 			text: 'Manage',
 			color: 'secondary',
 			size: 'small',
 			onClick: () => {
-				navigateTo(`/tabs/events/${props.event.id}/manage`);
+				navigateTo(`/tabs/events/${ev.id}/manage`);
 			}
 		});
 
