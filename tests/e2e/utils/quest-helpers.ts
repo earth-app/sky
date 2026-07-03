@@ -123,10 +123,12 @@ export async function expectStepCompleted(page: Page): Promise<void> {
  * Assert a step-completion toast fired. notifyStepComplete in MSubmission shows
  * "Step complete!" (optionally with bonus points or "Quest Complete!").
  */
-export async function expectStepCompleteToast(page: Page): Promise<void> {
+export async function expectStepCompleteToast(page: Page, timeoutMs = 12_000): Promise<void> {
 	// completion shows a "Step/Quest complete!" toast AND closes the step modal ~650ms later.
 	// the modal-close can race the toast read, so accept either signal: a matching toast, or
 	// the step modal having closed (the step advanced). poll both.
+	// image steps (take_photo/draw) run client image moderation first, which can burn the full
+	// 8s fail-open timeout under a throttled CI mobile-chromium, so those callers pass a longer cap
 	await expect
 		.poll(
 			async () => {
@@ -136,7 +138,7 @@ export async function expectStepCompleteToast(page: Page): Promise<void> {
 				const modalOpen = await page.locator('ion-modal:visible').count();
 				return modalOpen === 0;
 			},
-			{ timeout: 12_000 }
+			{ timeout: timeoutMs }
 		)
 		.toBe(true);
 }

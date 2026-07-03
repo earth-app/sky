@@ -33,6 +33,8 @@ test.describe('Quest step: take_photo_location (native)', () => {
 		await expect(accept).toBeVisible({ timeout: 8000 });
 		await accept.click();
 
-		await expectStepCompleteToast(page);
+		// accepting the photo runs client image moderation (nsfwjs + tesseract) before the
+		// submit; on CI mobile-chromium that can eat the full 8s fail-open, so allow extra headroom
+		await expectStepCompleteToast(page, 25_000);
 	});
 });
