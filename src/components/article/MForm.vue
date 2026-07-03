@@ -287,7 +287,7 @@ async function handleSubmit() {
 			});
 
 			await draft?.clear();
-			router.push(`/articles/${res.data.id}`);
+			router.push(`/tabs/articles/${res.data.id}`);
 		} else {
 			loading.value = false;
 			if (emailGate.handleServerError(res, 'publish articles')) return;
