@@ -9,6 +9,13 @@ dist
 .build
 *.tsbuildinfo
 
+# Test outputs
+coverage
+.coverage
+playwright-report
+playwright-results
+.integration-session.json
+
 # Node dependencies
 node_modules
 
