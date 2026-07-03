@@ -225,9 +225,17 @@ onMounted(async () => {
 	if (!valid(res)) return; // silently ignore errors
 
 	if (count.data.count === res.data.count) return; // no change
+	if (!Number.isFinite(res.data.count)) return; // no valid count to show
+
+	// only show slash/total when total is a known positive number
+	const total = totalActivities.value;
+	const text =
+		Number.isFinite(total) && (total as number) > 0
+			? `You have now found ${res.data.count}/${total} activities on your journey. Keep going!`
+			: `You have now found ${res.data.count} activities on your journey. Keep going!`;
 
 	await Toast.show({
-		text: `You have now found ${res.data.count}/${totalActivities.value} activities on your journey. Keep going!`,
+		text,
 		duration: 'long'
 	});
 });

@@ -271,6 +271,7 @@ onMounted(async () => {
 	if (!valid(res)) return; // silently ignore errors
 
 	if (count.data.count === res.data.count) return; // no change
+	if (!Number.isFinite(res.data.count)) return; // no valid count to show
 
 	await Toast.show({
 		text: `You have now read ${res.data.count} articles on your journey streak. Keep going!`,
