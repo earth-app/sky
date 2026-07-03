@@ -130,8 +130,21 @@ const route = useRoute();
 const ionRouter = useIonRouter();
 const { resetPassword } = useAuth();
 
-const uid = computed(() => (typeof route.query.uid === 'string' ? route.query.uid : ''));
-const token = computed(() => (typeof route.query.token === 'string' ? route.query.token : ''));
+const router = useRouter();
+const liveQuery = computed(() => {
+	const fromRouter = router.currentRoute.value.query;
+	if (fromRouter && (fromRouter.uid || fromRouter.token)) return fromRouter;
+	if (import.meta.client) {
+		const params = new URLSearchParams(window.location.search);
+		return { uid: params.get('uid') ?? undefined, token: params.get('token') ?? undefined };
+	}
+	return route.query;
+});
+
+const uid = computed(() => (typeof liveQuery.value.uid === 'string' ? liveQuery.value.uid : ''));
+const token = computed(() =>
+	typeof liveQuery.value.token === 'string' ? liveQuery.value.token : ''
+);
 const hasValidLink = computed(() => uid.value.length > 0 && token.value.length > 0);
 
 const formSchema = z
