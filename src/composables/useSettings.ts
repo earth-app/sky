@@ -252,8 +252,7 @@ export function useAppSettings() {
 		for (const key of Object.keys(APP_SETTINGS_DEFAULTS) as AppSettingKey[]) {
 			const raw = await get<unknown>(toSettingStorageKey(key), APP_SETTINGS_DEFAULTS[key]);
 			(nextSettings as Record<AppSettingKey, string | boolean>)[key] = coerceSetting(key, raw) as
-				| string
-				| boolean;
+				string | boolean;
 		}
 
 		settings.value = nextSettings;
@@ -393,10 +392,7 @@ const STORAGE_KEY = 'sky:offline-mutation-queue-v1';
 const MAX_ATTEMPTS = 5;
 
 export type MMutationKind =
-	| 'mark-read'
-	| 'mark-all-read'
-	| 'dismiss-onboarding'
-	| 'mark-notification-delete';
+	'mark-read' | 'mark-all-read' | 'dismiss-onboarding' | 'mark-notification-delete';
 
 export interface QueuedMMutation {
 	id: string;

@@ -131,8 +131,7 @@ async function idbAppend(name: string, chunk: string): Promise<number> {
 		const getReq = store.get(name);
 		getReq.onsuccess = () => {
 			const existing = getReq.result as
-				| { name: string; content: string; modified: number; size: number }
-				| undefined;
+				{ name: string; content: string; modified: number; size: number } | undefined;
 			const next = existing ? existing.content + chunk : chunk;
 			store.put({ name, content: next, modified: Date.now(), size: next.length });
 			resolve(next.length);

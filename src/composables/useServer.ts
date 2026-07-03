@@ -43,9 +43,7 @@ const DEFAULT_RETRY_DELAY_MS = 400;
 
 function getErrorStatus(error: unknown): number | null {
 	const e = error as
-		| { statusCode?: number; status?: number; response?: { status?: number } }
-		| null
-		| undefined;
+		{ statusCode?: number; status?: number; response?: { status?: number } } | null | undefined;
 	const candidate = e?.statusCode ?? e?.status ?? e?.response?.status;
 	const numeric = Number(candidate);
 	return Number.isFinite(numeric) && numeric >= 100 && numeric < 600 ? numeric : null;
@@ -61,8 +59,7 @@ function isTransientError(error: unknown): boolean {
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export type ServerRequestResult<T> =
-	| { success: true; data: T }
-	| { success: false; message: string };
+	{ success: true; data: T } | { success: false; message: string };
 
 export interface MServerRequestOptions extends Record<string, any> {
 	/** Number of retries on transient failures (default {@link DEFAULT_RETRIES}). Set to 0 to disable. */
