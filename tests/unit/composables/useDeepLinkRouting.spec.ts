@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const prefsSet = vi.fn(async () => {});
+const prefsSet = vi.fn(async (..._args: any[]) => {});
 vi.mock('@capacitor/preferences', () => ({
 	Preferences: {
 		set: (...args: any[]) => prefsSet(...args),
