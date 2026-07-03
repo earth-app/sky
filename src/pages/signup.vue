@@ -84,8 +84,12 @@ if (typeof error === 'string') {
 
 async function bridgeReferralCode() {
 	try {
-		const fromQuery = typeof route.query.ref === 'string' ? route.query.ref : '';
-		const code = fromQuery || (await Preferences.get({ key: 'referral_code' })).value || '';
+		const fromRoute = typeof route.query.ref === 'string' ? route.query.ref : '';
+		const fromLocation = import.meta.client
+			? new URLSearchParams(window.location.search).get('ref') || ''
+			: '';
+		const code =
+			fromRoute || fromLocation || (await Preferences.get({ key: 'referral_code' })).value || '';
 		if (code && /^[0-9A-HJKMNP-TV-Z]{6}$/.test(code)) {
 			useCookie<string | null>('referral_code').value = code;
 		}
