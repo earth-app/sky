@@ -4,6 +4,7 @@ import type { Activity } from 'types/activity';
 import type { Article } from 'types/article';
 import type { Prompt } from 'types/prompts';
 import { validateSessionAllowOffline } from '~/composables/useOfflineAuth';
+import { toSettingStorageKey } from '~/composables/useSettings';
 
 export const networkOffline = ref(false);
 export const connectionType = ref<ConnectionType>('unknown');
@@ -19,6 +20,19 @@ export const isDataConstrained = computed(
 export function applyNetworkStatus(status: Pick<ConnectionStatus, 'connected' | 'connectionType'>) {
 	networkOffline.value = !status.connected;
 	connectionType.value = status.connectionType;
+}
+
+export async function isOfflineModePreferred(): Promise<boolean> {
+	if (offlineModeEnabled.value || networkOffline.value) return true;
+	if (import.meta.client && typeof navigator !== 'undefined' && !navigator.onLine) return true;
+
+	try {
+		const { Preferences } = await import('@capacitor/preferences');
+		const { value } = await Preferences.get({ key: toSettingStorageKey('offlineMode') });
+		return value === 'true' || value === JSON.stringify(true);
+	} catch {
+		return false;
+	}
 }
 
 export function setOfflineModeEnabled(enabled: boolean) {
