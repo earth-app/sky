@@ -1,0 +1,178 @@
+name: End-To-End Testing
+
+on:
+  repository_dispatch:
+    types: [mantle2-update, cloud-update]
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+
+    env:
+      DDEV_VERSION: v1.25.2
+
+    steps:
+      - name: Checkout sky
+        uses: actions/checkout@v6
+        with:
+          path: sky
+      - name: Checkout mantle2
+        uses: actions/checkout@v6
+        with:
+          repository: earth-app/mantle2
+          path: mantle2
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout cloud
+        uses: actions/checkout@v6
+        with:
+          repository: earth-app/cloud
+          path: cloud
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 'latest'
+          registries: |
+            https://registry.npmjs.org/
+            @earth-app:https://npm.pkg.github.com|$GITHUB_TOKEN
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: json, curl, mbstring, dom, intl, gd, pdo_mysql
+          coverage: none
+          tools: composer:v2
+      - name: Cache ddev Binary
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ddev
+          key: ddev-bin-${{ runner.os }}-${{ env.DDEV_VERSION }}
+      - name: Install ddev
+        run: |
+          # download+extract only on a cache miss; the tarball bundles ddev + mkcert
+          if [ ! -x "$HOME/.cache/ddev/ddev" ]; then
+            mkdir -p "$HOME/.cache/ddev"
+            curl -fsSL "https://github.com/ddev/ddev/releases/download/${DDEV_VERSION}/ddev_linux-amd64.${DDEV_VERSION}.tar.gz" \
+              | tar -xz -C "$HOME/.cache/ddev"
+          fi
+          # (re)install cached binaries onto PATH (cheap even on cache hit)
+          sudo install "$HOME/.cache/ddev/ddev" /usr/local/bin/ddev
+          [ -f "$HOME/.cache/ddev/ddev-hostname" ] && sudo install "$HOME/.cache/ddev/ddev-hostname" /usr/local/bin/ddev-hostname
+          [ -f "$HOME/.cache/ddev/mkcert" ] && sudo install "$HOME/.cache/ddev/mkcert" /usr/local/bin/mkcert
+          mkcert -install || true
+          ddev config global --instrumentation-opt-in=false
+          ddev --version
+      - name: Cache ddev Docker Images
+        if: ${{ !cancelled() }}
+        uses: actions/cache@v6
+        with:
+          path: /tmp/ddev-images
+          key: ddev-images-${{ runner.os }}-${{ env.DDEV_VERSION }}
+      - name: Load or Pull ddev Docker Images
+        run: |
+          if [ -f /tmp/ddev-images/images.tar ]; then
+            docker load -i /tmp/ddev-images/images.tar
+          else
+            # ddev pulls its own stack (webserver, mariadb, router); no docker compose here
+            ddev debug download-images
+            mkdir -p /tmp/ddev-images
+            docker images --format '{{.Repository}}:{{.Tag}}' \
+              | grep -E '^(ddev/|mariadb)' \
+              | xargs -r docker save -o /tmp/ddev-images/images.tar
+          fi
+      - name: Boot earth-app/mantle2
+        run: |
+          cd mantle2
+          bash startup.sh 2>&1 | tee /tmp/mantle2.log
+      - name: Boot earth-app/cloud
+        run: |
+          cd cloud
+          bun install --frozen-lockfile
+          bun run dev > /tmp/cloud.log 2>&1 &
+          echo $! > /tmp/cloud.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:9898/; then
+              echo "cloud is up"
+              break
+            fi
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:9898/ || (cat /tmp/cloud.log && exit 1)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          ADMIN_API_KEY: test-admin-key
+          MANTLE_URL: http://127.0.0.1:8787
+      - name: Install Sky dependencies
+        run: |
+          cd sky
+          bun add -g husky
+          bun install --frozen-lockfile
+          bun run postinstall
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Install Playwright Browsers
+        run: |
+          cd sky
+          bunx playwright install --with-deps chromium
+      - name: Build Test Bundle
+        run: |
+          cd sky
+          bun run build:test
+      - name: Run E2E tests with Coverage
+        run: |
+          cd sky
+          MOCK_DISABLED=1 COVERAGE=1 PLAYWRIGHT_PROD=1 bun run test:e2e:integration
+        env:
+          CI: true
+          PLAYWRIGHT_PROD: '1'
+          MOCK_DISABLED: '1'
+          COVERAGE: '1'
+      - name: Upload Playwright Artifacts (Failure)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-e2e
+          path: |
+            sky/playwright-report/
+            sky/playwright-results/
+            /tmp/mantle2.log
+            /tmp/cloud.log
+          retention-days: 14
+      - name: Upload to Codecov
+        if: ${{ always() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: earth-app/sky
+          working-directory: sky
+          fail_ci_if_error: false
+          flags: e2e-integration
+          files: coverage/lcov.info
+      - name: Archive Coverage Artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-integration-artifacts-${{ github.run_id }}
+          path: sky/coverage/
+          retention-days: 14
+      - name: Tear-Down Servers
+        if: always()
+        run: |
+          # mantle2 is daemonized by ddev (no PID file). cloud was launched
+          # in the background by the Boot step and recorded its PID.
+          if [ -f /tmp/cloud.pid ]; then kill "$(cat /tmp/cloud.pid)" || true; fi
+          if command -v ddev >/dev/null; then
+            (cd /tmp/drupal-mantle2 && ddev stop) || true
+          fi
