@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 
 test.describe('Verify email page (unverified user)', () => {
@@ -8,6 +8,7 @@ test.describe('Verify email page (unverified user)', () => {
 	});
 
 	test('renders the code entry UI', async ({ page, gotoHydrated }) => {
+		skipIfIntegration('depends on email_verified:false override; real admin is already verified');
 		await gotoHydrated('/verify-email');
 		await expect(page.getByText(/Email Verification/i).first()).toBeVisible({ timeout: 10_000 });
 		await expect(page.getByPlaceholder(/12345678/i)).toBeVisible();
@@ -18,6 +19,7 @@ test.describe('Verify email page (unverified user)', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('depends on email_verified:false override; real admin is already verified');
 		await gotoHydrated('/verify-email');
 
 		const codeInput = page.getByPlaceholder(/12345678/i);
@@ -34,6 +36,7 @@ test.describe('Verify email page (unverified user)', () => {
 		gotoHydrated,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on email_verified:false override; real admin is already verified');
 		await mockApi.set({
 			method: 'POST',
 			path: '/v2/users/current/verify_email',

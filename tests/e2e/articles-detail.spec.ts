@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 
 // mantle quiz-definition shape the article store expects: { questions, summary }
 const QUIZ_DEFINITION = {
@@ -22,6 +22,7 @@ const QUIZ_DEFINITION = {
 
 test.describe('Article detail page', () => {
 	test('renders the title, body and author for art-1', async ({ page, asUser, gotoHydrated }) => {
+		skipIfIntegration('depends on mock article art-1');
 		await asUser();
 		await gotoHydrated('/tabs/articles/art-1');
 
@@ -40,6 +41,7 @@ test.describe('Article detail page', () => {
 		mockApi,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('depends on mock article art-1 + mock override');
 		await asUser();
 		// article store loads the quiz from mantle on mount; seed it so the CTA renders
 		await mockApi.set({

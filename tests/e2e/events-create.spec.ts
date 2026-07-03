@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { expectNativeToast } from './utils/journey-helpers';
 import { makeEvent } from './utils/mock-data';
 import { installNativeMock } from './utils/native-mock';
@@ -9,6 +9,7 @@ test.describe('Event create (ORGANIZER)', () => {
 	});
 
 	test('renders the required fields', async ({ page, asUser, gotoHydrated }) => {
+		skipIfIntegration('depends on mock ORGANIZER account gate');
 		await asUser({ account: { account_type: 'ORGANIZER' } });
 		await gotoHydrated('/tabs/events/new');
 
@@ -23,6 +24,7 @@ test.describe('Event create (ORGANIZER)', () => {
 		mockApi,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('writes to backend + asserts mock success toast');
 		await asUser({ account: { account_type: 'ORGANIZER' } });
 		await mockApi.set({
 			backend: 'mantle',

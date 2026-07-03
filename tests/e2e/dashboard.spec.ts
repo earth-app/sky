@@ -1,9 +1,10 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 import { seedSingleStepQuest } from './utils/quest-helpers';
 
 test.describe('Dashboard tab', () => {
 	test('renders the title, greeting, and feed sections', async ({ page, gotoHydrated, asUser }) => {
+		skipIfIntegration('asserts mock @dashuser greeting');
 		await asUser({ username: 'dashuser' });
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 
@@ -36,6 +37,7 @@ test.describe('Dashboard tab', () => {
 	});
 
 	test('surfaces the MOTD card with the mock message', async ({ page, gotoHydrated, asUser }) => {
+		skipIfIntegration('depends on mock MOTD override');
 		await asUser({ username: 'dashuser' });
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 
@@ -62,6 +64,7 @@ test.describe('Dashboard tab', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded mock quest progress');
 		const user = await asUser({ username: 'dashuser' });
 		// seed an active quest tied to the logged-in user so the store primes it
 		await seedSingleStepQuest(mockApi, 'describe_text', { questId: 'q-dash-active' });

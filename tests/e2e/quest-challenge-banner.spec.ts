@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { makeChallenge, makeUser } from './utils/mock-data';
 
 test.describe('Quest challenge banner', () => {
@@ -8,6 +8,7 @@ test.describe('Quest challenge banner', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend');
 		const u = await asUser();
 		// recipient is the current user + status pending -> recipient banner branch
 		await mockApi.set({

@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 import {
 	expectStepCompleteToast,
@@ -18,6 +18,7 @@ test.describe('Quest step: scan_barcode (native)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		await asUser({ username: 'scanner' });
 		const questId = await seedSingleStepQuest(mockApi, 'scan_barcode');
 		await gotoQuestStep(page, gotoHydrated, questId, 0);
@@ -41,6 +42,7 @@ test.describe('Quest step: scan_barcode (native)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		await asUser({ username: 'scanner2' });
 		const questId = await seedSingleStepQuest(mockApi, 'scan_barcode');
 		await gotoQuestStep(page, gotoHydrated, questId, 0);

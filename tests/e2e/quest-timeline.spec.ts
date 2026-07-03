@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { makeQuest } from './utils/mock-data';
 import { installNativeMock } from './utils/native-mock';
 import {
@@ -18,6 +18,7 @@ test.describe('Quest timeline', () => {
 	});
 
 	test('starting a quest confirms then toasts', async ({ page, gotoHydrated, asUser, mockApi }) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		await asUser();
 		// register a startable quest with NO active quest, so the button reads "Start Quest"
 		await mockApi.registerQuest(makeQuest({ id: 'q-start', title: 'Startable Quest' }));
@@ -39,6 +40,7 @@ test.describe('Quest timeline', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		await asUser();
 		const questId = await seedSingleStepQuest(mockApi, 'describe_text', { questId: 'q-end' });
 		await gotoQuestDetail(page, gotoHydrated, questId);
@@ -58,6 +60,7 @@ test.describe('Quest timeline', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		await asUser();
 		await seedStepTypeQuestActive(mockApi);
 		await gotoQuestDetail(page, gotoHydrated, STEP_TYPE_QUEST_ID);
@@ -73,6 +76,7 @@ test.describe('Quest timeline', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		await asUser();
 		await seedStepTypeQuestActive(mockApi);
 		await gotoQuestDetail(page, gotoHydrated, STEP_TYPE_QUEST_ID);

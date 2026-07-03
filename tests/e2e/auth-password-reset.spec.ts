@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { expectNativeToast } from './utils/journey-helpers';
 import { installNativeMock } from './utils/native-mock';
 
@@ -40,6 +40,7 @@ test.describe('Reset password page (anonymous)', () => {
 		gotoHydrated,
 		mockApi
 	}) => {
+		skipIfIntegration('valid reset link needs a real backend token');
 		// reset submits to /v2/users/<uid>/change_password (per-id, not the /current route)
 		await mockApi.set({
 			method: 'POST',

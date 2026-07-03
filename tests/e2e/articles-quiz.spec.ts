@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 
 // 2-question quiz: multiple_choice (Paris) + true_false (True)
@@ -67,6 +67,7 @@ test.describe('Article quiz flow', () => {
 		mockApi,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('depends on mock article art-1 + mock quiz override');
 		await asUser();
 		await mockApi.setMany([
 			{
@@ -118,6 +119,7 @@ test.describe('Article quiz flow', () => {
 		mockApi,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('depends on mock article art-1 + mock quiz override');
 		await asUser();
 		await mockApi.set({
 			backend: 'mantle',

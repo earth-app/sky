@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 
 test.describe('Profile view', () => {
@@ -7,6 +7,7 @@ test.describe('Profile view', () => {
 		gotoHydrated,
 		asUser
 	}) => {
+		skipIfIntegration('mock profile fixtures');
 		const user = await asUser({ username: 'viewer' });
 		await gotoTab(page, gotoHydrated, `/tabs/profile/@${user.username}`);
 
@@ -16,6 +17,7 @@ test.describe('Profile view', () => {
 	});
 
 	test('own profile is reachable by user id too', async ({ page, gotoHydrated, asUser }) => {
+		skipIfIntegration('mock profile fixtures');
 		const user = await asUser({ username: 'viewer' });
 		await gotoTab(page, gotoHydrated, `/tabs/profile/${user.id}`);
 
@@ -24,6 +26,7 @@ test.describe('Profile view', () => {
 	});
 
 	test('another user profile hides owner-only controls', async ({ page, gotoHydrated, asUser }) => {
+		skipIfIntegration('mock profile fixtures');
 		await asUser({ username: 'viewer' });
 		// author-1 (@author) is a seeded mock user distinct from the logged-in viewer
 		await gotoTab(page, gotoHydrated, '/tabs/profile/author-1');
@@ -34,6 +37,7 @@ test.describe('Profile view', () => {
 	});
 
 	test('unknown user shows the not-found state', async ({ page, gotoHydrated, asUser }) => {
+		skipIfIntegration('mock profile fixtures');
 		await asUser({ username: 'viewer' });
 		await gotoTab(page, gotoHydrated, '/tabs/profile/does-not-exist-999');
 

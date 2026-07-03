@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 import {
 	expectStepCompleteToast,
@@ -18,6 +18,7 @@ test.describe('Quest step: take_photo_location (native)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		await asUser({ username: 'shooter' });
 		const questId = await seedSingleStepQuest(mockApi, 'take_photo_location');
 		await gotoQuestStep(page, gotoHydrated, questId, 0);

@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { makeQuest, makeQuestStep, makeUserQuestProgress } from './utils/mock-data';
 import { installNativeMock } from './utils/native-mock';
 import { gotoQuestStep, stepModal } from './utils/quest-helpers';
@@ -14,6 +14,7 @@ test.describe('Quest step: article_read_time (progress)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		await asUser({ username: 'reader' });
 
 		const questId = 'q-article_read_time';

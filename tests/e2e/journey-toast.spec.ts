@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 
 test.describe('Native toast content', () => {
@@ -11,6 +11,7 @@ test.describe('Native toast content', () => {
 		gotoHydrated,
 		asUser
 	}) => {
+		skipIfIntegration('native mock + mock journey response');
 		await asUser({ username: 'journeyuser' });
 		await gotoHydrated('/tabs/dashboard');
 		// give any async journey/sync toasts a beat to fire

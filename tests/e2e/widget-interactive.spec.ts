@@ -15,6 +15,7 @@ test.describe('Interactive feed widgets', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('testBuild harness + mock widget data');
 		await gotoHydrated(harnessUrl('MicroQuiz'));
 		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
 
@@ -34,6 +35,7 @@ test.describe('Interactive feed widgets', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('testBuild harness + mock widget data');
 		await gotoHydrated(harnessUrl('RapidFlash'));
 		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
 
@@ -87,6 +89,7 @@ test.describe('Interactive feed widgets', () => {
 	});
 
 	test('MicroReflection saves a written reflection', async ({ page, gotoHydrated }) => {
+		skipIfIntegration('testBuild harness + mock widget data');
 		await gotoHydrated(harnessUrl('MicroReflection'));
 		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
 
@@ -105,6 +108,7 @@ test.describe('Interactive feed widgets', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('testBuild harness + mock widget data');
 		await gotoHydrated(harnessUrl('ImpactTracker'));
 		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
 

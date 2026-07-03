@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 import {
 	gotoQuestStep,
@@ -18,6 +18,7 @@ test.describe('Quest step: match_terms + order_items (timed drag)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		const items = STEP_TYPE_INDEX.order_items;
 		if (!items) throw new Error('STEP_TYPE_INDEX.order_items is undefined');
 
@@ -41,6 +42,7 @@ test.describe('Quest step: match_terms + order_items (timed drag)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		const items = STEP_TYPE_INDEX.match_terms;
 		if (!items) throw new Error('STEP_TYPE_INDEX.match_terms is undefined');
 

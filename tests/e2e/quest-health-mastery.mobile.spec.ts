@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { makeBadge, makeQuest, makeQuestStep } from './utils/mock-data';
 import { installNativeMock } from './utils/native-mock';
 import { gotoQuestDetail } from './utils/quest-helpers';
@@ -15,6 +15,7 @@ test.describe('Quest health + mastery disclosures', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		await asUser();
 		// registered but not made active -> showHealthDisclosure is true on ios
 		await mockApi.registerQuest(
@@ -35,6 +36,7 @@ test.describe('Quest health + mastery disclosures', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		const u = await asUser();
 		// mastery id is badge_mastery_<badgeId>; masteryBadge resolves off the user's badges
 		await mockApi.set({

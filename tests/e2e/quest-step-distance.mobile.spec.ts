@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 import { firePedometer, gotoQuestStep, seedSingleStepQuest } from './utils/quest-helpers';
 
@@ -13,6 +13,7 @@ test.describe('Quest step: distance_covered (native)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		await asUser({ username: 'walker' });
 		// 1km goal so a single 1km pedometer event reaches the goal
 		const questId = await seedSingleStepQuest(mockApi, 'distance_covered', {
@@ -48,6 +49,7 @@ test.describe('Quest step: distance_covered (non-native web)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		await asUser({ username: 'webwalker' });
 		const questId = await seedSingleStepQuest(mockApi, 'distance_covered', {
 			stepOverrides: { parameters: [1000] }

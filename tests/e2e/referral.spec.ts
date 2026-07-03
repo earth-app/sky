@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 
 // well-formed per crust's bridge regex /^[0-9A-HJKMNP-TV-Z]{6}$/ (Crockford base32)
@@ -35,6 +35,7 @@ test.describe('Referral flow', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('native deep-link + mock signup');
 		// warm the SPA so app.vue is mounted and its appUrlOpen listener is live
 		await gotoHydrated('/login');
 
@@ -53,6 +54,7 @@ test.describe('Referral flow', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('native deep-link + mock signup');
 		await gotoHydrated('/login');
 
 		// any allowed host with a ?ref param is captured by resolveDeepLink; the root
@@ -70,6 +72,7 @@ test.describe('Referral flow', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('native deep-link + mock signup');
 		const getBody = await captureCreateBody(page);
 
 		// seed the code the way a prior deep link would have (Preferences), then load
@@ -100,6 +103,7 @@ test.describe('Referral flow', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('native deep-link + mock signup');
 		const getBody = await captureCreateBody(page);
 
 		// arrive on signup directly with the query param the deep link would have set
@@ -117,6 +121,7 @@ test.describe('Referral flow', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('native deep-link + mock signup');
 		const getBody = await captureCreateBody(page);
 
 		// a malformed code in the query: the bridge regex must reject it so it never

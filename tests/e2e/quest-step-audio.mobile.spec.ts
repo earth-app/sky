@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 import {
 	expectStepCompleteToast,
@@ -18,6 +18,7 @@ test.describe('Quest step: transcribe_audio (native)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		await asUser({ username: 'recorder' });
 		const questId = await seedSingleStepQuest(mockApi, 'transcribe_audio');
 		await gotoQuestStep(page, gotoHydrated, questId, 0);
@@ -32,6 +33,7 @@ test.describe('Quest step: transcribe_audio (native)', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('native bridge + seeded quest data');
 		await asUser({ username: 'recorder2' });
 		// minLength 1s so the stop gate opens after a single real-time tick
 		const questId = await seedSingleStepQuest(mockApi, 'transcribe_audio', {

@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { makePromptResponse } from './utils/mock-data';
 import { installNativeMock } from './utils/native-mock';
 
@@ -8,6 +8,7 @@ test.describe('Prompt respond', () => {
 	});
 
 	test('renders the prompt and its existing responses', async ({ page, asUser, gotoHydrated }) => {
+		skipIfIntegration('pmt-1 mock prompt');
 		await asUser();
 		await gotoHydrated('/tabs/prompts/pmt-1');
 
@@ -19,6 +20,7 @@ test.describe('Prompt respond', () => {
 	});
 
 	test('posts a response and clears the input', async ({ page, asUser, mockApi, gotoHydrated }) => {
+		skipIfIntegration('pmt-1 mock prompt');
 		await asUser();
 		await mockApi.set({
 			backend: 'mantle',

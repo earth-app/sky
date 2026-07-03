@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 
 test.describe('Native OAuth deep-link completion', () => {
@@ -13,6 +13,7 @@ test.describe('Native OAuth deep-link completion', () => {
 		mockApi,
 		testId
 	}) => {
+		skipIfIntegration('native deep-link + mock session');
 		// seed the user the post-OAuth /v2/users/current fetch will resolve to,
 		// bound to the token the deep link carries
 		const token = `oauth-token-${testId}`;
@@ -49,6 +50,7 @@ test.describe('Native OAuth deep-link completion', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('native deep-link + mock session');
 		await gotoHydrated('/login');
 		await page.evaluate(() => {
 			(window as any).__fireAppUrlOpen(

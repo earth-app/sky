@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { expectNativeToast } from './utils/journey-helpers';
 import { installNativeMock } from './utils/native-mock';
 
@@ -12,6 +12,7 @@ test.describe('Prompt create', () => {
 		asUser,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('native bridge + backend write');
 		await asUser();
 		await gotoHydrated('/tabs/prompts/new');
 

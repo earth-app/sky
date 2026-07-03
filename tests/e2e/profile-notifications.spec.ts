@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 import { makeNotification } from './utils/mock-data';
 
@@ -7,6 +7,7 @@ const CREATED_AT_SECONDS = Math.floor(Date.parse('2026-06-20T12:00:00.000Z') / 1
 
 test.describe('Profile notifications', () => {
 	test('renders the seeded notifications', async ({ page, gotoHydrated, asUser, mockApi }) => {
+		skipIfIntegration('mock notifications');
 		await asUser({ username: 'notifuser' });
 		await mockApi.set({
 			backend: 'mantle',
@@ -50,6 +51,7 @@ test.describe('Profile notifications', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('mock notifications');
 		await asUser({ username: 'notifuser' });
 		await mockApi.set({
 			backend: 'mantle',
@@ -71,6 +73,7 @@ test.describe('Profile notifications', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('mock notifications');
 		await asUser({ username: 'notifuser' });
 		await mockApi.set({
 			backend: 'mantle',

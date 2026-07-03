@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 import {
 	expectStepCompleteToast,
@@ -20,6 +20,7 @@ test.describe('Quest step: describe_text', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		await asUser({ username: 'writer1' });
 		const questId = await seedSingleStepQuest(mockApi, 'describe_text');
 		await gotoQuestStep(page, gotoHydrated, questId, 0);
@@ -36,6 +37,7 @@ test.describe('Quest step: describe_text', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		await asUser({ username: 'writer2' });
 		const questId = await seedSingleStepQuest(mockApi, 'describe_text');
 		await rejectNextSubmission(mockApi, 'That response did not pass validation.');

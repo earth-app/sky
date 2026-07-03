@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 
 test.describe('Settings sub-pages (logged in, empty state)', () => {
@@ -11,6 +11,7 @@ test.describe('Settings sub-pages (logged in, empty state)', () => {
 		gotoHydrated,
 		mockApi
 	}) => {
+		skipIfIntegration('mock empty-state override');
 		// fetchKeys() -> /v2/users/current/api-keys ; fetchCatalog() -> /v2/api-keys/scopes
 		await mockApi.setMany([
 			{
@@ -42,6 +43,7 @@ test.describe('Settings sub-pages (logged in, empty state)', () => {
 		gotoHydrated,
 		mockApi
 	}) => {
+		skipIfIntegration('mock empty-state override');
 		// fetchBlocked() -> /v2/users/current/blocked
 		await mockApi.set({
 			method: 'GET',
@@ -67,6 +69,7 @@ test.describe('Settings sub-pages (logged in, empty state)', () => {
 		gotoHydrated,
 		mockApi
 	}) => {
+		skipIfIntegration('mock good-standing override');
 		// fetchModeration() -> /v2/users/current/moderation
 		await mockApi.set({
 			method: 'GET',

@@ -1,10 +1,11 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { makeEvent, makeUser } from './utils/mock-data';
 
 const host = makeUser({ id: 'host-1', username: 'host', account: { account_type: 'ORGANIZER' } });
 
 test.describe('Event detail + RSVP', () => {
 	test('renders the profile card and host card', async ({ page, asUser, gotoHydrated }) => {
+		skipIfIntegration('depends on mock event evt-1');
 		await asUser();
 		await gotoHydrated('/tabs/events/evt-1');
 
@@ -19,6 +20,7 @@ test.describe('Event detail + RSVP', () => {
 		mockApi,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('depends on mock event evt-1 + mock signup override');
 		await asUser();
 		// keep evt-1 out of the similar/random pool so its list-shape can't race-clobber
 		// the authoritative single-event fetch's is_attending flag
@@ -76,6 +78,7 @@ test.describe('Event detail + RSVP', () => {
 		mockApi,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('depends on mock event evt-1 + mock attendees override');
 		await asUser();
 		// attending event so the Attendees button is present from first render
 		await mockApi.setMany([

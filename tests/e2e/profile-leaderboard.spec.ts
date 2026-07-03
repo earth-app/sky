@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 
 const POINTS_ROWS = [
@@ -22,6 +22,7 @@ test.describe('Profile leaderboard', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('mock leaderboard data');
 		await asUser({ username: 'lbviewer' });
 		await mockApi.set({
 			backend: 'mantle',
@@ -48,6 +49,7 @@ test.describe('Profile leaderboard', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('mock leaderboard data');
 		await asUser({ username: 'lbviewer' });
 		await mockApi.set({
 			backend: 'mantle',
@@ -67,6 +69,7 @@ test.describe('Profile leaderboard', () => {
 	});
 
 	test('invalid metric falls back to the loading state', async ({ page, gotoHydrated, asUser }) => {
+		skipIfIntegration('mock leaderboard data');
 		await asUser({ username: 'lbviewer' });
 		await gotoTab(page, gotoHydrated, '/tabs/profile/leaderboard/not-a-metric');
 

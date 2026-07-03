@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { installNativeMock } from './utils/native-mock';
 import { gotoQuestStep, seedSingleStepQuest, stepModal } from './utils/quest-helpers';
 
@@ -13,6 +13,7 @@ test.describe('Quest step: completed view', () => {
 		asUser,
 		mockApi
 	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
 		await asUser({ username: 'finisher' });
 		const questId = await seedSingleStepQuest(mockApi, 'describe_text', {
 			progress: [

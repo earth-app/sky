@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { expectNativeToast } from './utils/journey-helpers';
 import { installNativeMock } from './utils/native-mock';
 
@@ -12,6 +12,7 @@ test.describe('Article create (WRITER)', () => {
 		asUser,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('writes to backend + asserts mock success toast');
 		// WRITER + PUBLIC (default) passes the new.vue account/visibility gate
 		await asUser({ account: { account_type: 'WRITER', visibility: 'PUBLIC' } });
 		await gotoHydrated('/tabs/articles/new');
