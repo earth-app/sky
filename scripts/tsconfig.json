@@ -1,0 +1,8 @@
+{
+	"extends": "../.nuxt/tsconfig.json",
+	"comment": "standalone bun/node scripts (sync-version.ts etc); orphaned from the root refs otherwise, so node:fs/process/import.meta.url show unresolved. inherits Nuxt paths (~/*) for src imports + pins node types",
+	"compilerOptions": {
+		"types": ["node"]
+	},
+	"include": ["./**/*.ts"]
+}
