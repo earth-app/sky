@@ -87,13 +87,14 @@
 <script setup lang="ts">
 import { App, type URLOpenListenerEvent } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
-import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
+import { Capacitor, CapacitorHttp, type PluginListenerHandle } from '@capacitor/core';
 import { Network, type ConnectionStatus } from '@capacitor/network';
 import { Preferences } from '@capacitor/preferences';
 import { Share } from '@capacitor/share';
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
 import slide from './animations/slide';
 import { initQuestCelebrationListener } from './composables/useHaptics';
+import { logWarn } from './composables/useLogger';
 import {
 	applyNetworkStatus,
 	isOffline,
@@ -106,6 +107,7 @@ if (import.meta.client) {
 }
 
 const config = useAppConfig();
+const runtimeConfig = useRuntimeConfig();
 const { fetchUser, user } = useAuth();
 const authStore = useAuthStore();
 const { resolveDeepLink } = useDeepLinkRouting();
@@ -594,6 +596,96 @@ async function safeHydrateUser(force?: boolean) {
 	}
 }
 
+const isFullyResolvedUser = (u: unknown): boolean =>
+	!!(u as any)?.account?.account_type && typeof (u as any)?.id === 'string';
+
+let repairInFlight = false;
+let repairBudget = 8; // backstop against a repair<->refetch ping-pong
+
+async function repairCurrentUser(
+	cachedUser: NonNullable<typeof authStore.currentUser> | null = null
+) {
+	if (!isNative || repairInFlight) return;
+	const token = authStore.sessionToken;
+	if (!token) return;
+	if (isFullyResolvedUser(authStore.currentUser)) return;
+	if (repairBudget <= 0) return;
+
+	repairInFlight = true;
+	const apiBaseUrl = runtimeConfig.public.apiBaseUrl as string;
+	try {
+		for (let attempt = 0; attempt < 3 && !isFullyResolvedUser(authStore.currentUser); attempt++) {
+			repairBudget--;
+			// brief backoff so a retry lands after the cold-launch network settles
+			if (attempt > 0) await new Promise((r) => setTimeout(r, 300 * attempt));
+			try {
+				const res = await CapacitorHttp.request({
+					method: 'GET',
+					url: `${apiBaseUrl}/v2/users/current`,
+					headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+				});
+
+				if (res.status === 401 || res.status === 403) {
+					authStore.setSessionToken(null);
+					authStore.currentUser = null;
+					return;
+				}
+
+				let data: any = res.data;
+				if (typeof data === 'string') {
+					try {
+						data = JSON.parse(data);
+					} catch {
+						data = null;
+					}
+				}
+				// some transports wrap the body in an { data } envelope; unwrap once if needed
+				if (
+					data &&
+					typeof data === 'object' &&
+					!data.id &&
+					data.data &&
+					typeof data.data === 'object'
+				) {
+					data = data.data;
+				}
+				if (
+					data &&
+					typeof data === 'object' &&
+					typeof data.id === 'string' &&
+					data.id &&
+					typeof data.username === 'string'
+				) {
+					authStore.currentUser = data;
+					repairBudget = 8;
+					return;
+				}
+
+				// live 2xx but unresolved; log the shape to pin the transport on a device run
+				logWarn('auth.repair', 'unresolved current-user (2xx)', {
+					attempt,
+					status: res.status,
+					dataType: typeof res.data,
+					keys:
+						res.data && typeof res.data === 'object'
+							? Object.keys(res.data as Record<string, unknown>).slice(0, 12)
+							: undefined
+				});
+			} catch (error: any) {
+				logWarn('auth.repair', 'current-user repair request failed', {
+					attempt,
+					message: String(error?.message ?? error)
+				});
+			}
+		}
+	} finally {
+		repairInFlight = false;
+	}
+
+	// couldn't resolve but token isn't rejected; keep the cached user so the shell isn't blank
+	if (!authStore.currentUser && cachedUser) authStore.currentUser = cachedUser;
+}
+
 async function bootstrapAuth() {
 	if (!authStore.sessionToken) {
 		try {
@@ -604,13 +696,14 @@ async function bootstrapAuth() {
 		}
 	}
 
-	if (authStore.sessionToken && !authStore.currentUser) {
+	let cachedUser: NonNullable<typeof authStore.currentUser> | null = null;
+	if (authStore.sessionToken) {
 		try {
 			const { value } = await Preferences.get({ key: CURRENT_USER_KEY });
 			if (value) {
 				const cached = JSON.parse(value) as Partial<CachedCurrentUser>;
 				if (cached?.id && cached?.username) {
-					authStore.currentUser = {
+					cachedUser = {
 						id: cached.id,
 						username: cached.username,
 						account: { avatar_url: cached.avatar_url ?? undefined }
@@ -621,14 +714,23 @@ async function bootstrapAuth() {
 			// no cached user or parse failure; the fetch below will populate it
 		}
 	}
+	if (cachedUser && !authStore.currentUser) authStore.currentUser = cachedUser;
 
 	if (!(await isOfflineModePreferred())) {
 		await safeHydrateUser(true);
+		await repairCurrentUser(cachedUser);
 	}
 }
 
 onMounted(async () => {
 	const authReady = bootstrapAuth();
+
+	watch(
+		() => [authStore.sessionToken, authStore.currentUser] as const,
+		([token, current]) => {
+			if (token && !current) void repairCurrentUser();
+		}
+	);
 
 	try {
 		await initSettings();
