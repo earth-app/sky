@@ -19,8 +19,10 @@
  *   the global teardown merges raw traces into coverage/lcov.info + summary
  *   for codecov upload.
  *
- * No webkit project: iOS WKWebView is exercised by real device builds; CI runs
- * chromium + Pixel-7 mobile-chromium only.
+ * The `webkit` (iPhone) project runs the same non-mobile specs on WebKit, the
+ * closest engine to the iOS WKWebView the app actually ships in, so WKWebView-class
+ * bugs (head/unhead resolution, transport quirks) surface in CI. It is opt-in: the
+ * default test:e2e selects chromium projects explicitly; use test:e2e:webkit to run it.
  */
 
 import type { ConfigOptions } from '@nuxt/test-utils/playwright';
@@ -98,6 +100,13 @@ export default defineConfig<ConfigOptions>({
 			name: 'mobile-chromium',
 			testMatch: /\.(mobile|responsive)\.spec\.ts$/,
 			use: { ...devices['Pixel 7'], launchOptions: { args: chromiumArgs } }
+		},
+		{
+			// closest engine to the shipped iOS WKWebView; opt-in via test:e2e:webkit.
+			// mobile/native specs stay chromium-only (they lean on chromium launch args)
+			name: 'webkit',
+			testIgnore: /\.(mobile|responsive)\.spec\.ts$/,
+			use: { ...devices['iPhone 14'] }
 		}
 	]
 });
