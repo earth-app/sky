@@ -32,7 +32,7 @@
         "@capgo/capacitor-pedometer": "^8.0.37",
         "@capgo/capacitor-watch": "^8.1.0",
         "@codecov/nuxt-plugin": "^2.0.1",
-        "@earth-app/crust": "0.5.0",
+        "@earth-app/crust": "0.5.0-3aa5c06",
         "@earth-app/ocean": "1.1.0",
         "@ionic/pwa-elements": "^3.4.0",
         "@ionic/vue": "8.8.13",
@@ -245,7 +245,7 @@
 
     "@dxup/unimport": ["@dxup/unimport@0.1.2", "", {}, "sha512-/B8YJGPzaYq1NbsQmwgP8EZqg40NpTw4ZB3suuI0TplbxKHeK94jeaawLmVhCv+YwUnOpiWEz9U6SeThku/8JQ=="],
 
-    "@earth-app/crust": ["@earth-app/crust@0.5.0", "https://npm.pkg.github.com/download/@earth-app/crust/0.5.0/4c76aeebba55e127bb0ce9127f17350e5036d8e1", { "dependencies": { "@earth-app/ocean": "^1.1.0", "@internationalized/date": "^3.12.2", "@nuxt/hints": "^1.1.3", "@nuxt/icon": "^2.3.1", "@nuxt/image": "^2.0.0", "@nuxt/kit": "^4.4.8", "@nuxt/scripts": "^1.3.0", "@nuxt/ui": "^4.9.0", "@nuxthub/core": "^0.10.7", "@nuxtjs/color-mode": "^4.0.1", "@nuxtjs/google-fonts": "^3.2.0", "@nuxtjs/i18n": "^10.4.0", "@nuxtjs/robots": "^6.1.2", "@nuxtjs/sitemap": "^8.2.2", "@nuxtjs/turnstile": "^1.1.3", "@pinia/nuxt": "^0.11.3", "@tailwindcss/vite": "^4.3.2", "@tensorflow/tfjs": "^4.22.0", "@types/luxon": "^3.7.2", "@vueuse/core": "^14.3.0", "@vueuse/nuxt": "^14.3.0", "jose": "^6.2.3", "luxon": "^3.7.2", "nsfwjs": "^4.3.0", "nuxt": "^4.4.8", "nuxt-api-shield": "^1.0.0", "nuxt-schema-org": "^6.2.3", "nuxt-viewport": "^2.4.0", "obscenity": "^0.4.6", "piexifjs": "^1.0.6", "tailwindcss": "^4.3.2", "tailwindcss-motion": "^1.1.1", "tesseract.js": "^7.0.0", "vue": "^3.5.39", "vue-router": "^5.1.0", "youtube-sr": "^4.3.12", "zod": "^4.4.3" } }, "sha512-ST+xym7pDG18k0Qe2B1y6y/7l+h0XYYqoKyI865ePxnH5LOXwQhHp6yNs1v0Ia5S9gtzgSBlFjd2TPlJsYbr2Q=="],
+    "@earth-app/crust": ["@earth-app/crust@0.5.0-3aa5c06", "https://npm.pkg.github.com/download/@earth-app/crust/0.5.0-3aa5c06/5c4ad3866ef278464a31dee52e3c7bd33ac542a1", { "dependencies": { "@earth-app/ocean": "^1.1.0", "@internationalized/date": "^3.12.2", "@nuxt/hints": "^1.1.3", "@nuxt/icon": "^2.3.1", "@nuxt/image": "^2.0.0", "@nuxt/kit": "^4.4.8", "@nuxt/scripts": "^1.3.0", "@nuxt/ui": "^4.9.0", "@nuxthub/core": "^0.10.7", "@nuxtjs/color-mode": "^4.0.1", "@nuxtjs/google-fonts": "^3.2.0", "@nuxtjs/i18n": "^10.4.0", "@nuxtjs/robots": "^6.1.2", "@nuxtjs/sitemap": "^8.2.2", "@nuxtjs/turnstile": "^1.1.3", "@pinia/nuxt": "^0.11.3", "@tailwindcss/vite": "^4.3.2", "@tensorflow/tfjs": "^4.22.0", "@types/luxon": "^3.7.2", "@vueuse/core": "^14.3.0", "@vueuse/nuxt": "^14.3.0", "jose": "^6.2.3", "luxon": "^3.7.2", "nsfwjs": "^4.3.0", "nuxt": "^4.4.8", "nuxt-api-shield": "^1.0.0", "nuxt-schema-org": "^6.2.3", "nuxt-viewport": "^2.4.0", "obscenity": "^0.4.6", "piexifjs": "^1.0.6", "tailwindcss": "^4.3.2", "tailwindcss-motion": "^1.1.1", "tesseract.js": "^7.0.0", "vue": "^3.5.39", "vue-router": "^5.1.0", "youtube-sr": "^4.3.12", "zod": "^4.4.3" } }, "sha512-voIDo7375CQGT2Mdsl5JjJh4PvjLYTOUryzvxDkFK8YwuvStW996dEQ+APufU4is13QES5Of/7jgpCR1utQGhA=="],
 
     "@earth-app/ocean": ["@earth-app/ocean@1.1.0", "https://npm.pkg.github.com/download/@earth-app/ocean/1.1.0/ef9777bed463ff7c00613dada1006e25655580be", { "dependencies": { "rss-parser": "^3.13.0", "ws": "8.18.3" } }, "sha512-i/alPfqW3PlNoSIBaGhwhW9rNWPuTDENSbv0yDeb53E6aSVnDUpCVNGWzStgvxBMHEJp5YYdK3Cfy/oGC34+CQ=="],
 
