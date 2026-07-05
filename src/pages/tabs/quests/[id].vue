@@ -146,7 +146,21 @@ const {
 } = useUser(userId);
 const { fetchQuest, getStepIcon } = useQuests();
 
-const quest = ref<Quest | null>(null);
+const fetchedQuest = ref<Quest | null>(null);
+
+// only a quest with a real steps array is renderable; a partial object (e.g. a truncated
+// native http response) would throw on `quest.steps.*` downstream and blank the page
+const hasSteps = (q: Quest | null | undefined): q is Quest => Array.isArray(q?.steps);
+
+// fall back to the store's quest object so a failed/slow catalog fetch never blanks the page
+const quest = computed<Quest | null>(() => {
+	if (hasSteps(fetchedQuest.value)) return fetchedQuest.value;
+	const routeId = (route.params.id as string | undefined) ?? '';
+	const active = currentQuest.value;
+	if (routeId && active?.questId === routeId && hasSteps(active.quest)) return active.quest;
+	const historyQuest = questHistory.value.get(routeId)?.quest;
+	return hasSteps(historyQuest) ? historyQuest : null;
+});
 const progress = computed(() => {
 	if (!quest.value) return [];
 
@@ -158,6 +172,8 @@ const progress = computed(() => {
 });
 
 const progressChecked = ref(false);
+// ceiling so a hung fetch / unhydrated auth can't strand the timeline behind the gate
+const PROGRESS_READY_CEILING_MS = 4000;
 const progressReady = computed(() => {
 	if (!quest.value) return false;
 	const id = quest.value.id;
@@ -226,14 +242,16 @@ const isMasteryQuestCompleted = computed(() => {
 	return questHistory.value?.get(id)?.completedAt !== undefined;
 });
 
+// non-blocking: a hung/slow native catalog fetch must not keep the page in Suspense (blank)
 if (route.params.id) {
 	const id = route.params.id as string;
-	quest.value = await fetchQuest(id);
-
-	if (!quest.value && id.startsWith(MASTERY_PREFIX) && user.value) {
-		await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
-		await navigateTo('/tabs/quests', { replace: true });
-	}
+	void (async () => {
+		fetchedQuest.value = await fetchQuest(id);
+		if (!quest.value && id.startsWith(MASTERY_PREFIX) && user.value) {
+			await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
+			await navigateTo('/tabs/quests', { replace: true });
+		}
+	})();
 }
 
 watch(
@@ -242,36 +260,37 @@ watch(
 		if (!id) return;
 		const { fetchUserQuest, fetchQuestHistory, fetchQuestHistoryEntry, fetchBadges } = useUser(id);
 
-		// resolve the active quest first; under data saver prefer cache over a forced round-trip
-		await fetchUserQuest(!isDataConstrained.value);
+		// finally guarantees the gate resolves even if a fetch rejects
+		try {
+			// resolve the active quest first; under data saver prefer cache over a forced round-trip
+			await fetchUserQuest(!isDataConstrained.value);
 
-		let viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
+			let viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
 
-		// retry the quest fetch now that auth is hydrated; covers the race where
-		// the page mounted before user.value resolved.
-		if (!quest.value && viewedQuestId) {
-			quest.value = await fetchQuest(viewedQuestId);
-			if (!quest.value) {
-				if (viewedQuestId.startsWith(MASTERY_PREFIX)) {
-					await showErrorToast(new Error('Badge mastery quest not found.'), {
-						duration: 'short'
-					});
-					await navigateTo('/tabs/quests', { replace: true });
+			if (!quest.value && viewedQuestId) {
+				fetchedQuest.value = await fetchQuest(viewedQuestId);
+				if (!quest.value) {
+					if (viewedQuestId.startsWith(MASTERY_PREFIX)) {
+						await showErrorToast(new Error('Badge mastery quest not found.'), {
+							duration: 'short'
+						});
+						await navigateTo('/tabs/quests', { replace: true });
+					}
+					return;
 				}
-				progressChecked.value = true;
-				return;
+				viewedQuestId = quest.value?.id ?? viewedQuestId;
 			}
-			viewedQuestId = quest.value?.id ?? viewedQuestId;
-		}
 
-		if (viewedQuestId && currentQuest.value?.questId !== viewedQuestId) {
-			await fetchQuestHistoryEntry(viewedQuestId);
-		}
-		progressChecked.value = true;
+			if (viewedQuestId && currentQuest.value?.questId !== viewedQuestId) {
+				await fetchQuestHistoryEntry(viewedQuestId);
+			}
 
-		// remaining fetches only feed other surfaces; fire and forget
-		void fetchQuestHistory();
-		void fetchBadges();
+			// remaining fetches only feed other surfaces; fire and forget
+			void fetchQuestHistory();
+			void fetchBadges();
+		} finally {
+			progressChecked.value = true;
+		}
 	},
 	{ immediate: true }
 );
@@ -403,6 +422,18 @@ function maybeReconcileOnEnter() {
 }
 
 onIonViewWillEnter(() => maybeReconcileOnEnter());
+
+// ceiling: reveal the timeline even if the quest fetch hangs or auth never hydrates
+let _progressCeiling: ReturnType<typeof setTimeout> | null = null;
+onMounted(() => {
+	_progressCeiling = setTimeout(() => {
+		progressChecked.value = true;
+	}, PROGRESS_READY_CEILING_MS);
+});
+onBeforeUnmount(() => {
+	if (_progressCeiling) clearTimeout(_progressCeiling);
+	_progressCeiling = null;
+});
 
 // app foreground resume; reconcileQuestState mutexes itself so overlap with the view hook is safe
 let removeResumeListener: (() => void) | null = null;
