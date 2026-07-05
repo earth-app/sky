@@ -1,59 +1,124 @@
 import ActivityKit
 import SwiftUI
-import UIKit
 import WidgetKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @available(iOS 16.1, *)
-struct DistanceLiveActivityWidget: Widget {
-    var body: some WidgetConfiguration {
-        ActivityConfiguration(for: DistanceActivityAttributes.self) { context in
-            QuestLockScreenView(state: context.state)
-                .padding(14)
-                .activityBackgroundTint(Color.black.opacity(0.55))
-                .activitySystemActionForegroundColor(.white)
-                .widgetURL(URL(string: context.state.tapURL))
-        } dynamicIsland: { context in
-            let s = context.state
-            return DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: s.stepSymbol).foregroundStyle(rarityColor(s.rarity))
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    if s.totalSteps > 0 {
-                        Text("Step \(s.stepIndex + 1)/\(s.totalSteps)")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    Text(s.questName).font(.caption).lineLimit(1)
-                }
-                DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 4) {
-                        if !s.stepLabel.isEmpty {
-                            Text(s.stepLabel).font(.caption2).foregroundStyle(.secondary)
-                        }
-                        QuestStatusRow(state: s)
-                        if !s.ctaText.isEmpty, let url = URL(string: s.ctaURL) {
-                            Link(destination: url) {
-                                Text(s.ctaText).font(.caption2).fontWeight(.semibold)
-                            }
-                        }
-                    }
-                }
-            } compactLeading: {
-                Image(systemName: s.stepSymbol).foregroundStyle(rarityColor(s.rarity))
-            } compactTrailing: {
-                CompactTrailing(state: s)
-            } minimal: {
+private func makeQuestActivityConfiguration() -> some WidgetConfiguration {
+    ActivityConfiguration(for: DistanceActivityAttributes.self) { context in
+        QuestLockScreenView(state: context.state)
+            .activityBackgroundTint(Color.black.opacity(0.55))
+            .activitySystemActionForegroundColor(.white)
+            .widgetURL(URL(string: context.state.tapURL))
+    } dynamicIsland: { context in
+        let s = context.state
+        return DynamicIsland {
+            DynamicIslandExpandedRegion(.leading) {
                 Image(systemName: s.stepSymbol).foregroundStyle(rarityColor(s.rarity))
             }
-            .widgetURL(URL(string: s.tapURL))
+            DynamicIslandExpandedRegion(.trailing) {
+                if s.totalSteps > 0 {
+                    Text("Step \(s.stepIndex + 1)/\(s.totalSteps)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            DynamicIslandExpandedRegion(.center) {
+                Text(s.questName).font(.caption).lineLimit(1)
+            }
+            DynamicIslandExpandedRegion(.bottom) {
+                VStack(spacing: 4) {
+                    if !s.stepLabel.isEmpty {
+                        Text(s.stepLabel).font(.caption2).foregroundStyle(.secondary)
+                    }
+                    QuestStatusRow(state: s)
+                    if !s.ctaText.isEmpty, let url = URL(string: s.ctaURL) {
+                        Link(destination: url) {
+                            Text(s.ctaText).font(.caption2).fontWeight(.semibold)
+                        }
+                    }
+                }
+            }
+        } compactLeading: {
+            Image(systemName: s.stepSymbol).foregroundStyle(rarityColor(s.rarity))
+        } compactTrailing: {
+            CompactTrailing(state: s)
+        } minimal: {
+            Image(systemName: s.stepSymbol).foregroundStyle(rarityColor(s.rarity))
         }
+        .widgetURL(URL(string: s.tapURL))
     }
 }
 
 @available(iOS 16.1, *)
+struct DistanceLiveActivityWidget: Widget {
+    var body: some WidgetConfiguration {
+        if #available(iOS 18.0, *) {
+            return makeQuestActivityConfiguration().supplementalActivityFamilies([.small])
+        } else {
+            return makeQuestActivityConfiguration()
+        }
+    }
+}
+
+// small family = apple watch surface, where the full lock-screen stack overflows
+@available(iOS 16.1, *)
 private struct QuestLockScreenView: View {
+    let state: DistanceActivityAttributes.ContentState
+
+    var body: some View {
+        if #available(iOS 18.0, *) {
+            QuestAdaptiveView(state: state)
+        } else {
+            QuestFullView(state: state)
+        }
+    }
+}
+
+@available(iOS 18.0, *)
+private struct QuestAdaptiveView: View {
+    @Environment(\.activityFamily) private var activityFamily
+    let state: DistanceActivityAttributes.ContentState
+
+    var body: some View {
+        switch activityFamily {
+        case .small:
+            QuestWatchView(state: state)
+        case .medium:
+            QuestFullView(state: state)
+        @unknown default:
+            QuestFullView(state: state)
+        }
+    }
+}
+
+// compact single-row layout sized for the watch Smart Stack
+@available(iOS 16.1, *)
+private struct QuestWatchView: View {
+    let state: DistanceActivityAttributes.ContentState
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: state.stepSymbol)
+                .font(.headline)
+                .foregroundStyle(rarityColor(state.rarity))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(state.questName).font(.caption).fontWeight(.semibold).lineLimit(1)
+                if state.totalSteps > 0 {
+                    Text("Step \(state.stepIndex + 1)/\(state.totalSteps)")
+                        .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                }
+                QuestStatusRow(state: state)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+    }
+}
+
+@available(iOS 16.1, *)
+private struct QuestFullView: View {
     let state: DistanceActivityAttributes.ContentState
 
     var body: some View {
@@ -88,6 +153,7 @@ private struct QuestLockScreenView: View {
                 }
             }
         }
+        .padding(14)
     }
 }
 
@@ -129,11 +195,15 @@ private struct CompactTrailing: View {
 private struct BrandMark: View {
     var body: some View {
         Group {
+            #if canImport(UIKit)
             if UIImage(named: "AppLogo") != nil {
                 Image("AppLogo").resizable().aspectRatio(contentMode: .fit)
             } else {
                 Image(systemName: "globe.americas.fill").foregroundStyle(.green)
             }
+            #else
+            Image(systemName: "globe.americas.fill").foregroundStyle(.green)
+            #endif
         }
         .frame(width: 15, height: 15)
         .clipShape(RoundedRectangle(cornerRadius: 3))
