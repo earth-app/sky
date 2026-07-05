@@ -10,6 +10,7 @@ export interface OverrideSpec {
 	body: any;
 	headers?: Record<string, string>;
 	once?: boolean;
+	delayMs?: number; // simulate hanging backend
 }
 
 function baseUrl(backend: Backend): string {
@@ -36,6 +37,7 @@ export class MockClient {
 				body: spec.body,
 				headers: spec.headers,
 				once: spec.once ?? true,
+				delayMs: spec.delayMs,
 				testId: this.testId
 			})
 		});

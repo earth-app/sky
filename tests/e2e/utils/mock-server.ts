@@ -49,6 +49,7 @@ interface Override {
 	status: number;
 	body: any;
 	headers?: Record<string, string>;
+	delayMs?: number; // simulate hanging backend
 }
 
 interface BackendState {
@@ -1474,6 +1475,9 @@ async function dispatch(
 	// 2. Per-test overrides
 	const override = findOverride(req, ctx);
 	if (override) {
+		if (override.delayMs && override.delayMs > 0) {
+			await new Promise((resolve) => setTimeout(resolve, override.delayMs));
+		}
 		return json(res, override.status, override.body, override.headers ?? {});
 	}
 

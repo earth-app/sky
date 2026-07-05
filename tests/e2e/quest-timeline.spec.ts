@@ -1,5 +1,5 @@
 import { expect, skipIfIntegration, test } from './utils/fixtures';
-import { makeQuest } from './utils/mock-data';
+import { makeQuest, makeUserQuestProgress } from './utils/mock-data';
 import { installNativeMock } from './utils/native-mock';
 import {
 	gotoQuestDetail,
@@ -68,6 +68,93 @@ test.describe('Quest timeline', () => {
 		// the wrapper divs render eagerly; the badges inside hydrate on scroll
 		await expect(page.locator('#tile-0')).toBeVisible({ timeout: 12_000 });
 		await expect(page.locator('#tile-end')).toBeVisible();
+	});
+
+	test('renders the active quest when the catalog fetch 404s (uncatalogued running quest)', async ({
+		page,
+		gotoHydrated,
+		asUser,
+		mockApi
+	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
+		await asUser();
+		// deliberately DO NOT registerQuest -> /v2/users/quests?id= 404s for this id
+		const quest = makeQuest({ id: 'q-uncatalogued', title: 'Uncatalogued Running Quest' });
+		await mockApi.setActiveQuest(makeUserQuestProgress(quest));
+		await gotoQuestDetail(page, gotoHydrated, quest.id);
+
+		// timeline renders from the store fallback, and it's recognized as the active quest
+		await expect(page.locator('#tile-end')).toBeVisible({ timeout: 12_000 });
+		await expect(page.locator('#quest-button')).toHaveText(/end quest/i, { timeout: 12_000 });
+	});
+
+	test('reveals the timeline even if the active-quest fetch hangs', async ({
+		page,
+		gotoHydrated,
+		asUser,
+		mockApi
+	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
+		await asUser();
+		const quest = makeQuest({ id: 'q-hang', title: 'Slow Quest' });
+		await mockApi.registerQuest(quest);
+		// every active-quest GET stalls far past the render ceiling
+		await mockApi.set({
+			method: 'GET',
+			path: /^\/v2\/users\/[^/]+\/quest$/,
+			body: makeUserQuestProgress(quest),
+			delayMs: 15_000,
+			once: false
+		});
+		await gotoHydrated(`/tabs/quests/${quest.id}`);
+
+		// the ~4s ceiling reveals the timeline well before the 15s hang resolves
+		await expect(page.locator('#tile-end')).toBeVisible({ timeout: 10_000 });
+	});
+
+	test('renders the timeline even if the catalog fetch hangs (non-blocking mount)', async ({
+		page,
+		gotoHydrated,
+		asUser,
+		mockApi
+	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
+		await asUser();
+		const quest = makeQuest({ id: 'q-catalog-hang', title: 'Catalog Hang Quest' });
+		await mockApi.registerQuest(quest);
+		await mockApi.setActiveQuest(makeUserQuestProgress(quest));
+		// stall every catalog GET far past the render ceiling
+		await mockApi.set({
+			method: 'GET',
+			path: /^\/v2\/users\/quests$/,
+			body: quest,
+			delayMs: 15_000,
+			once: false
+		});
+		await gotoHydrated(`/tabs/quests/${quest.id}`);
+
+		// resolves via the active-quest fallback well before the 15s catalog stall
+		await expect(page.locator('#tile-end')).toBeVisible({ timeout: 10_000 });
+	});
+
+	test('does not blank when the active quest has no steps array (partial native response)', async ({
+		page,
+		gotoHydrated,
+		asUser,
+		mockApi
+	}) => {
+		skipIfIntegration('depends on seeded quest data + mock backend + native bridge');
+		await asUser();
+		const quest = makeQuest({ id: 'q-lean-active', title: 'Lean Active Quest' });
+		const active = makeUserQuestProgress(quest);
+		delete (active.quest as Record<string, unknown>).steps;
+		await mockApi.setActiveQuest(active);
+		// no registerQuest -> catalog 404s, so the step-less active quest is the only source
+
+		await gotoHydrated('/tabs/quests/q-lean-active');
+
+		// the page renders its loading state rather than throwing and unmounting to a blank screen
+		await expect(page.getByAltText('Loading...').first()).toBeVisible({ timeout: 12_000 });
 	});
 
 	test('tapping the first tile opens the step modal', async ({
