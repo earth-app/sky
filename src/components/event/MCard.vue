@@ -28,15 +28,17 @@
 	</div>
 	<MContentDrawer
 		ref="attendeesDrawerRef"
-		:title="`Event Attendees (${comma(reactiveEvent.attendee_count)})`"
+		:title="`Event Attendees (${comma(attendeeCount)})`"
 		:is-loading="false"
 	>
 		<template #default="{ search }">
-			<UserMCard
-				v-for="attendee in filteredAttendees(search)"
-				:key="attendee.id"
-				:user="attendee"
-			/>
+			<div class="flex flex-col w-full px-4 gap-3">
+				<UserMCard
+					v-for="attendee in filteredAttendees(search)"
+					:key="attendee.id"
+					:user="attendee"
+				/>
+			</div>
 		</template>
 	</MContentDrawer>
 </template>
@@ -48,8 +50,14 @@ defineOptions({
 import { Toast } from '@capacitor/toast';
 import { DateTime } from 'luxon';
 import type { Event } from 'types/event';
+import type { User } from 'types/user';
 import { capitalizeFully, comma, trimString } from 'utils';
 import MContentDrawer from '~/components/MContentDrawer.vue';
+import {
+	attendeeCount as computeAttendeeCount,
+	distinctAttendees as computeDistinctAttendees,
+	isEventPast
+} from '~/utils/event';
 
 const props = defineProps<{
 	event: Event;
@@ -74,11 +82,10 @@ const {
 function afterRsvp(attending: boolean) {
 	const id = props.event.id;
 	if (!id) return;
-	const current = eventStore.get(id) ?? props.event;
-	eventStore.updateEvent(id, {
-		is_attending: attending,
-		attendee_count: Math.max(0, (current.attendee_count ?? 0) + (attending ? 1 : -1))
-	});
+	// count is refetched authoritatively by the composable (and derived from the
+	// deduped attendee list); only flip attendance here so we don't stack a second
+	// optimistic increment on top of that refetch (was inflating the count by one)
+	eventStore.updateEvent(id, { is_attending: attending });
 }
 
 onMounted(() => {
@@ -88,6 +95,8 @@ onMounted(() => {
 });
 
 const reactiveEvent = computed(() => eventState.value || props.event);
+
+const isPast = computed(() => isEventPast(reactiveEvent.value));
 
 const canReport = computed(() => Boolean(user.value) && !isOffline.value);
 
@@ -100,12 +109,21 @@ const openAttendeesDrawer = () => {
 	attendeesDrawerRef.value?.open();
 };
 
-const allAttendees = computed(() => {
-	const filteredAttendees = (attendees.value || []).filter(
-		(attendee) => attendee.id !== reactiveEvent.value.hostId
-	);
-	return [reactiveEvent.value.host, ...filteredAttendees];
-});
+const distinctAttendees = computed<User[] | null>(() =>
+	computeDistinctAttendees(reactiveEvent.value.host, attendees.value)
+);
+
+// fall back to just the host until the attendee list has loaded
+const allAttendees = computed(() => distinctAttendees.value ?? [reactiveEvent.value.host]);
+
+// prefer the deduped list length so the count can never drift from the rendered cards
+const attendeeCount = computed(() =>
+	computeAttendeeCount(
+		reactiveEvent.value.host,
+		attendees.value,
+		reactiveEvent.value.attendee_count ?? 0
+	)
+);
 
 const normalizeSearch = (value?: string | null) => value?.trim().toLowerCase() || '';
 
@@ -150,6 +168,15 @@ const badges = computed(() => {
 		size: 'small' | 'default' | 'large';
 		link?: string;
 	}[] = [];
+
+	if (isPast.value) {
+		array.push({
+			text: 'Event Ended',
+			icon: 'mdi:calendar-remove',
+			color: 'danger',
+			size: 'small'
+		});
+	}
 
 	let typeIcon: string;
 	switch (props.event.type) {
@@ -273,13 +300,23 @@ const buttons = computed(() => {
 				}
 			});
 		} else {
+			const past = isPast.value;
+			const full = isAtCapacity.value;
 			array.push({
-				text: isAtCapacity.value ? 'Event Full' : 'Sign Up',
-				color: isAtCapacity.value ? 'light' : 'primary',
+				text: past ? 'Event Ended' : full ? 'Event Full' : 'Sign Up',
+				color: past || full ? 'light' : 'primary',
 				size: 'small',
-				disabled: isAtCapacity.value,
+				disabled: past || full,
 				onClick: async () => {
-					if (isAtCapacity.value) {
+					if (past) {
+						await Toast.show({
+							text: 'This event has already ended.',
+							duration: 'long'
+						});
+						return;
+					}
+
+					if (full) {
 						await Toast.show({
 							text: 'This event has reached its maximum capacity.',
 							duration: 'long'
@@ -296,7 +333,7 @@ const buttons = computed(() => {
 
 	if (ev.can_edit || ev.is_attending) {
 		array.push({
-			text: `Attendees (${withSuffix(reactiveEvent.value.attendee_count)})`,
+			text: `Attendees (${withSuffix(attendeeCount.value)})`,
 			color: 'medium',
 			size: 'small',
 			onClick: openAttendeesDrawer
