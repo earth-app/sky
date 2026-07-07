@@ -35,16 +35,18 @@
 						title="Success Notification"
 						size="20"
 					/>
-					<div
+					<button
 						v-if="!notification.read"
-						class="mx-2"
+						type="button"
+						title="Mark as Read"
+						aria-label="Mark as Read"
+						class="flex! items-center justify-center size-11! -my-2! mx-0! p-0! bg-transparent! border-0!"
+						@click.stop="markAsRead"
 					>
 						<span
-							:class="['inline-block size-3 rounded-full', unreadDotClass]"
-							title="Mark as Read"
-							@click.stop="markAsRead"
+							:class="['inline-block size-3 rounded-full pointer-events-none', unreadDotClass]"
 						></span>
-					</div>
+					</button>
 					<UIcon
 						v-if="additional"
 						name="mdi:delete-outline"
@@ -80,6 +82,7 @@ import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
 import { DateTime } from 'luxon';
 import { trimString } from 'utils';
+import { theme } from '~/composables/useSettings';
 
 const props = defineProps<{
 	notification: UserNotification;
