@@ -55,14 +55,12 @@ const recentBadges = computed(() => {
 
 const visible = computed(() => !!user.value && recentBadges.value.length > 0);
 
-onMounted(() => {
-	if (user.value) void fetchBadges();
-});
-
+// eager + fresh: force past the LRU cache so a newly-earned badge shows
 watch(
-	() => user.value?.id,
+	userId,
 	(id) => {
-		if (id) void fetchBadges();
-	}
+		if (id) void fetchBadges(true);
+	},
+	{ immediate: true }
 );
 </script>
