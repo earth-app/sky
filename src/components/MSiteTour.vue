@@ -42,6 +42,11 @@
 			v-if="isActive && step"
 			ref="tooltipCard"
 			class="site-tour-card-wrap motion-preset-fade-md"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="site-tour-title"
+			tabindex="-1"
+			@keydown="onCardKeydown"
 			@click.stop
 			@mousedown.stop
 			@pointerdown.stop
@@ -61,7 +66,7 @@
 		>
 			<IonCard
 				:key="stepAnimKey"
-				class="shadow-lg min-w-70 w-[90vw] sm:w-[72vw] lg:w-[52vw] max-w-200 p-4 border-4 border-blue-600 rounded-lg site-tour-card site-tour-card--enter"
+				class="shadow-lg w-[min(92vw,26rem)] max-w-[92vw] sm:w-[72vw] sm:max-w-136 lg:w-[52vw] p-4 border-4 rounded-lg site-tour-card site-tour-card--enter"
 			>
 				<IonCardHeader class="pb-2">
 					<div class="flex justify-between items-center gap-2">
@@ -69,9 +74,14 @@
 							<UIcon
 								v-if="step.icon"
 								:name="step.icon"
-								class="size-5 text-blue-500 shrink-0"
+								class="size-5 text-(--ion-color-primary) shrink-0"
 							/>
-							<h3 class="text-lg font-semibold m-0! truncate">{{ step.title }}</h3>
+							<h3
+								id="site-tour-title"
+								class="text-lg font-semibold m-0! truncate"
+							>
+								{{ step.title }}
+							</h3>
 						</div>
 						<IonButton
 							fill="clear"
@@ -111,7 +121,9 @@
 							<span class="text-xs! text-gray-500 text-center mx-2">
 								Step {{ visibleStepIndex + 1 }} of {{ visibleSteps.length }}
 							</span>
-							<div class="flex flex-col gap-2 items-stretch w-full sm:flex-row sm:justify-end">
+							<div
+								class="flex flex-col gap-2 items-stretch w-full sm:flex-row sm:flex-wrap sm:justify-end"
+							>
 								<IonButton
 									v-if="index > 0"
 									fill="outline"
@@ -119,7 +131,7 @@
 									size="small"
 									:disabled="busy"
 									@click="gotoPreviousStep"
-									class="sm:w-30"
+									class="w-full sm:w-auto sm:flex-1 sm:min-w-24"
 								>
 									<IonSpinner
 										v-if="regressing"
@@ -140,7 +152,7 @@
 									size="small"
 									:disabled="busy || ctaLoading"
 									@click="runCTA"
-									class="sm:w-30"
+									class="w-full sm:w-auto sm:flex-1 sm:min-w-24"
 								>
 									<IonSpinner
 										v-if="ctaLoading"
@@ -159,8 +171,9 @@
 									color="primary"
 									size="small"
 									:disabled="busy"
+									data-tour-next
 									@click="gotoNextStep"
-									class="sm:w-30"
+									class="w-full sm:w-auto sm:flex-1 sm:min-w-24"
 								>
 									<IonSpinner
 										v-if="advancing"
@@ -204,8 +217,15 @@ const emit = defineEmits<{
 	(event: 'complete-tour'): void;
 }>();
 
-const { registerTour, unregisterTour, isActiveTour, stopTour, activeStepIndex, markCompleted } =
-	useSiteTour();
+const {
+	registerTour,
+	unregisterTour,
+	isActiveTour,
+	stopTour,
+	activeStepIndex,
+	goToStep,
+	markCompleted
+} = useSiteTour();
 const overlayTeleportTarget = ref<string | HTMLElement>('body');
 const highlightBox = ref<HTMLElement | null>(null);
 const tooltipCard = ref<HTMLElement | null>(null);
@@ -241,7 +261,72 @@ const tooltipStyle = ref({
 	zIndex: `${BASE_LAYER_Z_INDEX + 2}`
 });
 const dimZIndex = ref(`${BASE_LAYER_Z_INDEX}`);
-const dimColor = 'rgba(0, 0, 0, 0.55)';
+// theme-aware dim so contrast holds on bright light-mode content
+const dimColor = ref('rgba(0, 0, 0, 0.55)');
+
+function prefersDarkTheme(): boolean {
+	if (!import.meta.client) return false;
+	const root = document.documentElement;
+	if (root.classList.contains('dark') || document.body.classList.contains('dark')) return true;
+	if (root.classList.contains('light') || document.body.classList.contains('light')) return false;
+	return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
+}
+
+function refreshDimColor() {
+	dimColor.value = prefersDarkTheme() ? 'rgba(0, 0, 0, 0.62)' : 'rgba(15, 23, 42, 0.48)';
+}
+
+// element focused before the tour took over, restored on close for a11y
+let previouslyFocused: HTMLElement | null = null;
+
+const FOCUSABLE_SELECTOR = [
+	'a[href]',
+	'button:not([disabled])',
+	'ion-button:not([disabled])',
+	'input:not([disabled])',
+	'select:not([disabled])',
+	'textarea:not([disabled])',
+	'[tabindex]:not([tabindex="-1"])'
+].join(', ');
+
+function getCardFocusables(): HTMLElement[] {
+	if (!tooltipCard.value) return [];
+	return Array.from(tooltipCard.value.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+		(el) => el.offsetParent !== null || el === document.activeElement
+	);
+}
+
+// move focus into the card (primary/next button, else the card itself)
+function focusCard() {
+	if (!import.meta.client || !isActive.value || !tooltipCard.value) return;
+	const focusables = getCardFocusables();
+	// prefer the enabled next button, else the last enabled control, else the card container
+	const primary = focusables.find((el) => el.hasAttribute('data-tour-next'));
+	const target = primary || focusables[focusables.length - 1] || tooltipCard.value;
+	target?.focus?.();
+}
+
+// keep Tab inside the card while the dialog is open
+function onCardKeydown(event: KeyboardEvent) {
+	if (event.key !== 'Tab') return;
+	const focusables = getCardFocusables();
+	if (focusables.length === 0) return;
+
+	const first = focusables[0]!;
+	const last = focusables[focusables.length - 1]!;
+	const active = (document.activeElement as HTMLElement | null) ?? null;
+	const outside = !tooltipCard.value?.contains(active);
+	const atFirst = !!active && (active === first || first.contains(active));
+	const atLast = !!active && (active === last || last.contains(active));
+
+	if (event.shiftKey && (atFirst || outside)) {
+		event.preventDefault();
+		last.focus();
+	} else if (!event.shiftKey && (atLast || outside)) {
+		event.preventDefault();
+		first.focus();
+	}
+}
 
 const busy = ref(false);
 const advancing = ref(false);
@@ -613,6 +698,8 @@ async function gotoNextStep() {
 	}
 
 	index.value = nextIndex;
+	// keep shared tour state in sync so app.vue can persist a resume step on close
+	if (activeStepIndex.value !== nextIndex) goToStep(nextIndex);
 	await display();
 	emit('next-step', oldStep);
 }
@@ -641,6 +728,8 @@ async function gotoPreviousStep() {
 	if (newIndex < 0) newIndex = 0;
 
 	index.value = newIndex;
+	// keep shared tour state in sync so app.vue can persist a resume step on close
+	if (activeStepIndex.value !== newIndex) goToStep(newIndex);
 	await display();
 	emit('prev-step', oldStep);
 }
@@ -964,23 +1053,31 @@ function ensureObserversForTarget(element: HTMLElement) {
 	});
 	resizeObserver.observe(element);
 
+	// scope mutations to the target's overlay/layer container (or offsetParent) so we
+	// do not re-run positioning on every unrelated dashboard-feed mutation
+	if (mutationObserver) {
+		mutationObserver.disconnect();
+	}
+	const mutationRoot =
+		findLayerContainer(element) ||
+		(element.offsetParent as HTMLElement | null) ||
+		element.parentElement ||
+		document.body;
+	mutationObserver = new MutationObserver(() => {
+		updateBoxPosition();
+	});
+	mutationObserver.observe(mutationRoot, {
+		childList: true,
+		subtree: true,
+		attributes: true,
+		attributeFilter: ['style', 'class']
+	});
+
 	observedElement = element;
 	updateTrackedScrollContainers(element);
 }
 
 function ensureGlobalPositionObservers() {
-	if (!mutationObserver) {
-		mutationObserver = new MutationObserver(() => {
-			updateBoxPosition();
-		});
-		mutationObserver.observe(document.body, {
-			childList: true,
-			subtree: true,
-			attributes: true,
-			attributeFilter: ['style', 'class']
-		});
-	}
-
 	window.addEventListener('scroll', updateBoxPosition, true);
 	document.addEventListener('scroll', updateBoxPosition, true);
 	window.addEventListener('resize', updateBoxPosition);
@@ -1049,19 +1146,26 @@ function updateBoxPosition() {
 		let width = rect.width + padding * 2;
 		let height = rect.height + padding * 2;
 
-		if (left < 0) {
-			width += left;
-			left = 0;
+		// clamp highlight + cutout inside the safe-area viewport so a target near the
+		// notch / dynamic island / home indicator never sits under the system bars
+		const minX = safeAreaInsets.left;
+		const minY = safeAreaInsets.top;
+		const maxX = viewportWidth - safeAreaInsets.right;
+		const maxY = viewportHeight - safeAreaInsets.bottom;
+
+		if (left < minX) {
+			width -= minX - left;
+			left = minX;
 		}
-		if (top < 0) {
-			height += top;
-			top = 0;
+		if (top < minY) {
+			height -= minY - top;
+			top = minY;
 		}
-		if (left + width > viewportWidth) {
-			width = viewportWidth - left;
+		if (left + width > maxX) {
+			width = maxX - left;
 		}
-		if (top + height > viewportHeight) {
-			height = viewportHeight - top;
+		if (top + height > maxY) {
+			height = maxY - top;
 		}
 
 		width = Math.max(width, 0);
@@ -1212,6 +1316,7 @@ function createTourHighlight(id?: string) {
 	hasScrolledToFallbackTooltip = false;
 	lastShadowLookupAt = 0;
 	refreshSafeAreaInsets();
+	refreshDimColor();
 	stepAnimKey.value++;
 
 	const activeElement = document.activeElement;
@@ -1283,14 +1388,24 @@ onMounted(() => {
 	});
 });
 
+// stored so we can tear it down on unmount (was a leaked anonymous listener)
+let onKeydown: ((event: KeyboardEvent) => void) | null = null;
+
 onUnmounted(() => {
 	unregisterTour(props.tourId);
 	destroyTourHighlight();
+	if (import.meta.client && onKeydown) {
+		window.removeEventListener('keydown', onKeydown);
+		onKeydown = null;
+	}
 });
 
 if (import.meta.client) {
 	watch(isActive, (active) => {
 		if (active) {
+			// capture focus before the dialog takes over, restore it on close
+			previouslyFocused =
+				document.activeElement instanceof HTMLElement ? document.activeElement : null;
 			index.value = Math.max(0, Math.min(activeStepIndex.value || 0, props.steps.length - 1));
 			if (props.steps.length > 0) {
 				display();
@@ -1298,6 +1413,9 @@ if (import.meta.client) {
 		} else {
 			destroyTourHighlight();
 			index.value = 0;
+			const toRestore = previouslyFocused;
+			previouslyFocused = null;
+			if (toRestore?.isConnected) nextTick(() => toRestore.focus?.());
 		}
 	});
 
@@ -1311,8 +1429,14 @@ if (import.meta.client) {
 		}
 	});
 
+	// move focus into the card on each step render for a11y
+	watch(stepAnimKey, () => {
+		if (!isActive.value) return;
+		nextTick(() => focusCard());
+	});
+
 	// keyboard navigation - mostly useful on iPad / web, harmless on phones
-	window.addEventListener('keydown', (event: KeyboardEvent) => {
+	onKeydown = (event: KeyboardEvent) => {
 		if (!isActive.value) return;
 		if (event.key === 'Escape' && props.allowSkip !== false) {
 			event.preventDefault();
@@ -1324,7 +1448,8 @@ if (import.meta.client) {
 			event.preventDefault();
 			gotoPreviousStep();
 		}
-	});
+	};
+	window.addEventListener('keydown', onKeydown);
 }
 
 // hardware-back support: when a tour is active, intercept back to close the tour first.
@@ -1342,10 +1467,11 @@ useBackButton(100, (processNextHandler) => {
 
 <style scoped>
 .site-tour-highlight {
-	border: 2px solid #3b82f6;
+	/* earth primary green (30, 187, 72) to match the app palette */
+	border: 2px solid rgb(30, 187, 72);
 	box-shadow:
-		0 0 0 4px rgba(59, 130, 246, 0.18),
-		0 0 14px rgba(59, 130, 246, 0.55);
+		0 0 0 4px rgba(30, 187, 72, 0.2),
+		0 0 14px rgba(30, 187, 72, 0.55);
 	background: transparent;
 	transition:
 		top 260ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -1379,13 +1505,54 @@ useBackButton(100, (processNextHandler) => {
 	0%,
 	100% {
 		box-shadow:
-			0 0 0 4px rgba(59, 130, 246, 0.18),
-			0 0 12px rgba(59, 130, 246, 0.45);
+			0 0 0 4px rgba(30, 187, 72, 0.2),
+			0 0 12px rgba(30, 187, 72, 0.45);
 	}
 	50% {
 		box-shadow:
-			0 0 0 10px rgba(59, 130, 246, 0.05),
-			0 0 22px rgba(59, 130, 246, 0.7);
+			0 0 0 10px rgba(30, 187, 72, 0.06),
+			0 0 22px rgba(30, 187, 72, 0.7);
+	}
+}
+
+.site-tour-card {
+	/* theme-aware earth-palette wash over the ionic card surface */
+	--background:
+		linear-gradient(
+			155deg,
+			rgba(30, 187, 72, 0.12) 0%,
+			rgba(23, 79, 150, 0.08) 55%,
+			rgba(30, 187, 72, 0) 100%
+		),
+		var(--ion-card-background, var(--ion-background-color, #ffffff));
+	border-color: rgba(30, 187, 72, 0.85) !important;
+}
+
+:global(html.dark) .site-tour-card,
+:global(body.dark) .site-tour-card {
+	--background:
+		linear-gradient(
+			155deg,
+			rgba(30, 187, 72, 0.22) 0%,
+			rgba(23, 79, 150, 0.16) 55%,
+			rgba(30, 187, 72, 0) 100%
+		),
+		var(--ion-card-background, var(--ion-background-color, #1a1b1e));
+	border-color: rgba(53, 194, 90, 0.7) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+	:global(html:not(.light)) .site-tour-card,
+	:global(body:not(.light)) .site-tour-card {
+		--background:
+			linear-gradient(
+				155deg,
+				rgba(30, 187, 72, 0.22) 0%,
+				rgba(23, 79, 150, 0.16) 55%,
+				rgba(30, 187, 72, 0) 100%
+			),
+			var(--ion-card-background, var(--ion-background-color, #1a1b1e));
+		border-color: rgba(53, 194, 90, 0.7) !important;
 	}
 }
 
