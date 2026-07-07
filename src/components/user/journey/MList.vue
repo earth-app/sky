@@ -69,6 +69,9 @@ onMounted(async () => {
 
 	await Promise.all(
 		journeyTypes.map(async (type) => {
+			// skip silently before the id resolves; fetchCurrentJourney now returns success:false
+			// on an empty id and the else-branch would toast a false error
+			if (!props.user?.id) return;
 			// Fetch count
 			const countRes = await fetchCurrentJourney(type, props.user.id);
 			if (countRes.success && countRes.data) {
