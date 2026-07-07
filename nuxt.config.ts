@@ -115,6 +115,8 @@ export default defineNuxtConfig({
 				'@ionic/vue',
 				'@vue/devtools-core',
 				'@vue/devtools-kit',
+				'errors',
+				'ionicons/icons',
 				'luxon',
 				'piexifjs',
 				'zod',
