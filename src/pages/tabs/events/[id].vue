@@ -72,6 +72,15 @@
 				</div>
 			</div>
 			<div
+				v-else-if="notFound"
+				class="h-screen flex flex-col"
+			>
+				<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
+					<h2 class="text-xl font-semibold">Event Not Found</h2>
+					<p class="text-gray-500 text-sm">This event doesn't exist or was removed.</p>
+				</div>
+			</div>
+			<div
 				v-else
 				class="h-screen"
 			>
@@ -93,6 +102,8 @@ const route = useRoute();
 const relatedLoaded = ref(false);
 const relatedEvents = ref<Event[]>([]);
 const unavailableOffline = ref(false);
+const fetchAttempted = ref(false);
+const notFound = computed(() => fetchAttempted.value && !event.value && !unavailableOffline.value);
 
 // event auto-deletion happens once the event has already ended
 const eventExpiresAt = computed(() => {
@@ -109,7 +120,11 @@ onMounted(async () => {
 		return;
 	}
 
-	await eventStore.fetchEvent(route.params.id as string, true);
+	try {
+		await eventStore.fetchEvent(route.params.id as string, true);
+	} finally {
+		fetchAttempted.value = true;
+	}
 });
 
 watch(isOffline, (offline) => {

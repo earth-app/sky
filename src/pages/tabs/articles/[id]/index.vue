@@ -126,6 +126,15 @@
 				</div>
 			</div>
 			<div
+				v-else-if="notFound"
+				class="h-screen flex flex-col"
+			>
+				<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
+					<h2 class="text-xl font-semibold">Article Not Found</h2>
+					<p class="text-gray-500 text-sm">This article doesn't exist or was removed.</p>
+				</div>
+			</div>
+			<div
 				v-else
 				class="h-screen"
 			>
@@ -140,8 +149,9 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
+import { shouldShowJourneyToast } from '~/utils/journey';
 
-const { user, fetchCurrentJourney, tapCurrentJourney } = useAuth(makeMServerRequest);
+const { user, tapCurrentJourney } = useAuth(makeMServerRequest);
 const route = useRoute();
 
 const relatedLoaded = ref(false);
@@ -149,6 +159,12 @@ const relatedArticles = ref<Article[]>([]);
 const currentArticle = ref<Article | null>(null);
 const loadedFromOffline = ref(false);
 const unavailableOffline = ref(false);
+const fetchAttempted = ref(false);
+
+// a settled load with no article (and not an offline gap) = genuinely missing, not loading
+const notFound = computed(
+	() => fetchAttempted.value && !currentArticle.value && !unavailableOffline.value
+);
 
 const articleExpiresAt = computed(() => {
 	const a = currentArticle.value;
@@ -214,30 +230,34 @@ async function loadArticleForView() {
 	const id = routeId.value;
 	if (!id) return;
 
-	unavailableOffline.value = false;
+	try {
+		unavailableOffline.value = false;
 
-	if (isOffline.value) {
-		const offlineArticle = await downloads.get('article', id);
-		if (offlineArticle) {
-			loadedFromOffline.value = true;
-			currentArticle.value = offlineArticle as Article;
+		if (isOffline.value) {
+			const offlineArticle = await downloads.get('article', id);
+			if (offlineArticle) {
+				loadedFromOffline.value = true;
+				currentArticle.value = offlineArticle as Article;
+				relatedArticles.value = [];
+				relatedLoaded.value = true;
+				return;
+			}
+
+			currentArticle.value = null;
+			loadedFromOffline.value = false;
 			relatedArticles.value = [];
 			relatedLoaded.value = true;
+			unavailableOffline.value = true;
 			return;
 		}
 
-		currentArticle.value = null;
 		loadedFromOffline.value = false;
-		relatedArticles.value = [];
-		relatedLoaded.value = true;
-		unavailableOffline.value = true;
-		return;
+		relatedLoaded.value = false;
+		await fetch();
+		currentArticle.value = article.value || null;
+	} finally {
+		fetchAttempted.value = true;
 	}
-
-	loadedFromOffline.value = false;
-	relatedLoaded.value = false;
-	await fetch();
-	currentArticle.value = article.value || null;
 }
 
 watch(
@@ -264,14 +284,9 @@ onMounted(async () => {
 	if (isOffline.value || loadedFromOffline.value) return;
 
 	if (!user.value) return;
-	const count = await fetchCurrentJourney('article', user.value.id);
-	if (!valid(count)) return; // silently ignore errors
-
 	const res = await tapCurrentJourney('article');
-	if (!valid(res)) return; // silently ignore errors
-
-	if (count.data.count === res.data.count) return; // no change
-	if (!Number.isFinite(res.data.count)) return; // no valid count to show
+	// toast only on a real server-side increment with a usable count (never on unchanged)
+	if (!shouldShowJourneyToast(res)) return;
 
 	await Toast.show({
 		text: `You have now read ${res.data.count} articles on your journey streak. Keep going!`,

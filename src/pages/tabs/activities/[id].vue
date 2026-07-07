@@ -84,6 +84,15 @@
 			</div>
 		</div>
 		<div
+			v-else-if="notFound"
+			class="h-screen flex flex-col"
+		>
+			<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
+				<h2 class="text-xl font-semibold">Activity Not Found</h2>
+				<p class="text-gray-500 text-sm">This activity doesn't exist or was removed.</p>
+			</div>
+		</div>
+		<div
 			v-else
 			class="h-screen"
 		>
@@ -98,12 +107,19 @@
 import { Toast } from '@capacitor/toast';
 import type { Activity } from 'types/activity';
 import { useRoute } from 'vue-router'; // explicit import fixes issues with ionic
+import { shouldShowJourneyToast } from '~/utils/journey';
 
 const route = useRoute();
 const { activity, fetch } = useActivity(route.params.id as string);
 const currentActivity = ref<Activity | null>(null);
 const loadedFromOffline = ref(false);
 const unavailableOffline = ref(false);
+const fetchAttempted = ref(false);
+
+// a settled load with no activity (and not an offline gap) = genuinely missing, not loading
+const notFound = computed(
+	() => fetchAttempted.value && !currentActivity.value && !unavailableOffline.value
+);
 
 const downloads = useDownloads();
 const routeId = computed(() => route.params.id as string);
@@ -137,25 +153,36 @@ async function loadActivityForView() {
 	const id = routeId.value;
 	if (!id) return;
 
-	unavailableOffline.value = false;
+	try {
+		unavailableOffline.value = false;
 
-	if (isOffline.value) {
-		const offlineActivity = await downloads.get('activity', id);
-		if (offlineActivity) {
-			loadedFromOffline.value = true;
-			currentActivity.value = offlineActivity as Activity;
+		if (isOffline.value) {
+			const offlineActivity = await downloads.get('activity', id);
+			if (offlineActivity) {
+				loadedFromOffline.value = true;
+				currentActivity.value = offlineActivity as Activity;
+				return;
+			}
+
+			currentActivity.value = null;
+			loadedFromOffline.value = false;
+			unavailableOffline.value = true;
 			return;
 		}
 
-		currentActivity.value = null;
 		loadedFromOffline.value = false;
-		unavailableOffline.value = true;
-		return;
-	}
+		await fetch();
 
-	loadedFromOffline.value = false;
-	await fetch();
-	currentActivity.value = activity.value;
+		// at this point activity.value shouldn't be undefined (loading)
+		if (!activity.value) {
+			currentActivity.value = null;
+			return;
+		}
+
+		currentActivity.value = activity.value;
+	} finally {
+		fetchAttempted.value = true;
+	}
 }
 
 async function startDownload() {
@@ -201,7 +228,7 @@ watch(activity, (newActivity) => {
 
 // User Journey
 
-const { user, fetchCurrentJourney, tapCurrentJourney } = useAuth(makeMServerRequest);
+const { user, tapCurrentJourney } = useAuth(makeMServerRequest);
 const { count: totalActivities, refresh: refreshCount } = useActivitiesCount();
 watch(currentActivity, (newActivity) => {
 	if (newActivity && !loadedFromOffline.value) {
@@ -218,14 +245,9 @@ onMounted(async () => {
 		await refreshCount();
 	}
 
-	const count = await fetchCurrentJourney('activity', user.value.id);
-	if (!valid(count)) return; // silently ignore errors
-
 	const res = await tapCurrentJourney('activity', route.params.id as string);
-	if (!valid(res)) return; // silently ignore errors
-
-	if (count.data.count === res.data.count) return; // no change
-	if (!Number.isFinite(res.data.count)) return; // no valid count to show
+	// toast only on a real server-side increment with a usable count (never on unchanged)
+	if (!shouldShowJourneyToast(res)) return;
 
 	// only show slash/total when total is a known positive number
 	const total = totalActivities.value;
