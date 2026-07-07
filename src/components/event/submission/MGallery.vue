@@ -35,6 +35,7 @@
 				<IonModal
 					:title="`Submission by @${item.user.value?.username || 'anonymous'}`"
 					:is-open="openStates[index]"
+					@did-dismiss="openStates[index] = false"
 				>
 					<IonHeader>
 						<IonToolbar class="px-2">

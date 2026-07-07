@@ -38,6 +38,7 @@
 			v-if="submissions && submissions.length > 0"
 			title="Submissions"
 			:is-open="open"
+			@did-dismiss="open = false"
 		>
 			<IonHeader>
 				<IonToolbar class="px-2">

@@ -36,6 +36,7 @@
 		v-if="value"
 		title="Confirm Submission"
 		:is-open="modalOpen"
+		@did-dismiss="value = []"
 	>
 		<div class="flex flex-col items-center">
 			<img
