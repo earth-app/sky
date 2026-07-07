@@ -113,6 +113,7 @@
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
 import { type Prompt } from 'types/prompts';
+import { shouldShowJourneyToast } from '~/utils/journey';
 
 const { user, avatar128, tapCurrentJourney } = useAuth(makeMServerRequest);
 
@@ -194,7 +195,8 @@ async function postResponse() {
 
 		// Tap Prompts Journey
 		const journeyRes = await tapCurrentJourney('prompt');
-		if (valid(journeyRes) && Number.isFinite(journeyRes.data.count)) {
+		// toast only on a real server-side increment with a usable count (never on unchanged)
+		if (shouldShowJourneyToast(journeyRes)) {
 			await Toast.show({
 				text: `Your prompts streak is now at ${journeyRes.data.count} prompts on your journey!`,
 				duration: 'long'
