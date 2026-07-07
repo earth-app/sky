@@ -140,6 +140,7 @@ import { emailSchema, fullNameSchema, passwordSchema, usernameSchema } from 'sch
 import type { User } from 'types/user';
 import z from 'zod';
 import { theme } from '~/composables/useSettings';
+import { USERNAME_NO_SPACES_MESSAGE, usernameHasWhitespace } from '~/utils/username';
 
 const fullName = ref('');
 const email = ref('');
@@ -202,10 +203,12 @@ async function safeToast(text: string, duration: 'short' | 'long' = 'long') {
 }
 
 async function handleFormError(event: any) {
-	const firstMessage =
-		event?.errors?.[0]?.message ??
-		event?.children?.[0]?.message ??
-		'Please fix the highlighted fields and try again.';
+	// spaces get the specific message even when the schema also rejects the value
+	const firstMessage = usernameHasWhitespace(username.value)
+		? USERNAME_NO_SPACES_MESSAGE
+		: (event?.errors?.[0]?.message ??
+			event?.children?.[0]?.message ??
+			'Please fix the highlighted fields and try again.');
 	error.value = firstMessage;
 	notifyError();
 	await safeToast(firstMessage, 'long');
@@ -231,6 +234,12 @@ async function handleSignup() {
 
 	if (normalizedName.length > 0 && !fullNameSchema.safeParse(normalizedName).success) {
 		await reportValidationError('Please enter a valid full name.');
+		return;
+	}
+
+	// spaces get a specific message before the generic allowed-characters one
+	if (usernameHasWhitespace(username.value)) {
+		await reportValidationError(USERNAME_NO_SPACES_MESSAGE);
 		return;
 	}
 
