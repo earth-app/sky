@@ -14,6 +14,19 @@
 			</div>
 			<IonButton
 				size="small"
+				fill="outline"
+				color="info"
+				aria-label="Word of the Day"
+				@click="openWordOfTheDay"
+			>
+				<UIcon
+					name="mdi:calendar-star"
+					class="size-4 mr-1"
+				/>
+				Word of the Day
+			</IonButton>
+			<IonButton
+				size="small"
 				fill="clear"
 				color="medium"
 				router-link="/tabs/settings/words"
@@ -42,19 +55,56 @@
 				<span class="text-xs opacity-90 line-clamp-2">{{ word.definition }}</span>
 			</button>
 		</div>
+
+		<IonModal
+			:is-open="wordModalOpen"
+			@did-dismiss="wordModalOpen = false"
+		>
+			<IonHeader>
+				<IonToolbar>
+					<IonTitle>Word of the Day</IonTitle>
+					<IonButtons slot="end">
+						<IonButton
+							color="danger"
+							aria-label="Close word of the day"
+							@click="wordModalOpen = false"
+						>
+							<UIcon
+								name="mdi:close"
+								class="min-h-6 min-w-6"
+							/>
+						</IonButton>
+					</IonButtons>
+				</IonToolbar>
+			</IonHeader>
+			<div class="h-full overflow-auto p-4">
+				<WidgetsMWordOfTheDay :words="modalWords" />
+			</div>
+		</IonModal>
 	</IonCard>
 </template>
 
 <script setup lang="ts">
-import { Toast } from '@capacitor/toast';
+type WordEntry = { word: string; partOfSpeech: string; definition: string };
 
 const { list } = useSavedWords();
 
-async function open(word: { word: string; partOfSpeech: string; definition: string }) {
-	// quick preview: surface definition in a toast since there's no per-word page yet
-	await Toast.show({
-		text: `${word.word} (${word.partOfSpeech}): ${word.definition}`,
-		duration: 'long'
-	});
+const wordModalOpen = ref(false);
+const activeWord = ref<WordEntry | null>(null);
+
+// undefined lets the widget use its own daily pool; a single entry pins it to the tapped word
+const modalWords = computed<WordEntry[] | undefined>(() =>
+	activeWord.value ? [activeWord.value] : undefined
+);
+
+// tapping a saved word now opens the interactive widget in a modal (was a plain toast)
+function open(word: WordEntry) {
+	activeWord.value = word;
+	wordModalOpen.value = true;
+}
+
+function openWordOfTheDay() {
+	activeWord.value = null;
+	wordModalOpen.value = true;
 }
 </script>
