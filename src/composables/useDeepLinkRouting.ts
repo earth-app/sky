@@ -20,7 +20,7 @@ const EXTERNAL_ONLY_PATHS = new Set([
 	'/privacy-policy'
 ]);
 
-const TABS_PREFIX_PATHS = ['/activities/', '/articles/', '/events/', '/prompts/'];
+const TABS_PREFIX_PATHS = ['/activities/', '/articles/', '/events/', '/prompts/', '/quests/'];
 
 const OAUTH_COMPLETE_PATHS = new Set([
 	'/oauth/complete',
