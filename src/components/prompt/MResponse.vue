@@ -38,6 +38,7 @@
 		<IonModal
 			v-if="hasButtons"
 			:is-open="editOpen"
+			@did-dismiss="editOpen = false"
 		>
 			<IonHeader>
 				<IonToolbar>
@@ -95,8 +96,15 @@ const emit = defineEmits<{
 const i18n = useI18n();
 const { user } = useAuth();
 const { handle: identifier } = useDisplayName(props.response.owner);
-const { avatar128: authorAvatar } = useUser(props.response.owner.id);
 const { updateResponse, removeResponse } = usePromptResponses(props.response.prompt_id);
+
+const avatarStore = useAvatarStore();
+const ownerAvatarUrl = computed(() => props.response.owner.account?.avatar_url);
+const authorAvatar = computed(() => avatarStore.safeUrl(ownerAvatarUrl.value, 'avatar128'));
+
+if (import.meta.client) {
+	watch(ownerAvatarUrl, (url) => avatarStore.preloadAvatar(url), { immediate: true });
+}
 
 const time = computed(() => {
 	const created = DateTime.fromISO(props.response.created_at, {
