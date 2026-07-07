@@ -65,6 +65,8 @@ interface BackendState {
 	activeQuestByTestId: Record<string, any>;
 	currentUserByToken: Record<string, string>; // token -> userId
 	currentUserByTestId: Record<string, string | null>; // testId -> userId (overrides currentUserByToken)
+	onboarding: Record<string, any>; // userId -> OnboardingState
+	avatars: Record<string, boolean>; // userId -> has a generated (non-default) avatar
 	overrides: Override[];
 }
 
@@ -157,6 +159,8 @@ function freshState(): BackendState {
 			[MOCK_ADMIN_TOKEN]: adminUser.id
 		},
 		currentUserByTestId: {},
+		onboarding: {},
+		avatars: {},
 		overrides: []
 	};
 }
@@ -199,6 +203,22 @@ function json(
 
 function notFound(res: ServerResponse, message = 'Not Found') {
 	json(res, 404, { message, code: 404 });
+}
+
+// a 1x1 png is enough - the avatar store only checks the response is a non-empty image blob
+const AVATAR_PNG = Buffer.from(
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M8AAAMBAQDJ/pLvAAAAAElFTkSuQmCC',
+	'base64'
+);
+function sendPng(res: ServerResponse) {
+	res.writeHead(200, {
+		'content-type': 'image/png',
+		'access-control-allow-origin': (res as any)._reqOrigin || '*',
+		'access-control-allow-credentials': 'true',
+		'access-control-expose-headers': '*',
+		vary: 'Origin'
+	});
+	res.end(AVATAR_PNG);
 }
 
 function unauthorized(res: ServerResponse) {
@@ -251,6 +271,23 @@ function currentUserId(ctx: RouteContext): string | null {
 function findUser(idOrUsername: string): any | undefined {
 	if (state.users[idOrUsername]) return state.users[idOrUsername];
 	return Object.values(state.users).find((u: any) => u.username === idOrUsername);
+}
+
+// lazily create the onboarding state for a user so the checklist can render + mutate
+function onboardingFor(userId: string): any {
+	if (!state.onboarding[userId]) {
+		const now = Date.now();
+		state.onboarding[userId] = {
+			user_id: userId,
+			completed_steps: [],
+			interests: [],
+			started_at: now,
+			finished_at: null,
+			dismissed_at: null,
+			updated_at: now
+		};
+	}
+	return state.onboarding[userId];
 }
 
 // ---------------------------------------------------------------------------
@@ -488,6 +525,85 @@ const mantleRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }>
 		}
 	},
 
+	// Onboarding state (checklist)
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/current\/onboarding\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			json(res, 200, { state: onboardingFor(id) });
+		}
+	},
+	// Complete an onboarding step
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/onboarding\/step\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			const step = (ctx.body ?? {}).step;
+			const ob = onboardingFor(id);
+			if (step && !ob.completed_steps.includes(step)) ob.completed_steps.push(step);
+			ob.updated_at = Date.now();
+			json(res, 200, { state: ob });
+		}
+	},
+	// Dismiss the onboarding checklist
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/onboarding\/dismiss\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			const ob = onboardingFor(id);
+			ob.dismissed_at = Date.now();
+			ob.updated_at = ob.dismissed_at;
+			json(res, 200, { state: ob });
+		}
+	},
+	// Set onboarding persona + interests
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/onboarding\/persona\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			const ob = onboardingFor(id);
+			ob.persona = (ctx.body ?? {}).persona ?? ob.persona;
+			ob.interests = (ctx.body ?? {}).interests ?? ob.interests;
+			ob.updated_at = Date.now();
+			json(res, 200, { state: ob });
+		}
+	},
+
+	// Regenerate profile photo (AI avatar) -- returns image bytes; the client reads
+	// this as a Blob. Marks the user as having a (non-default) avatar so subsequent
+	// GET profile_photo returns bytes. Tests override this route to force error cases.
+	{
+		method: 'PUT',
+		pattern: /^\/v2\/users\/current\/profile_photo\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			state.avatars[id] = true;
+			sendPng(res);
+		}
+	},
+	// Fetch a profile photo -- 200 bytes once generated, else 404 (default placeholder).
+	// this is the canonical "has a custom avatar" signal the client reads.
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/(current|[^/]+)\/profile_photo\/?$/,
+		handler: (_req, res, ctx) => {
+			const match = ctx.url.pathname.match(/^\/v2\/users\/([^/]+)\/profile_photo/);
+			const raw = match?.[1];
+			const id = raw === 'current' ? currentUserId(ctx) : raw;
+			if (id && state.avatars[id]) return sendPng(res);
+			json(res, 404, { message: 'Profile photo not found', code: 404 });
+		}
+	},
+
 	// User listing (admin)
 	{
 		method: 'GET',
@@ -544,6 +660,23 @@ const mantleRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }>
 			const id = currentUserId(ctx);
 			if (!id) return unauthorized(res);
 			json(res, 204, '');
+		}
+	},
+
+	// Set a user's account level (admin) -- PUT /v2/users/<id>/account_type?type=<level>
+	{
+		method: 'PUT',
+		pattern: /^\/v2\/users\/(?!current\b)([^/?]+)\/account_type\/?$/,
+		handler: (_req, res, ctx) => {
+			if (!currentUserId(ctx)) return unauthorized(res);
+			const match = ctx.url.pathname.match(/^\/v2\/users\/([^/?]+)\/account_type/);
+			const target = match ? findUser(match[1]!) : null;
+			if (!target) return notFound(res, 'User not found');
+			const type = (ctx.url.searchParams.get('type') || '').toUpperCase();
+			const allowed = ['FREE', 'PRO', 'WRITER', 'ORGANIZER', 'ADMINISTRATOR'];
+			if (!allowed.includes(type)) return json(res, 400, { message: 'invalid account type' });
+			target.account = { ...(target.account ?? {}), account_type: type };
+			json(res, 200, target);
 		}
 	},
 
@@ -606,6 +739,16 @@ const mantleRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }>
 		method: 'GET',
 		pattern: /^\/v2\/activities\/count\/?$/,
 		handler: (_req, res) => json(res, 200, { count: Object.values(state.activities).length })
+	},
+
+	// Random activities (must precede the by-id catch-all so "random" isn't read as an id)
+	{
+		method: 'GET',
+		pattern: /^\/v2\/activities\/random\/?$/,
+		handler: (_req, res, ctx) => {
+			const count = Number(ctx.url.searchParams.get('count') ?? '3');
+			json(res, 200, Object.values(state.activities).slice(0, Math.max(1, count)));
+		}
 	},
 
 	// Activity by id

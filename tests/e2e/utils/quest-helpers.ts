@@ -162,6 +162,35 @@ export async function rejectNextSubmission(
 	});
 }
 
+/**
+ * Emulate the native CapacitorHttp transport handing back a mangled-but-successful
+ * updateQuest response for the next submission. `string` serves a raw JSON *string* body
+ * as text/plain so the client does not auto-parse it; `envelope` wraps the result in a
+ * `{ data: {...} }` object. The store must tolerate both and still treat the submit as
+ * validated (regression guard for the false "could not validate" error on native).
+ */
+export async function respondNextSubmissionRaw(
+	mockApi: MockClient,
+	opts: { shape?: 'string' | 'envelope'; completed?: boolean; message?: string } = {}
+): Promise<void> {
+	const shape = opts.shape ?? 'string';
+	const result = {
+		validated: true,
+		completed: opts.completed ?? false,
+		message: opts.message ?? 'Step complete!'
+	};
+	await mockApi.set({
+		backend: 'mantle',
+		method: 'POST',
+		path: /^\/api\/user\/updateQuest/,
+		status: 200,
+		// text/plain string body -> ofetch returns it unparsed; object envelope -> parsed as { data }
+		body: shape === 'string' ? JSON.stringify(result) : { data: result },
+		...(shape === 'string' ? { headers: { 'content-type': 'text/plain; charset=utf-8' } } : {}),
+		once: true
+	});
+}
+
 // android default stride the tracker uses to convert cumulative steps -> meters
 // (DEFAULT_STRIDE_M in useHealthKit.ts); keep in sync if that constant changes
 const DEFAULT_STRIDE_M = 0.762;

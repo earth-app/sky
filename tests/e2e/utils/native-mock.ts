@@ -99,6 +99,12 @@ export async function installNativeMock(
 			// ---- test driver hooks --------------------------------------------
 			w.__fireAppUrlOpen = (url: string) => fire('App', 'appUrlOpen', { url });
 			w.__fireAppState = (isActive: boolean) => fire('App', 'appStateChange', { isActive });
+			// drive the @capacitor/network listener so offline<->online transitions are testable
+			w.__fireNetworkChange = (connected: boolean) =>
+				fire('Network', 'networkStatusChange', {
+					connected,
+					connectionType: connected ? 'wifi' : 'none'
+				});
 			w.__firePedometer = (meas: Record<string, unknown>) =>
 				fire('CapacitorPedometer', 'measurement', meas);
 			// android cumulative-step counter the history path reads via getMeasurement();
@@ -137,6 +143,45 @@ export async function installNativeMock(
 						return Promise.resolve();
 					},
 					keys: () => Promise.resolve({ keys: Object.keys(w.__prefs) })
+				},
+				// @capacitor/core CapacitorHttp - route through fetch so native CapacitorHttp
+				// paths (e.g. current-user repair) actually hit the mock; the context x-test-id
+				// header is added automatically by playwright, so requests scope correctly
+				CapacitorHttp: {
+					request: async (opts: any) => {
+						const method = (opts?.method || 'GET').toUpperCase();
+						const headers: Record<string, string> = { ...(opts?.headers ?? {}) };
+						let url = opts?.url ?? '';
+						if (opts?.params && typeof opts.params === 'object') {
+							const qs = new URLSearchParams(opts.params as Record<string, string>).toString();
+							if (qs) url += (url.includes('?') ? '&' : '?') + qs;
+						}
+						const init: any = { method, headers };
+						if (opts?.data !== undefined && method !== 'GET' && method !== 'HEAD') {
+							init.body = typeof opts.data === 'string' ? opts.data : JSON.stringify(opts.data);
+							if (!Object.keys(headers).some((h) => h.toLowerCase() === 'content-type')) {
+								headers['Content-Type'] = 'application/json';
+							}
+						}
+						const resp = await fetch(url, init);
+						const text = await resp.text();
+						let data: any = text;
+						try {
+							data = text ? JSON.parse(text) : null;
+						} catch {
+							// leave as raw text when the body isn't json
+						}
+						const respHeaders: Record<string, string> = {};
+						resp.headers.forEach((v, k) => {
+							respHeaders[k] = v;
+						});
+						return { status: resp.status, data, headers: respHeaders, url: resp.url };
+					},
+					get: (opts: any) => plugins.CapacitorHttp.request({ ...opts, method: 'GET' }),
+					post: (opts: any) => plugins.CapacitorHttp.request({ ...opts, method: 'POST' }),
+					put: (opts: any) => plugins.CapacitorHttp.request({ ...opts, method: 'PUT' }),
+					patch: (opts: any) => plugins.CapacitorHttp.request({ ...opts, method: 'PATCH' }),
+					delete: (opts: any) => plugins.CapacitorHttp.request({ ...opts, method: 'DELETE' })
 				},
 				// @capacitor/browser - record opens, expose a finished emitter
 				Browser: {

@@ -112,8 +112,16 @@ test.describe('Profile notifications', () => {
 		await expect(page.getByText('Unread Item')).toBeVisible({ timeout: 12_000 });
 		await expect(page.getByText(/1 unread/i)).toBeVisible();
 
-		// the unread dot carries a "Mark as Read" title; tapping it flips the count
-		await page.locator('[title="Mark as Read"]').first().click();
+		// the mark-read control must be a comfortable tap target (HIG 44pt); the visible
+		// dot is small but the hit area is expanded, so assert the box is >= 40 both ways
+		const markRead = page.locator('[title="Mark as Read"]').first();
+		const box = await markRead.boundingBox();
+		expect(box).not.toBeNull();
+		expect(box!.width).toBeGreaterThanOrEqual(40);
+		expect(box!.height).toBeGreaterThanOrEqual(40);
+
+		// tapping it still flips the count
+		await markRead.click();
 		await expect(page.getByText(/all read/i)).toBeVisible({ timeout: 8000 });
 	});
 });

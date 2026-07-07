@@ -108,9 +108,11 @@ test.describe('Discover tab', () => {
 				const scrollEl = await (content as any)?.getScrollElement?.();
 				if (scrollEl) scrollEl.scrollTo({ top: scrollEl.scrollHeight });
 			});
+			// load-more is the LAST ion-button in #discover-results; the word-of-the-day
+			// widget renders its own ion-buttons first, so .first() clicked the wrong one
 			await page
-				.locator('#discover-results ion-button:not([disabled])')
-				.first()
+				.locator('#discover-results ion-button')
+				.last()
 				.click()
 				.catch(() => {});
 			await page.waitForTimeout(1200);

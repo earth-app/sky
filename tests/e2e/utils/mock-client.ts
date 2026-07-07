@@ -51,6 +51,72 @@ export class MockClient {
 	}
 
 	/**
+	 * Reply to the next matching request with the body as a raw JSON STRING (content-type
+	 * text/plain) - emulates the native CapacitorHttp transport handing back an unparsed
+	 * string the shared request layer must parse itself.
+	 */
+	async respondRawString(
+		method: string,
+		path: string | RegExp,
+		body: any,
+		opts: { backend?: Backend; status?: number; once?: boolean } = {}
+	): Promise<void> {
+		await this.set({
+			backend: opts.backend,
+			method,
+			path,
+			status: opts.status ?? 200,
+			headers: { 'content-type': 'text/plain' },
+			body: typeof body === 'string' ? body : JSON.stringify(body),
+			once: opts.once ?? false
+		});
+	}
+
+	/**
+	 * Reply with the real payload wrapped in the { data, status, url } transport ENVELOPE -
+	 * the shape native CapacitorHttp uses for larger bodies. The request layer must unwrap it.
+	 */
+	async respondEnvelope(
+		method: string,
+		path: string | RegExp,
+		inner: any,
+		opts: { backend?: Backend; status?: number; once?: boolean } = {}
+	): Promise<void> {
+		await this.set({
+			backend: opts.backend,
+			method,
+			path,
+			status: opts.status ?? 200,
+			body: {
+				data: inner,
+				status: opts.status ?? 200,
+				url: typeof path === 'string' ? path : undefined
+			},
+			once: opts.once ?? false
+		});
+	}
+
+	/**
+	 * Arm a ONE-SHOT transient failure (default 500). The shared request layer retries the
+	 * GET (or a later refetch fires), and the second attempt falls through to the seeded
+	 * default route - so the UI must self-heal rather than blank.
+	 */
+	async respondTransientThenSuccess(
+		method: string,
+		path: string | RegExp,
+		opts: { backend?: Backend; status?: number; body?: any } = {}
+	): Promise<void> {
+		await this.set({
+			backend: opts.backend,
+			method,
+			path,
+			status: opts.status ?? 500,
+			body: opts.body ?? { message: 'Internal error' },
+			once: true
+		});
+	}
+
+	/**
 	 * Make every request from this test see `user` as the current user.
 	 * Pass `null` to anonymize. Optionally also bind a token so SSR-side
 	 * lookups (which can't read the X-Test-Id header) resolve correctly.

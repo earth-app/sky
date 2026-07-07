@@ -139,8 +139,11 @@ export function makeArticle(overrides: Record<string, any> = {}): Record<string,
 
 export function makeEvent(overrides: Record<string, any> = {}): Record<string, any> {
 	const id = overrides.id ?? `event-${Math.random().toString(36).slice(2, 8)}`;
-	const start = Date.UTC(2026, 5, 1, 15);
-	const end = Date.UTC(2026, 5, 1, 17);
+	// keep the default event genuinely upcoming (matches timing.is_upcoming below); a
+	// hardcoded calendar date silently goes "past" against the real clock and flips the
+	// signup CTA to "Event Ended"
+	const start = Date.now() + 86_400_000;
+	const end = start + 2 * 3_600_000;
 	const host = overrides.host ?? makeUser({ username: 'host' });
 	return {
 		id,

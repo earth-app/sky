@@ -72,8 +72,15 @@ test.describe('Dashboard tab', () => {
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 
 		await expect(page.locator('#title')).toBeVisible({ timeout: 12_000 });
-		// the dashboard intentionally has no active-quest resume card; the only
-		// resume affordance is the welcome-tour chip. assert no quest-resume UI leaks in.
-		await expect(page.getByText(/resume.*quest/i)).toHaveCount(0);
+		// the welcome checklist legitimately carries a "Resume Quest" step CTA; the dashboard's
+		// own content (feed, hero, banners) must not add another quest-resume affordance, so
+		// assert every resume-quest match lives inside the checklist, none leak outside it
+		await page.waitForTimeout(1500);
+		const totalResume = await page.getByText(/resume.*quest/i).count();
+		const inChecklist = await page
+			.locator('#welcome-checklist')
+			.getByText(/resume.*quest/i)
+			.count();
+		expect(totalResume).toBe(inChecklist);
 	});
 });
