@@ -195,6 +195,7 @@ import { onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
 import { type Event } from 'types/event';
 import { capitalizeFully, comma } from 'utils';
 import { theme } from '~/composables/useSettings';
+import { interleaveFeed } from '~/utils/feed';
 
 const SEARCH_DEBOUNCE_MS = 450;
 const SEARCH_LIMIT = 25;
@@ -445,24 +446,15 @@ function getSortTimestamp(result: DiscoverResult): number {
 	return 0;
 }
 
-function shuffleResults<T>(items: T[]): T[] {
-	const shuffled = [...items];
-
-	for (let i = shuffled.length - 1; i > 0; i -= 1) {
-		const j = Math.floor(Math.random() * (i + 1));
-		const tmp = shuffled[i];
-		shuffled[i] = shuffled[j]!;
-		shuffled[j] = tmp!;
-	}
-
-	return shuffled;
-}
-
-function addUniqueResults(items: DiscoverResult[]): number {
+function addUniqueResults(items: DiscoverResult[], limit?: number): number {
 	const seen = new Set(results.value.map((result) => `${result.data_type}:${result.id}`));
 	let added = 0;
 
 	for (const item of items) {
+		if (limit !== undefined && added >= limit) {
+			break;
+		}
+
 		const key = `${item.data_type}:${item.id}`;
 		if (seen.has(key)) {
 			continue;
@@ -813,18 +805,14 @@ async function loadRandomResults(generation: number) {
 	const randomCount = RANDOM_FETCH_BASE + ((currentPage - 1) % 3);
 
 	let anyReceived = false;
-	let addedSoFar = 0;
+	// collect each type into its own bucket, then interleave once after all fetches settle
+	// so the page is a mixed blend instead of type-grouped clumps (order-only; fetch unchanged)
+	const buckets: DiscoverResult[][] = [];
 
 	const streamBatch = (items: DiscoverResult[]) => {
 		if (generation !== queryGeneration.value || items.length === 0) return;
 		anyReceived = true;
-
-		const remaining = Math.max(0, RANDOM_LIMIT - addedSoFar);
-		if (remaining === 0) return;
-
-		const shuffled = shuffleResults(items).slice(0, remaining);
-		const added = addUniqueResults(shuffled);
-		addedSoFar += added;
+		buckets.push(items);
 	};
 
 	await Promise.allSettled([
@@ -909,6 +897,10 @@ async function loadRandomResults(generation: number) {
 	]);
 
 	if (generation !== queryGeneration.value) return;
+
+	if (buckets.length > 0) {
+		addUniqueResults(interleaveFeed(buckets), RANDOM_LIMIT);
+	}
 
 	if (anyReceived || hasMore.value) {
 		page.value = currentPage + 1;
