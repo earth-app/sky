@@ -29,6 +29,12 @@
 		</IonHeader>
 
 		<IonContent :scroll-y="true">
+			<IonRefresher
+				slot="fixed"
+				@ionRefresh="onRefresh"
+			>
+				<IonRefresherContent />
+			</IonRefresher>
 			<div class="flex flex-col items-center px-4 gap-4">
 				<IonSearchbar
 					id="quest-search"
@@ -89,6 +95,8 @@
 </template>
 
 <script setup lang="ts">
+import { theme } from '~/composables/useSettings';
+
 const { user } = useAuth();
 const route = useRoute();
 const ionRouter = useIonRouter();
@@ -124,6 +132,15 @@ async function refreshQuestData() {
 	}
 }
 
+// pull-to-refresh (parity with the discover tab); always complete the spinner
+async function onRefresh(event: CustomEvent) {
+	try {
+		await refreshQuestData();
+	} finally {
+		(event.target as HTMLIonRefresherElement | null)?.complete();
+	}
+}
+
 onMounted(() => {
 	fetchQuests();
 	maybeOpenQuest();
@@ -136,24 +153,24 @@ watch(
 );
 
 // merge static catalog with history so dynamic quests (badge_mastery, activity, custom)
-//; which never appear in the catalog; still show up once they've been started/completed
 const allQuests = computed<Quest[]>(() => {
 	const merged = new Map<string, Quest>();
-	for (const q of quests.value ?? []) merged.set(q.id, q);
+
+	for (const q of quests.value ?? []) if (q?.id) merged.set(q.id, q);
 	for (const entry of questHistory.value.values()) {
-		if (entry.quest && !merged.has(entry.quest.id)) merged.set(entry.quest.id, entry.quest);
+		if (entry?.quest?.id && !merged.has(entry.quest.id)) merged.set(entry.quest.id, entry.quest);
 	}
 	return Array.from(merged.values());
 });
 
 const shownQuests = computed(() => {
 	const term = search.value.toLowerCase();
-	return allQuests.value.filter(
-		(q) =>
-			q.id.toLowerCase().includes(term) ||
-			q.title.toLowerCase().includes(term) ||
-			q.description.toLowerCase().includes(term)
-	);
+	return allQuests.value.filter((q) => {
+		const id = q.id?.toLowerCase() ?? '';
+		const title = q.title?.toLowerCase() ?? '';
+		const description = q.description?.toLowerCase() ?? '';
+		return id.includes(term) || title.includes(term) || description.includes(term);
+	});
 });
 
 watch(userId, () => void refreshQuestData(), { immediate: true });

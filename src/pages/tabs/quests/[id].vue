@@ -153,7 +153,7 @@ const fetchedQuest = ref<Quest | null>(null);
 const hasSteps = (q: Quest | null | undefined): q is Quest => Array.isArray(q?.steps);
 
 // fall back to the store's quest object so a failed/slow catalog fetch never blanks the page
-const quest = computed<Quest | null>(() => {
+const resolvedQuest = computed<Quest | null>(() => {
 	if (hasSteps(fetchedQuest.value)) return fetchedQuest.value;
 	const routeId = (route.params.id as string | undefined) ?? '';
 	const active = currentQuest.value;
@@ -161,6 +161,26 @@ const quest = computed<Quest | null>(() => {
 	const historyQuest = questHistory.value.get(routeId)?.quest;
 	return hasSteps(historyQuest) ? historyQuest : null;
 });
+
+// sticky: once a renderable quest exists, never regress the timeline back to <Loading>
+const lastRenderableQuest = ref<Quest | null>(null);
+watch(
+	resolvedQuest,
+	(q) => {
+		if (hasSteps(q)) lastRenderableQuest.value = q;
+	},
+	{ immediate: true, flush: 'sync' }
+);
+const quest = computed<Quest | null>(() =>
+	hasSteps(resolvedQuest.value) ? resolvedQuest.value : lastRenderableQuest.value
+);
+
+async function resolveFetchedQuest(id: string): Promise<Quest | null> {
+	let q = await fetchQuest(id);
+	if (!hasSteps(q)) q = await fetchQuest(id, true);
+	if (hasSteps(q)) fetchedQuest.value = q;
+	return q;
+}
 const progress = computed(() => {
 	if (!quest.value) return [];
 
@@ -174,7 +194,7 @@ const progress = computed(() => {
 const progressChecked = ref(false);
 // ceiling so a hung fetch / unhydrated auth can't strand the timeline behind the gate
 const PROGRESS_READY_CEILING_MS = 4000;
-const progressReady = computed(() => {
+const progressReadyBase = computed(() => {
 	if (!quest.value) return false;
 	const id = quest.value.id;
 
@@ -183,6 +203,17 @@ const progressReady = computed(() => {
 
 	return progressChecked.value;
 });
+// sticky: once the timeline has been cleared to render, a transient store blip after a submit
+// must not send it back behind the gate
+const progressReadyLatched = ref(false);
+watch(
+	progressReadyBase,
+	(ready) => {
+		if (ready) progressReadyLatched.value = true;
+	},
+	{ immediate: true, flush: 'sync' }
+);
+const progressReady = computed(() => progressReadyBase.value || progressReadyLatched.value);
 
 // surface the apple health disclosure on quests that include a distance step (ios reads distance from healthkit)
 const hasDistanceStep = computed(() =>
@@ -246,10 +277,16 @@ const isMasteryQuestCompleted = computed(() => {
 if (route.params.id) {
 	const id = route.params.id as string;
 	void (async () => {
-		fetchedQuest.value = await fetchQuest(id);
-		if (!quest.value && id.startsWith(MASTERY_PREFIX) && user.value) {
-			await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
-			await navigateTo('/tabs/quests', { replace: true });
+		try {
+			await resolveFetchedQuest(id);
+			if (!quest.value && id.startsWith(MASTERY_PREFIX) && user.value) {
+				await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
+				await navigateTo('/tabs/quests', { replace: true });
+			}
+		} finally {
+			// a resolved catalog quest with no active/history entry gates only on progressChecked;
+			// flip it here so the non-current path never depends solely on the 4s ceiling
+			if (quest.value) progressChecked.value = true;
 		}
 	})();
 }
@@ -268,7 +305,7 @@ watch(
 			let viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
 
 			if (!quest.value && viewedQuestId) {
-				fetchedQuest.value = await fetchQuest(viewedQuestId);
+				await resolveFetchedQuest(viewedQuestId);
 				if (!quest.value) {
 					if (viewedQuestId.startsWith(MASTERY_PREFIX)) {
 						await showErrorToast(new Error('Badge mastery quest not found.'), {
@@ -278,7 +315,6 @@ watch(
 					}
 					return;
 				}
-				viewedQuestId = quest.value?.id ?? viewedQuestId;
 			}
 
 			if (viewedQuestId && currentQuest.value?.questId !== viewedQuestId) {
@@ -425,11 +461,17 @@ onIonViewWillEnter(() => maybeReconcileOnEnter());
 
 // ceiling: reveal the timeline even if the quest fetch hangs or auth never hydrates
 let _progressCeiling: ReturnType<typeof setTimeout> | null = null;
-onMounted(() => {
+function armProgressCeiling() {
+	if (progressChecked.value || _progressCeiling) return;
 	_progressCeiling = setTimeout(() => {
 		progressChecked.value = true;
+		_progressCeiling = null;
 	}, PROGRESS_READY_CEILING_MS);
-});
+}
+onMounted(() => armProgressCeiling());
+// belt-and-suspenders: ionic can keep a tab page alive and re-enter without a fresh mount, so
+// re-arm on view enter if the gate hasn't resolved yet
+onIonViewWillEnter(() => armProgressCeiling());
 onBeforeUnmount(() => {
 	if (_progressCeiling) clearTimeout(_progressCeiling);
 	_progressCeiling = null;
