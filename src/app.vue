@@ -101,6 +101,7 @@ import {
 	setDataSaverModeEnabled,
 	setOfflineModeEnabled
 } from './composables/useNetwork';
+import { OAUTH_USERNAME_PROMPT_KEY } from './utils/username';
 
 if (import.meta.client) {
 	defineCustomElements(window);
@@ -539,6 +540,11 @@ async function handleIncomingDeepLink(url: string) {
 		if (isOffline.value) {
 			await showErrorToast('You appear to be offline. Reconnect and try signing in again.');
 			return;
+		}
+
+		// fresh oauth signup gets the optional username-change step on the dashboard
+		if (resolved.context === 'signup') {
+			void Preferences.set({ key: OAUTH_USERNAME_PROMPT_KEY, value: 'true' }).catch(() => {});
 		}
 
 		authStore.setSessionToken(resolved.sessionToken);
