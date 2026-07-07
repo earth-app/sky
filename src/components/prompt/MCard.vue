@@ -28,6 +28,7 @@
 		v-if="hasButtons"
 		can-dismiss
 		:is-open="editOpen"
+		@did-dismiss="editOpen = false"
 	>
 		<IonHeader>
 			<IonToolbar>
