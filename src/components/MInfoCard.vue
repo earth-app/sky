@@ -7,13 +7,14 @@
 		@click="
 			async () => {
 				selection();
-				if (inBrowser && link) {
+				if (!link) return;
+				if (inBrowser) {
 					await Browser.open({ url: link });
-				} else {
-					if (link) {
-						goTo(link);
-					}
+				} else if (link.startsWith('http')) {
+					// router-link is disabled for external urls, so navigate here
+					goTo(link);
 				}
+				// internal links are handled by :router-link to avoid double navigation
 			}
 		"
 	>
@@ -38,8 +39,9 @@
 							:src="avatar.src"
 							class="mr-2"
 							@click="
-								() => {
+								(e: Event) => {
 									if (avatar?.link) {
+										e.stopPropagation();
 										goTo(avatar.link);
 									}
 								}
@@ -52,8 +54,9 @@
 						:src="avatar.src"
 						class="mr-2"
 						@click="
-							() => {
+							(e: Event) => {
 								if (avatar?.link) {
+									e.stopPropagation();
 									goTo(avatar.link);
 								}
 							}
@@ -75,8 +78,9 @@
 							class="ml-2"
 							:class="title ? 'opacity-80 font-sans text-sm!' : 'text-base!'"
 							@click="
-								() => {
+								(e: Event) => {
 									if (subtitleLink) {
+										e.stopPropagation();
 										goTo(subtitleLink);
 									}
 								}
@@ -264,11 +268,12 @@
 					:color="badge.color"
 					class="flex items-center py-1 px-3 font-semibold"
 					@click="
-						() => {
+						(e: Event) => {
+							selection();
 							if (badge.link) {
+								e.stopPropagation();
 								goTo(badge.link);
 							}
-							selection();
 						}
 					"
 				>
@@ -294,7 +299,7 @@
 					:key="index"
 					:color="button.color"
 					:size="button.size || 'default'"
-					@click="
+					@click.stop="
 						() => {
 							selection();
 							if (button.onClick) button.onClick();
