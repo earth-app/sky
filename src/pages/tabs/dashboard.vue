@@ -35,6 +35,8 @@
 									shape="round"
 									fill="outline"
 									size="small"
+									aria-label="Replay Welcome Tour"
+									title="Replay Welcome Tour"
 									@click="startWelcomeTour"
 								>
 									<UIcon
@@ -47,6 +49,8 @@
 									shape="round"
 									fill="outline"
 									size="small"
+									aria-label="Reopen Getting Started"
+									title="Reopen Getting Started"
 									@click="onboardingOpen = true"
 								>
 									<UIcon
@@ -99,6 +103,8 @@
 							</div>
 						</IonCard>
 					</div>
+					<OnboardingMGettingStarted v-if="user" />
+
 					<div
 						v-if="motd && motd.motd"
 						id="motd"
@@ -143,7 +149,7 @@
 					<WidgetsMSavedWordsBlock v-if="user" />
 
 					<div
-						v-if="user && onboarding.state.value"
+						v-if="user && (onboarding.state.value || onboarding.error.value)"
 						class="w-full px-3"
 					>
 						<OnboardingMWelcomeChecklist @open-persona="personaOpen = true" />
@@ -173,7 +179,7 @@
 						</div>
 					</div>
 
-					<h2 class="self-start text-base! mt-0! mb-1! ml-4! font-bold!">Your Feed</h2>
+					<h2 class="self-start text-base! mt-6! mb-1! ml-4! font-bold!">Your Feed</h2>
 
 					<div
 						v-if="feedItems.length === 0 && (isRefreshing || isLoadingMore || !hasInitialized)"
@@ -320,6 +326,10 @@
 						</IonInfiniteScroll>
 					</div>
 
+					<OnboardingMUsernamePrompt
+						ref="usernamePromptRef"
+						@closed="handleUsernamePromptClosed"
+					/>
 					<OnboardingMTextSizePrompt
 						ref="textSizePromptRef"
 						@closed="handleTextSizePromptClosed"
@@ -401,6 +411,7 @@ const contentRef = ref<any>(null);
 // IonContent's inner scroll element resolved post-mount; MScrollCue attaches its listener to it
 const scrollContainerEl = ref<HTMLElement | null>(null);
 const textSizePromptRef = ref<{ maybeOpen: () => void } | null>(null);
+const usernamePromptRef = ref<{ maybeOpen: () => void } | null>(null);
 const feedItems = ref<FeedItem[]>([]);
 // data can transiently empty during refetch, outer filter + inner v-if guards belt-and-suspenders
 const renderableFeedItems = computed(() =>
@@ -474,6 +485,17 @@ function startWelcomeTour() {
 	startTour('welcome');
 }
 
+// the oauth username step opens first (when pending); on close it hands off to the
+// text-size prompt so the two onboarding sheets never stack
+let textSizeTriggeredFromUsername = false;
+function handleUsernamePromptClosed() {
+	if (textSizeTriggeredFromUsername) return;
+	textSizeTriggeredFromUsername = true;
+	if (!user.value) return;
+	if (hasCompleted('welcome')) return; // text-size + tour only run for pre-welcome users
+	textSizePromptRef.value?.maybeOpen();
+}
+
 let tourTriggeredFromTextSize = false;
 function handleTextSizePromptClosed() {
 	if (tourTriggeredFromTextSize) return;
@@ -495,6 +517,28 @@ async function dismissResumeTour() {
 	resumeStep.value = null;
 	await Preferences.remove({ key: WELCOME_TOUR_RESUME_KEY }).catch(() => {});
 }
+
+let onboardingChainStarted = false;
+async function startOnboardingChain() {
+	if (onboardingChainStarted || !user.value) return;
+	onboardingChainStarted = true;
+	if (!hasCompleted('welcome')) await loadResumeStep();
+	// the prompt lives in a <ClientOnly> that can mount late on native/webkit, so poll
+	// for the ref instead of a fixed delay; a null ref at a fixed timeout silently skips it
+	await nextTick();
+	for (let i = 0; i < 20 && !usernamePromptRef.value; i++) {
+		await new Promise((resolve) => setTimeout(resolve, 100));
+	}
+	if (!user.value) return;
+	usernamePromptRef.value?.maybeOpen();
+}
+
+watch(
+	() => !!user.value,
+	(present) => {
+		if (present) void startOnboardingChain();
+	}
+);
 
 function getNextContentType(): ContentType {
 	const types: ContentType[] = ['activity', 'prompt', 'article', 'event', 'user'];
@@ -988,17 +1032,7 @@ onMounted(async () => {
 		// fall back to window scroll inside MScrollCue
 	}
 
-	if (user.value && !hasCompleted('welcome')) {
-		// Text-size prompt fires first; the welcome tour only starts AFTER it
-		// closes (see handleTextSizePromptClosed). If the user has already seen
-		// the prompt, maybeOpen() emits `closed` immediately and the tour fires
-		// on the next tick; no UX regression for returning users.
-		await loadResumeStep();
-		setTimeout(() => {
-			if (!user.value) return;
-			textSizePromptRef.value?.maybeOpen();
-		}, 600);
-	}
+	void startOnboardingChain();
 
 	// fetch additional data if not data constrainted
 	if (!isDataConstrained.value && user.value) {
