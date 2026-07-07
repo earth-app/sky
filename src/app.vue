@@ -115,11 +115,19 @@ const { resolveDeepLink } = useDeepLinkRouting();
 const { closeBrowser, clearFlow, refreshFlowState } = useMobileOAuth();
 const { notifySuccess, notifyWarning } = useAppHaptics();
 const { settings: appSettings, init: initSettings } = useAppSettings();
-const { activeStepIndex, hasCompleted: tourCompleted } = useSiteTour();
+const {
+	activeStepIndex,
+	hasCompleted: tourCompleted,
+	markCompleted: markTourCompleted
+} = useSiteTour();
 const router = useIonRouter();
 const isNative = Capacitor.isNativePlatform();
 
 const WELCOME_TOUR_RESUME_KEY = 'sky:welcome-tour-resume-step';
+// crust tracks tour completion in localStorage, which ios/WKWebView reclaims under storage
+// pressure -> the whole tour re-auto-plays for users who already finished it. mirror welcome
+// completion into durable Preferences and re-seed on boot so it never replays
+const WELCOME_TOUR_COMPLETED_KEY = 'sky:welcome-tour-completed';
 
 // compact last-known user, persisted so cold launch paints the avatar tab before the network resolves
 const CURRENT_USER_KEY = 'current_user';
@@ -132,6 +140,7 @@ type CachedCurrentUser = {
 function handleWelcomeTourClosed() {
 	if (tourCompleted('welcome')) {
 		void Preferences.remove({ key: WELCOME_TOUR_RESUME_KEY }).catch(() => {});
+		void Preferences.set({ key: WELCOME_TOUR_COMPLETED_KEY, value: 'true' }).catch(() => {});
 		return;
 	}
 	const step = activeStepIndex.value;
@@ -140,6 +149,27 @@ function handleWelcomeTourClosed() {
 			key: WELCOME_TOUR_RESUME_KEY,
 			value: String(step)
 		}).catch(() => {});
+	}
+}
+
+// persist completion durably whenever it flips (covers finish-via-CTA which never emits close),
+// and re-seed the volatile localStorage flag from Preferences on cold launch
+if (import.meta.client) {
+	watch(
+		() => tourCompleted('welcome'),
+		(done) => {
+			if (done)
+				void Preferences.set({ key: WELCOME_TOUR_COMPLETED_KEY, value: 'true' }).catch(() => {});
+		}
+	);
+}
+
+async function restoreWelcomeTourCompletion() {
+	try {
+		const { value } = await Preferences.get({ key: WELCOME_TOUR_COMPLETED_KEY });
+		if (value === 'true' && !tourCompleted('welcome')) markTourCompleted('welcome');
+	} catch {
+		// preferences read failed; worst case the short tour offers once more
 	}
 }
 
@@ -185,17 +215,15 @@ async function shareCelebration() {
 	closeCelebration();
 }
 
-const profilePath = computed(() =>
-	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/tabs/profile/editor'
-);
-
+// short, in-place orientation: stays on the dashboard + tab bar (no cross-app navigation,
+// which is fragile), points at the durable Getting Started card, and ends with one clear CTA
 const welcomeTour = computed<SiteTourStep[]>(() => [
 	{
 		id: 'title',
 		title: 'Welcome to The Earth App',
 		description:
-			'A new kind of social experience: discover hobbies, dive into articles, answer thoughtful prompts, and meet people with similar interests.\n\nThis short tour will walk you through the highlights: feel free to skip it at any time with the X button or by tapping outside.',
-		footer: 'Tap Next to continue, or use the hardware back button to exit.',
+			'A new kind of social experience: discover hobbies, read short articles, answer creative prompts, complete quests, and meet people who share your interests.\n\nThis is a quick 30-second orientation: skip it any time with the X or by tapping outside.',
+		footer: 'Tap Next to continue, or the hardware back button to exit.',
 		icon: 'mdi:earth',
 		placement: 'center',
 		dim: true,
@@ -205,218 +233,54 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'navbar',
 		title: 'Your Tab Bar',
 		description:
-			'The tab bar is your home base. Jump between Dashboard, Discover, Quests, and your Profile from anywhere in the app.',
-		footer: 'It stays pinned to the bottom while you explore.',
+			'Your home base, pinned to the bottom everywhere you go: Dashboard for your feed, Discover to explore, Quests for guided adventures, and Profile for your account.',
+		footer: 'Tap any tab to jump straight there.',
 		icon: 'mdi:compass-outline'
 	},
 	{
-		url: '/tabs/discover?tab=activity',
-		id: 'discover-search',
-		title: 'Activities: Find What You Love',
+		id: 'getting-started',
+		title: 'Start Here',
 		description:
-			'Activities are hobbies, sports, and interests you can explore. Each one has curated guides, resources, and even quests you can complete to level up.',
-		footer: 'Tip: pick a few activities on your profile to get personalized recommendations.',
-		icon: 'mdi:run',
-		prerendered: true,
-		highlightPadding: 12,
-		cta: {
-			label: 'Try Activities Now',
-			icon: 'mdi:run',
-			color: 'secondary',
-			advance: true,
-			handler: () => router.push('/tabs/discover?tab=activity', slide)
-		}
+			'This is your Getting Started checklist. A few quick steps set up your account and unlock personalized recommendations across the app. It lives right here on your dashboard, so you can pick up where you left off any time.',
+		footer: 'Complete it at your own pace: nothing is mandatory.',
+		icon: 'mdi:flag-checkered',
+		highlightPadding: 10
 	},
 	{
-		url: '/tabs/discover?tab=article',
-		id: 'discover-search',
-		title: 'Articles: Read & Learn',
+		id: 'discover-orientation',
+		title: 'Discover What You Love',
 		description:
-			'Bite-sized articles tailored to your interests. Read about science, culture, sustainability, and more: then take a quick quiz to lock in what you learned.\n\nArticles auto-archive after 2 weeks, so the catalog stays fresh. Writers: publish now while readers are looking.',
-		footer: 'Articles personalize over time as you engage with the community.',
-		icon: 'mdi:book-open-page-variant-outline',
-		prerendered: true
+			'The Discover tab is where you find activities, articles, prompts, and events tailored to your interests. Pick a few activities and the whole app personalizes to you.',
+		footer: 'Fresh content rotates in daily: articles and prompts do not stick around forever.',
+		icon: 'mdi:magnify',
+		placement: 'center',
+		dim: true
 	},
 	{
-		url: '/tabs/discover?tab=prompt',
-		id: 'discover-search',
-		title: 'Prompts: Get Creative',
+		id: 'quests-orientation',
+		title: 'Quests: Guided Adventures',
 		description:
-			"Daily creative prompts to spark your imagination. Share a short response, browse what others wrote, and discover new perspectives from the community.\n\nPrompts vanish after 2 days: if you've got something to say, say it now.",
-		footer: 'Your answers can be public, friends-only, or private: your call.',
-		icon: 'mdi:lightbulb-on-outline',
-		prerendered: true
+			'Quests turn an activity into a step-by-step adventure with rewards and a satisfying finish. You can have one active at a time, and each completed quest earns badges and Impact Points.',
+		footer: 'Start with a quest tied to an activity you already enjoy.',
+		icon: 'mdi:map-marker-path',
+		placement: 'center',
+		dim: true
 	},
 	{
-		url: '/signup',
-		id: 'title',
-		title: 'Create Your Account',
+		id: 'finish',
+		title: "You're All Set",
 		description:
-			'Sign up to unlock personalized recommendations, earn badges and Impact Points, complete quests, and connect with friends across the Earth App.',
-		footer: "It's free and only takes a minute.",
-		anonymous: true,
-		icon: 'mdi:account-plus-outline',
+			"That's the tour! Everything else you'll pick up as you explore. The best first move is to start a quest: it walks you through the app while you earn your first rewards.",
+		footer: 'You can replay this tour any time from the dashboard.',
+		icon: 'mdi:rocket-launch-outline',
+		placement: 'center',
 		dim: true,
 		cta: {
-			label: 'Sign Up Now',
-			icon: 'mdi:account-plus',
-			color: 'tertiary',
-			advance: false,
-			closeOnSuccess: true,
-			handler: () => router.push('/signup', slide)
-		}
-	},
-	{
-		url: profilePath.value,
-		id: 'profile-title',
-		title: 'Your Profile',
-		description:
-			'Your profile is the heart of your Earth App experience. The activities you pick power your recommendations across the entire app: articles, prompts, and events.',
-		footer: 'A complete profile gets far more friend requests and replies.',
-		anonymous: false,
-		icon: 'mdi:account-circle-outline'
-	},
-	{
-		id: 'avatar',
-		title: 'Your Avatar',
-		description:
-			'Your avatar is generated from the activities you choose: no boring placeholder! Regenerate it any time, or unlock decorative cosmetics with Impact Points.',
-		footer: 'Customize it to match your vibe.',
-		anonymous: false,
-		icon: 'mdi:face-man-shimmer-outline'
-	},
-	{
-		id: 'notifications',
-		title: 'Notifications',
-		description:
-			'The bell shows new replies, friend activity, quest progress, and important account events. Tap it to see the full list.',
-		footer: 'Fine-tune which notifications you receive in your account settings.',
-		anonymous: false,
-		icon: 'mdi:bell-outline',
-		highlightPadding: 6
-	},
-	{
-		url: '/tabs/settings',
-		id: 'settings-link',
-		title: 'Your Settings',
-		description:
-			'In settings, tune appearance, performance, push notifications, offline mode, and account behavior to match your device and preferences.',
-		footer: 'Review settings any time to tailor your experience.',
-		anonymous: false,
-		icon: 'mdi:cog-outline'
-	},
-	{
-		url: '/tabs/profile/editor',
-		title: 'Profile Editor',
-		description:
-			'The profile editor is where you update your info, bio, interests, and visibility. Tap the help button there for a full walkthrough of every field.',
-		footer: 'Keep your profile fresh to get the best recommendations.',
-		anonymous: false,
-		icon: 'mdi:account-edit-outline',
-		cta: {
-			label: 'Open Profile Editor',
-			icon: 'mdi:account-edit-outline',
-			color: 'secondary',
-			advance: true,
-			handler: () => router.push('/tabs/profile/editor', slide)
-		}
-	},
-	{
-		url: '/tabs/quests',
-		title: 'Quests',
-		description:
-			'Quests are guided journeys that turn an activity into a structured adventure with steps, rewards, and a satisfying finish. Start with one tied to an activity you already love.',
-		footer: 'You can only have one active quest at a time: choose wisely!',
-		anonymous: false,
-		icon: 'mdi:map-marker-path',
-		cta: {
-			label: 'Pick a Quest',
+			label: 'Start Your First Quest',
 			icon: 'mdi:map-marker-path',
 			color: 'tertiary',
 			advance: true,
 			handler: () => router.push('/tabs/quests', slide)
-		}
-	},
-	{
-		url: profilePath.value,
-		id: 'badges',
-		title: 'Badges',
-		description:
-			'Badges celebrate your milestones: first article read, first quest completed, streaks, mastery achievements, and more. They show on your public profile.',
-		footer: 'Some badges have a "Mastery" path that goes way deeper if you commit.',
-		anonymous: false,
-		icon: 'mdi:shield-star-outline'
-	},
-	{
-		id: 'points-history',
-		title: 'Impact Points',
-		description:
-			'Impact Points reward you for engaging with the Earth App and the world around you: reading, writing, completing quests, helping others. Spend them on cosmetics, or watch them climb the leaderboard.',
-		footer: 'Tap "Points History" to see exactly how you earned them.',
-		anonymous: false,
-		icon: 'mdi:chart-line'
-	},
-	{
-		id: 'user-activities',
-		title: 'Your Activities Showcase',
-		description:
-			"Your selected activities appear here on your profile, giving friends an at-a-glance look at what you're into.",
-		footer: 'Keep this list current: recommendations follow these choices closely.',
-		anonymous: false,
-		icon: 'mdi:format-list-bulleted-square'
-	},
-	{
-		id: 'friends-buttons',
-		title: 'Your Friends',
-		description:
-			'Add friends to follow their activities, react to their content, and unlock friends-only privacy settings. Building a network makes the Earth App way more fun.',
-		footer: 'Tap any user avatar across the app to view their profile and add them.',
-		anonymous: false,
-		icon: 'mdi:account-multiple-outline'
-	},
-	{
-		url: profilePath.value,
-		id: 'user-invite',
-		title: 'Invite Friends: Earn Rewards',
-		description:
-			'Share your personal invite link to bring friends onto the Earth App. When they join, you BOTH earn Impact Points: and you climb the Recruiter badge tiers as more friends sign up.',
-		footer: 'Tap Share to send your invite anywhere: messages, social, wherever your people are.',
-		anonymous: false,
-		icon: 'mdi:account-arrow-right'
-	},
-	{
-		id: 'user-journeys',
-		title: 'Your Journeys',
-		description:
-			'Journeys summarize how you engage with prompts, articles, events, and activities: and reward streaks of meaningful engagement.',
-		footer: 'Daily login alone is enough to keep most journeys going.',
-		anonymous: false,
-		icon: 'mdi:walk'
-	},
-	{
-		id: 'user-content',
-		title: 'Your Content',
-		description:
-			"Every article and prompt response you publish lives here. It's your portfolio on the Earth App: and a great way for others to discover your perspective.",
-		footer: 'One last stop: the leaderboard.',
-		anonymous: false,
-		icon: 'mdi:notebook-multiple'
-	},
-	{
-		url: '/tabs/profile/leaderboard/points',
-		id: 'leaderboard-hero',
-		title: 'Friendly Competition',
-		description:
-			'See how you stack up on Impact Points and journey streaks: globally, among your friends, or inside your circle. Challenge a friend to a quest right from their row.',
-		footer: "That's the tour! Tap Finish and start climbing.",
-		anonymous: false,
-		icon: 'mdi:trophy-variant',
-		cta: {
-			label: 'View Leaderboard',
-			icon: 'mdi:trophy-variant',
-			color: 'tertiary',
-			advance: true,
-			handler: () => router.push('/tabs/profile/leaderboard/points', slide)
 		}
 	}
 ]);
@@ -729,6 +593,9 @@ async function bootstrapAuth() {
 }
 
 onMounted(async () => {
+	// re-seed tour completion from durable storage before the dashboard can auto-play it
+	void restoreWelcomeTourCompletion();
+
 	const authReady = bootstrapAuth();
 
 	watch(
