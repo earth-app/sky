@@ -53,10 +53,7 @@ test.describe('Reset password page (anonymous)', () => {
 		await gotoHydrated('/reset-password?uid=test-user-1&token=abc');
 		await expect(page.getByText(/Choose a New Password/i)).toBeVisible({ timeout: 10_000 });
 
-		// two password fields (new + confirm); ionic renders each IonInput as a nested
-		// <input> (the password-toggle can flip the type attr, so target the form's inputs
-		// by order rather than by [type=password])
-		const pwInputs = page.locator('#reset-password ion-input input');
+		const pwInputs = page.locator('#reset-password ion-input input:not(.cloned-input)');
 		await expect(pwInputs.first()).toBeVisible({ timeout: 12_000 });
 		await pwInputs.nth(0).fill('BrandNewPassword_1');
 		await pwInputs.nth(1).fill('BrandNewPassword_1');
