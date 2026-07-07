@@ -46,17 +46,20 @@
 					<IonProgressBar
 						:value="percentages[emoji] / 100"
 						:color="myVote === emoji ? 'primary' : 'medium'"
-						class="flex-1"
+						class="flex-1 min-w-0"
 					/>
 					<span
-						class="text-xs tabular-nums w-9 text-right"
+						class="text-xs tabular-nums w-10 text-right whitespace-nowrap shrink-0"
 						:class="myVote === emoji ? 'font-semibold text-primary' : 'text-medium'"
 						>{{ percentages[emoji] }}%</span
 					>
 				</div>
+				<p class="text-xs font-medium text-primary mt-1">
+					{{ votedThisSession ? 'Thanks for Sharing Today' : "You've Already Shared Today" }}
+				</p>
 				<p
 					v-if="snapshot && snapshot.total > 0"
-					class="text-xs text-medium mt-1"
+					class="text-xs text-medium"
 				>
 					{{ snapshot.total }} {{ snapshot.total === 1 ? 'voice' : 'voices' }} today
 				</p>
@@ -88,6 +91,7 @@ import {
 } from '@ionic/vue';
 import { pulseOutline } from 'ionicons/icons';
 import { showErrorToast, showInfoToast } from '~/composables/useNotify';
+import { computeMoodPercentages, moodMyVoteStorageKey, moodTodayUtc } from '~/utils/mood';
 
 const props = withDefaults(
 	defineProps<{
@@ -119,20 +123,39 @@ const MOOD_LABELS: Record<MoodEmoji, string> = {
 const myVote = ref<MoodEmoji | null>(null);
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
+// true only for a vote cast this mount; a reloaded prior vote reads back as false
+const votedThisSession = ref(false);
 
 // localStorage-backed hasVoted isn't reactive to a fresh vote, so also flip on myVote
 const showResults = computed(() => hasVoted.value || myVote.value !== null);
 
-const percentages = computed<Record<MoodEmoji, number>>(() => {
-	const counts = snapshot.value?.counts;
-	const total = snapshot.value?.total ?? 0;
-	const out = {} as Record<MoodEmoji, number>;
-	for (const e of EMOJIS) {
-		const v = counts?.[e] ?? 0;
-		out[e] = total > 0 ? Math.round((v / total) * 100) : 0;
+const percentages = computed<Record<MoodEmoji, number>>(() =>
+	computeMoodPercentages(snapshot.value?.counts, snapshot.value?.total ?? 0, EMOJIS)
+);
+
+function normalizedTopic(): string {
+	return props.topic.trim().toLowerCase();
+}
+
+// re-highlight the bar this device picked earlier today (crust's guard only stores a timestamp)
+function readPersistedVote(): MoodEmoji | null {
+	if (!import.meta.client) return null;
+	try {
+		const v = window.localStorage.getItem(moodMyVoteStorageKey(normalizedTopic(), moodTodayUtc()));
+		return v && (EMOJIS as readonly string[]).includes(v) ? (v as MoodEmoji) : null;
+	} catch {
+		return null;
 	}
-	return out;
-});
+}
+
+function persistVote(emoji: MoodEmoji) {
+	if (!import.meta.client) return;
+	try {
+		window.localStorage.setItem(moodMyVoteStorageKey(normalizedTopic(), moodTodayUtc()), emoji);
+	} catch {
+		// no localStorage; highlight just won't survive a reload
+	}
+}
 
 async function onVote(emoji: MoodEmoji) {
 	if (loading.value || hasVoted.value) return;
@@ -145,6 +168,8 @@ async function onVote(emoji: MoodEmoji) {
 
 	if (res.success) {
 		myVote.value = emoji;
+		votedThisSession.value = true;
+		persistVote(emoji);
 		haptics.notifySuccess();
 		emit('complete', { emoji });
 		showInfoToast('Mood recorded.');
@@ -158,6 +183,8 @@ async function onVote(emoji: MoodEmoji) {
 }
 
 onMounted(async () => {
+	// restore the prior highlight before the snapshot lands so the correct bar lights up
+	if (hasVoted.value) myVote.value = readPersistedVote();
 	await fetchSnapshot();
 });
 </script>
