@@ -2,6 +2,7 @@
 	<IonModal
 		:is-open="isOpen"
 		can-dismiss
+		@did-dismiss="isOpen = false"
 	>
 		<IonHeader>
 			<IonToolbar class="px-4">
