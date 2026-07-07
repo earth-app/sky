@@ -167,7 +167,7 @@ async function maybeOpen() {
 
 	// seed with whatever the user already has (or normal)
 	const current = settings.value.scale;
-	selected.value === current;
+	selected.value = current;
 
 	open.value = true;
 }
