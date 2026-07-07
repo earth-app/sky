@@ -240,11 +240,15 @@ const columns = computed<TableColumn<Row>[]>(() => {
 			cell: ({ row }) => {
 				const isSelf = authStore.currentUser?.id === row.original.id;
 				if (isSelf) return null;
-				return h(ChallengeButton, {
-					size: 'small',
-					friendId: row.original.id,
-					friendName: getUserDisplayName(row.original.user, { at: true })
-				});
+				return h(
+					ChallengeButton,
+					{ class: 'px-2' },
+					{
+						size: 'small',
+						friendId: row.original.id,
+						friendName: getUserDisplayName(row.original.user, { at: true })
+					}
+				);
 			}
 		});
 	}
