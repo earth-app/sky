@@ -11,6 +11,11 @@
 			/>
 			<IonButton
 				class="font-semibold text-center"
+				:class="
+					showAvatarRing
+						? 'ring-2! ring-primary/70! ring-offset-2! ring-offset-transparent! animate-pulse! hover:ring-4!'
+						: ''
+				"
 				color="primary"
 				shape="round"
 				size="small"
@@ -695,6 +700,7 @@ import type { IonModal } from '@ionic/vue';
 import type { Activity } from 'types/activity';
 import { OAUTH_PROVIDERS, type AvatarCosmetic, type OAuthProvider, type User } from 'types/user';
 import { capitalizeFully } from 'utils';
+import { USERNAME_NO_SPACES_MESSAGE, usernameHasWhitespace } from '~/utils/username';
 import MCosmetic from './MCosmetic.vue';
 
 const props = defineProps<{
@@ -892,6 +898,13 @@ const hasOwnAvatar = computed(() => {
 	return !!url && (url.startsWith('http://') || url.startsWith('https://'));
 });
 
+const showAvatarRing = computed(() => {
+	if (avatarLoading.value) return false;
+	const url = props.user?.account?.avatar_url;
+	if (!url || !(url.startsWith('http://') || url.startsWith('https://'))) return true;
+	return avatarStore.hasFailed(url);
+});
+
 const selectedPurchaseLoading = computed(() => {
 	if (!selectedCosmeticForPurchase.value) return false;
 	return Boolean(purchaseLoadingStates.get(selectedCosmeticForPurchase.value.key));
@@ -1054,6 +1067,13 @@ async function regenerateProfilePhoto() {
 
 async function saveProfile() {
 	if (savingProfile.value || !hasProfileChanges.value) return;
+
+	// reject a spaced username with a clear message before the confirm prompt or PATCH
+	if (usernameHasWhitespace(state.username)) {
+		notifyError();
+		await Toast.show({ text: USERNAME_NO_SPACES_MESSAGE, duration: 'long' });
+		return;
+	}
 
 	const normalizedCurrent = normalizeProfileState(state);
 	const normalizedPrevious = normalizeProfileState(initialProfileState.value);
