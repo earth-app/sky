@@ -199,6 +199,8 @@ const visible = computed(() => !!user.value && hasLoaded.value);
 async function loadJourneys() {
 	if (!user.value) return;
 	const userId = user.value.id;
+	if (!userId) return;
+
 	const results = await Promise.all(
 		ROWS.map((r) => fetchCurrentJourney(r.type, userId).catch(() => null))
 	);
