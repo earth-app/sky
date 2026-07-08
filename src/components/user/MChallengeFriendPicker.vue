@@ -5,7 +5,17 @@
 	>
 		<IonHeader>
 			<IonToolbar>
-				<IonTitle>Challenge a Friend</IonTitle>
+				<IonTitle>
+					<div class="flex justify-center items-center gap-2">
+						<UAvatar
+							slot="start"
+							:src="avatarSrc(authStore.currentUser!)"
+							:alt="authStore.currentUser?.username"
+							size="sm"
+						/>
+						Challenge a Friend
+					</div>
+				</IonTitle>
 				<IonButtons slot="end">
 					<IonButton
 						aria-label="Close"
@@ -68,7 +78,7 @@
 						:alt="row.user.username"
 						size="md"
 					/>
-					<IonLabel>
+					<IonLabel class="ml-2">
 						<h2 class="font-semibold!">{{ displayName(row.user) }}</h2>
 						<p class="text-xs! text-gray-500!">@{{ row.user.username }}</p>
 					</IonLabel>
