@@ -14,7 +14,7 @@
 		<IonCardHeader>
 			<div class="flex justify-between items-start mb-2">
 				<IonCardTitle :router-link="routerLink">{{ notification.title }}</IonCardTitle>
-				<div class="flex items-center">
+				<div class="flex items-center px-2 py-1">
 					<UIcon
 						v-if="notification.type === 'error'"
 						name="mdi:alert-circle-outline"
@@ -35,18 +35,20 @@
 						title="Success Notification"
 						size="20"
 					/>
-					<button
-						v-if="!notification.read"
-						type="button"
-						title="Mark as Read"
-						aria-label="Mark as Read"
-						class="flex! items-center justify-center size-11! -my-2! mx-0! p-0! bg-transparent! border-0!"
-						@click.stop="markAsRead"
-					>
-						<span
-							:class="['inline-block size-3 rounded-full pointer-events-none', unreadDotClass]"
-						></span>
-					</button>
+					<Transition name="fade">
+						<button
+							v-if="!notification.read"
+							type="button"
+							title="Mark as Read"
+							aria-label="Mark as Read"
+							class="flex! items-center justify-center size-5! -my-2! mx-0! p-0! bg-transparent! border-0!"
+							@click.stop="markAsRead"
+						>
+							<span
+								:class="['inline-block size-3 rounded-full pointer-events-none', unreadDotClass]"
+							></span>
+						</button>
+					</Transition>
 					<UIcon
 						v-if="additional"
 						name="mdi:delete-outline"
@@ -391,5 +393,15 @@ async function removeNotification() {
 	.notif-dot-error {
 		animation: none !important;
 	}
+}
+
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 200ms ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
 }
 </style>
