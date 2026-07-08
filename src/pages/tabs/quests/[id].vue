@@ -284,9 +284,12 @@ if (route.params.id) {
 				await navigateTo('/tabs/quests', { replace: true });
 			}
 		} finally {
-			// a resolved catalog quest with no active/history entry gates only on progressChecked;
-			// flip it here so the non-current path never depends solely on the 4s ceiling
-			if (quest.value) progressChecked.value = true;
+			// a resolved catalog quest with no active/history entry gates only on progressChecked.
+			// only flip here when auth is absent: for a logged-in user the history entry (a COMPLETED
+			// quest) is resolved by the auth watch below, and flipping now would open the timeline with
+			// empty progress for a few frames before the history loads (the reported empty-flash).
+			// logged-out / unhydrated browsing has no history to wait for, so reveal immediately.
+			if (quest.value && !user.value?.id) progressChecked.value = true;
 		}
 	})();
 }
@@ -297,12 +300,21 @@ watch(
 		if (!id) return;
 		const { fetchUserQuest, fetchQuestHistory, fetchQuestHistoryEntry, fetchBadges } = useUser(id);
 
+		// prefetch the viewed quest's history entry up front, in parallel with the active-quest
+		// fetch, so a COMPLETED quest's timeline paints populated instead of flashing empty while
+		// the history loads behind fetchUserQuest. skip under data saver to keep the lazy behavior.
+		const routeId = route.params.id as string | undefined;
+		const historyPrefetch =
+			routeId && !isDataConstrained.value
+				? fetchQuestHistoryEntry(routeId).catch(() => null)
+				: null;
+
 		// finally guarantees the gate resolves even if a fetch rejects
 		try {
 			// resolve the active quest first; under data saver prefer cache over a forced round-trip
 			await fetchUserQuest(!isDataConstrained.value);
 
-			let viewedQuestId = quest.value?.id ?? (route.params.id as string | undefined);
+			let viewedQuestId = quest.value?.id ?? routeId;
 
 			if (!quest.value && viewedQuestId) {
 				await resolveFetchedQuest(viewedQuestId);
@@ -318,7 +330,10 @@ watch(
 			}
 
 			if (viewedQuestId && currentQuest.value?.questId !== viewedQuestId) {
-				await fetchQuestHistoryEntry(viewedQuestId);
+				// await the in-flight prefetch when it targeted this quest; otherwise fetch it now
+				await (historyPrefetch && routeId === viewedQuestId
+					? historyPrefetch
+					: fetchQuestHistoryEntry(viewedQuestId));
 			}
 
 			// remaining fetches only feed other surfaces; fire and forget
