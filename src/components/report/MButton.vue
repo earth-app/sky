@@ -1,8 +1,10 @@
 <template>
 	<IonButton
+		v-bind="$attrs"
 		:fill="fill"
 		:size="size"
 		:color="color"
+		data-testid="report-button"
 		@click.stop.prevent="openMenu"
 		:class="full ? 'w-full' : ''"
 	>
@@ -31,6 +33,10 @@
 import { actionSheetController } from '@ionic/vue';
 import type { ContentType } from 'types/report';
 import MReportModal from '~/components/report/MModal.vue';
+
+// two root nodes (button + teleported modal) render a fragment; opt out of auto-inherit and
+// forward $attrs (the parent's positioning class) onto the button so vue stops warning
+defineOptions({ inheritAttrs: false });
 
 interface ExtraAction {
 	text: string;
