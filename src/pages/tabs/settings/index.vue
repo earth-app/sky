@@ -570,6 +570,13 @@ const settingSections = computed<SettingSection[]>(() => [
 			},
 			{
 				kind: 'toggle',
+				key: 'discoverAutoLoad',
+				title: 'Auto-Load on Scroll',
+				description: 'Automatically load more results as you reach the bottom.',
+				placeholder: 'Enable auto-load on scroll'
+			},
+			{
+				kind: 'toggle',
 				key: 'offlineMode',
 				title: 'Offline Mode',
 				description: 'Only access downloaded content and disable all network requests',

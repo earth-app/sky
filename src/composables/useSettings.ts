@@ -31,6 +31,7 @@ export type AppSettings = {
 	preloadContent: boolean;
 	offlineMode: boolean;
 	units: UnitSetting;
+	discoverAutoLoad: boolean;
 };
 
 export type AppSettingKey = keyof AppSettings;
@@ -47,7 +48,8 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
 	dataSaverMode: false,
 	preloadContent: true,
 	offlineMode: false,
-	units: 'imperial'
+	units: 'imperial',
+	discoverAutoLoad: true
 };
 
 function parseStoredValue(raw: string | null): unknown | null {
