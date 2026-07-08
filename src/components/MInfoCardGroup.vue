@@ -1,6 +1,7 @@
 <template>
 	<IonCard
 		v-if="hasContent"
+		data-testid="info-card-group"
 		class="info-card-group mt-6 shadow-xl rounded-lg w-full max-w-full min-w-0 overflow-hidden p-4"
 	>
 		<div class="flex space-x-1 items-start mb-4">
@@ -42,9 +43,11 @@
 		>
 			<div
 				ref="carouselContainer"
+				data-testid="info-card-track"
 				class="flex flex-row items-stretch flex-nowrap transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing *:shrink-0 *:h-full *:px-2 *:w-(--slide-width) w-full"
 				:style="{
-					transform: `translateX(-${currentSlide * slideWidth}px)`,
+					transform: `translateX(${-currentSlide * slideWidth + dragOffset}px)`,
+					transition: isDragging ? 'none' : undefined,
 					'--slide-width': slideWidth ? `${slideWidth}px` : '100%'
 				}"
 				@mousedown="startDrag"
@@ -174,8 +177,11 @@ const isDragging = ref(false);
 const isTransitioning = ref(false);
 const startX = ref(0);
 const startTouchX = ref(0);
-const currentTranslate = ref(0);
-const prevTranslate = ref(0);
+// live finger delta folded into the bound transform during a drag; 0 when idle
+const dragOffset = ref(0);
+// a gesture only counts as a drag once it clears this px threshold, so a tap stays a no-op
+const hasDragged = ref(false);
+const DRAG_THRESHOLD = 6;
 
 const progress = computed(() => {
 	if (totalSlides.value <= 1) return 0;
@@ -242,81 +248,54 @@ function goToSlide(index: number) {
 const startDrag = (e: MouseEvent) => {
 	if (!carouselContainer.value) return;
 	isDragging.value = true;
+	hasDragged.value = false;
 	startX.value = e.clientX;
-	prevTranslate.value = -currentSlide.value * slideWidth.value;
-	carouselContainer.value.style.transition = 'none';
+	dragOffset.value = 0;
 };
 
 const onDrag = (e: MouseEvent) => {
 	if (!isDragging.value) return;
-
-	const currentX = e.clientX;
-	const diff = currentX - startX.value;
-	currentTranslate.value = prevTranslate.value + diff;
-
-	if (carouselContainer.value) {
-		carouselContainer.value.style.transform = `translateX(${currentTranslate.value}px)`;
-	}
+	const diff = e.clientX - startX.value;
+	if (Math.abs(diff) > DRAG_THRESHOLD) hasDragged.value = true;
+	dragOffset.value = diff;
 };
 
 const endDrag = () => {
 	if (!isDragging.value) return;
-
-	isDragging.value = false;
-
-	const movedBy = currentTranslate.value - prevTranslate.value;
-
-	let targetSlide = currentSlide.value;
-	if (movedBy < -slideWidth.value / 4) {
-		targetSlide = currentSlide.value + 1;
-	} else if (movedBy > slideWidth.value / 4) {
-		targetSlide = currentSlide.value - 1;
-	}
-
-	if (props.loop) {
-		if (targetSlide < 0) {
-			targetSlide = totalSlides.value - 1;
-		} else if (targetSlide >= totalSlides.value) {
-			targetSlide = 0;
-		}
-	} else {
-		targetSlide = Math.max(0, Math.min(targetSlide, totalSlides.value - 1));
-	}
-
-	if (carouselContainer.value) {
-		carouselContainer.value.style.transition = '';
-		carouselContainer.value.style.transform = '';
-	}
-
-	if (targetSlide !== currentSlide.value) {
-		isTransitioning.value = true;
-		currentSlide.value = targetSlide;
-		setTimeout(() => {
-			isTransitioning.value = false;
-		}, 300);
-	}
+	finishDrag();
 };
 
 const startTouch = (e: TouchEvent) => {
 	if (!carouselContainer.value || !e.touches[0]) return;
+	isDragging.value = true;
+	hasDragged.value = false;
 	startTouchX.value = e.touches[0].clientX;
-	prevTranslate.value = -currentSlide.value * slideWidth.value;
-	carouselContainer.value.style.transition = 'none';
+	dragOffset.value = 0;
 };
 
 const onTouchMove = (e: TouchEvent) => {
-	if (!e.touches[0]) return;
-	const currentX = e.touches[0].clientX;
-	const diff = currentX - startTouchX.value;
-	currentTranslate.value = prevTranslate.value + diff;
-
-	if (carouselContainer.value) {
-		carouselContainer.value.style.transform = `translateX(${currentTranslate.value}px)`;
-	}
+	if (!isDragging.value || !e.touches[0]) return;
+	const diff = e.touches[0].clientX - startTouchX.value;
+	if (Math.abs(diff) > DRAG_THRESHOLD) hasDragged.value = true;
+	dragOffset.value = diff;
 };
 
 const endTouch = () => {
-	const movedBy = currentTranslate.value - prevTranslate.value;
+	if (!isDragging.value) return;
+	finishDrag();
+};
+
+// commit a released gesture: a sub-threshold tap is a no-op (slide + offset untouched so the
+// child's own click can run), a real drag past a quarter-slide pages forward/back
+function finishDrag() {
+	isDragging.value = false;
+
+	if (!hasDragged.value) {
+		dragOffset.value = 0;
+		return;
+	}
+
+	const movedBy = dragOffset.value;
 
 	let targetSlide = currentSlide.value;
 	if (movedBy < -slideWidth.value / 4) {
@@ -335,10 +314,8 @@ const endTouch = () => {
 		targetSlide = Math.max(0, Math.min(targetSlide, totalSlides.value - 1));
 	}
 
-	if (carouselContainer.value) {
-		carouselContainer.value.style.transition = '';
-		carouselContainer.value.style.transform = '';
-	}
+	dragOffset.value = 0;
+	hasDragged.value = false;
 
 	if (targetSlide !== currentSlide.value) {
 		isTransitioning.value = true;
@@ -347,7 +324,7 @@ const endTouch = () => {
 			isTransitioning.value = false;
 		}, 300);
 	}
-};
+}
 
 // rAF-coalesce resize callbacks so a width tick doesn't fire a synchronous re-measure inside the
 // same frame (which is what triggered the flicker loop on the events-calendar layout)

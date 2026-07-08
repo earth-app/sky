@@ -3,6 +3,7 @@
 		:color="color"
 		:router-link="inBrowser || link?.startsWith('http') ? undefined : link"
 		:router-animation="slide"
+		data-testid="info-card-slide"
 		class="my-2 pt-2 shadow-md shadow-black/30 light:shadow-black/10"
 		@click="
 			async () => {
