@@ -160,7 +160,9 @@ async function onRefresh(event: CustomEvent) {
 }
 
 onMounted(() => {
+	fetchUserQuest();
 	fetchQuests();
+	fetchQuestHistory();
 	maybeOpenQuest();
 });
 
