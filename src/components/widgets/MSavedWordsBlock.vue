@@ -1,7 +1,7 @@
 <template>
 	<IonCard
 		v-if="list.length > 0"
-		class="info-card-group w-11/12 max-w-2xl min-h-50 mt-4 mx-auto p-4 rounded-xl shadow-md border border-info/20"
+		class="info-card-group w-11/12 max-w-2xl min-h-2/7 mt-4 mx-auto p-4 rounded-xl shadow-md border border-info/20"
 	>
 		<div class="flex items-start gap-2 mb-3">
 			<UIcon
@@ -9,8 +9,8 @@
 				class="size-6 text-info shrink-0 mt-0.5"
 			/>
 			<div class="flex flex-col min-w-0 flex-1">
-				<h2 class="text-base! font-semibold m-0!">Your Saved Words</h2>
-				<p class="text-xs opacity-70 m-0! mt-0.5">{{ list.length }} saved | tap to revisit any</p>
+				<h2 class="text-base! font-semibold m-0!">Saved Words</h2>
+				<p class="text-xs opacity-70 m-0! mt-0.5">{{ list.length }} saved</p>
 			</div>
 			<IonButton
 				size="small"
