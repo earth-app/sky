@@ -346,7 +346,7 @@
 				:content-id="report.contentId"
 				:parent-id="report.parentId"
 				:extra-actions="report.extraActions"
-				class="absolute top-1 right-1 z-10"
+				class="z-10"
 			/>
 		</IonCardContent>
 	</IonCard>
