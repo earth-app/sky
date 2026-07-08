@@ -80,6 +80,7 @@
 </template>
 
 <script setup lang="ts">
+import { Preferences } from '@capacitor/preferences';
 import {
 	IonCard,
 	IonCardContent,
@@ -91,7 +92,12 @@ import {
 } from '@ionic/vue';
 import { pulseOutline } from 'ionicons/icons';
 import { showErrorToast, showInfoToast } from '~/composables/useNotify';
-import { computeMoodPercentages, moodMyVoteStorageKey, moodTodayUtc } from '~/utils/mood';
+import {
+	computeMoodPercentages,
+	moodMyVoteStorageKey,
+	moodTodayUtc,
+	moodVotedLatchKey
+} from '~/utils/mood';
 
 const props = withDefaults(
 	defineProps<{
@@ -125,9 +131,13 @@ const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 // true only for a vote cast this mount; a reloaded prior vote reads back as false
 const votedThisSession = ref(false);
+// reactive, durable per-day latch; localStorage is transient on Capacitor so the source of
+// truth is a @capacitor/preferences copy that survives WKWebView storage eviction
+const done = ref(false);
 
-// localStorage-backed hasVoted isn't reactive to a fresh vote, so also flip on myVote
-const showResults = computed(() => hasVoted.value || myVote.value !== null);
+// hasVoted (crust's localStorage guard) isn't reactive to a fresh vote, and localStorage can be
+// evicted; the durable `done` latch is what keeps the same topic un-revotable across remounts
+const showResults = computed(() => done.value || hasVoted.value || myVote.value !== null);
 
 const percentages = computed<Record<MoodEmoji, number>>(() =>
 	computeMoodPercentages(snapshot.value?.counts, snapshot.value?.total ?? 0, EMOJIS)
@@ -137,11 +147,19 @@ function normalizedTopic(): string {
 	return props.topic.trim().toLowerCase();
 }
 
+function votedLatchKey(): string {
+	return moodVotedLatchKey(normalizedTopic(), moodTodayUtc());
+}
+
+function myVoteKey(): string {
+	return moodMyVoteStorageKey(normalizedTopic(), moodTodayUtc());
+}
+
 // re-highlight the bar this device picked earlier today (crust's guard only stores a timestamp)
 function readPersistedVote(): MoodEmoji | null {
 	if (!import.meta.client) return null;
 	try {
-		const v = window.localStorage.getItem(moodMyVoteStorageKey(normalizedTopic(), moodTodayUtc()));
+		const v = window.localStorage.getItem(myVoteKey());
 		return v && (EMOJIS as readonly string[]).includes(v) ? (v as MoodEmoji) : null;
 	} catch {
 		return null;
@@ -151,14 +169,38 @@ function readPersistedVote(): MoodEmoji | null {
 function persistVote(emoji: MoodEmoji) {
 	if (!import.meta.client) return;
 	try {
-		window.localStorage.setItem(moodMyVoteStorageKey(normalizedTopic(), moodTodayUtc()), emoji);
+		window.localStorage.setItem(myVoteKey(), emoji);
 	} catch {
 		// no localStorage; highlight just won't survive a reload
 	}
 }
 
+// durable copies (survive localStorage eviction). the localStorage mirror above keeps crust's
+// synchronous hasVoted guard in sync for the common no-eviction case
+async function persistDurable(emoji?: MoodEmoji) {
+	try {
+		await Preferences.set({ key: votedLatchKey(), value: String(Date.now()) });
+		if (emoji) await Preferences.set({ key: myVoteKey(), value: emoji });
+	} catch {
+		// preferences unavailable; the localStorage mirror + backend rate-limit still apply
+	}
+}
+
+// read the durable latch; returns the stored emoji (if any) once today's vote is latched
+async function readDurableLatch(): Promise<{ voted: boolean; emoji: MoodEmoji | null }> {
+	try {
+		const { value: latch } = await Preferences.get({ key: votedLatchKey() });
+		if (latch == null) return { voted: false, emoji: null };
+		const { value: e } = await Preferences.get({ key: myVoteKey() });
+		const emoji = e && (EMOJIS as readonly string[]).includes(e) ? (e as MoodEmoji) : null;
+		return { voted: true, emoji };
+	} catch {
+		return { voted: false, emoji: null };
+	}
+}
+
 async function onVote(emoji: MoodEmoji) {
-	if (loading.value || hasVoted.value) return;
+	if (loading.value || done.value || hasVoted.value) return;
 	loading.value = true;
 	errorMessage.value = null;
 	haptics.selection();
@@ -168,23 +210,38 @@ async function onVote(emoji: MoodEmoji) {
 
 	if (res.success) {
 		myVote.value = emoji;
+		done.value = true;
 		votedThisSession.value = true;
 		persistVote(emoji);
+		void persistDurable(emoji);
 		haptics.notifySuccess();
 		emit('complete', { emoji });
 		showInfoToast('Mood recorded.');
+	} else if (res.error?.toLowerCase().includes('already')) {
+		// already recorded today (device guard or a backend 409); latch to results and persist the
+		// durable guard so voting stays closed across remounts and a cold app restart
+		done.value = true;
+		void persistDurable(myVote.value ?? undefined);
 	} else {
 		errorMessage.value = res.error ?? 'Could not record your mood.';
-		if (!res.error?.toLowerCase().includes('already')) {
-			haptics.notifyWarning();
-			showErrorToast(res.error ?? 'Could not record your mood.');
-		}
+		haptics.notifyWarning();
+		showErrorToast(res.error ?? 'Could not record your mood.');
 	}
 }
 
 onMounted(async () => {
-	// restore the prior highlight before the snapshot lands so the correct bar lights up
-	if (hasVoted.value) myVote.value = readPersistedVote();
+	// fast path: crust's synchronous localStorage guard latches + restores the highlight immediately
+	if (hasVoted.value) {
+		done.value = true;
+		myVote.value = readPersistedVote();
+	}
+	// durable path: the Preferences latch survives localStorage eviction, so a same-day remount
+	// (or a cold app restart) stays latched and can't re-open voting
+	const latch = await readDurableLatch();
+	if (latch.voted) {
+		done.value = true;
+		if (!myVote.value && latch.emoji) myVote.value = latch.emoji;
+	}
 	await fetchSnapshot();
 });
 </script>

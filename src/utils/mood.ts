@@ -11,6 +11,23 @@ export function moodMyVoteStorageKey(topic: string, date: string): string {
 	return `mood_myvote:${topic.trim().toLowerCase()}:${date}`;
 }
 
+// durable per-day vote latch key; matches useMood's localStorage guard format
+// (mood_voted:<normalized-topic>:<utc-date>) so a @capacitor/preferences copy survives the
+// WKWebView localStorage eviction that would otherwise re-enable voting on the same day
+export function moodVotedLatchKey(topic: string, date: string): string {
+	return `mood_voted:${topic.trim().toLowerCase()}:${date}`;
+}
+
+// pure latch resolver: has this topic already been voted on `date`, given the durable store's keys?
+// a same-day remount reading the same store stays latched; a new day reads a different key
+export function hasVotedToday(
+	store: Record<string, string | null | undefined>,
+	topic: string,
+	date: string
+): boolean {
+	return store[moodVotedLatchKey(topic, date)] != null;
+}
+
 // aggregate counts -> whole-percent per emoji; 0 for every emoji when nobody has voted yet
 export function computeMoodPercentages<E extends string>(
 	counts: Partial<Record<E, number>> | undefined,
