@@ -177,6 +177,8 @@ const rows = computed(() =>
 );
 
 const showQuestCta = computed(() => {
+	// redundant while a quest is already in progress
+	if (currentQuest.value) return false;
 	const anyExpiring = rows.value.some((r) => r.expiringSoon);
 	const allZero = rows.value.every((r) => r.count === 0);
 	return anyExpiring || allZero;

@@ -23,6 +23,8 @@ export default defineNuxtConfig({
 			appleTeamId: process.env.NUXT_PUBLIC_APPLE_TEAM_ID || '',
 			// public keys
 			mapsApiKey: process.env.NUXT_PUBLIC_MAPS_API_KEY || '',
+			// per-platform store url for the rate-app prompt (ios app store / play store)
+			appStoreReviewUrl: process.env.NUXT_PUBLIC_APP_STORE_REVIEW_URL || '',
 			// gates test-only pages (__test__/*) + the client-moderation e2e signature hook
 			testBuild: process.env.NUXT_PUBLIC_TEST_BUILD === '1'
 		}
