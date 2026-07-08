@@ -2,13 +2,8 @@ import type { Page } from '@playwright/test';
 import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 
-// the seeded catalog has 30 activities; a search page is capped at 25 (SEARCH_LIMIT), so the
-// first page fills to 25 and exactly one more page (the remaining 5) exists
 const FIRST_PAGE = 25;
 
-// the results summary renders "Activities - N Results"; N is displayedResults.length, which
-// only grows when a NEW page is fetched (unlike lazy card hydration on scroll), so it is the
-// reliable signal for "another page loaded" vs "more cards merely became visible"
 async function activitiesResultCount(page: Page): Promise<number> {
 	const el = page.getByText(/activities\s*-\s*\d+\s*results/i).first();
 	const raw = (await el.textContent().catch(() => '')) ?? '';
@@ -16,18 +11,16 @@ async function activitiesResultCount(page: Page): Promise<number> {
 	return match ? Number(match[1]) : -1;
 }
 
-// scroll the active ion-content's inner scroll element to the bottom (matches the existing
-// discover + dashboard specs); this drives the IonInfiniteScroll sentinel
 async function scrollToBottom(page: Page): Promise<void> {
 	await page.evaluate(async () => {
-		const content = document.querySelector('ion-content');
-		const scrollEl = await (content as any)?.getScrollElement?.();
+		const results = document.querySelector('#discover-results');
+		const content = (results?.closest('ion-content') ??
+			document.querySelector('ion-content')) as any;
+		const scrollEl = await content?.getScrollElement?.();
 		if (scrollEl) scrollEl.scrollTo({ top: scrollEl.scrollHeight });
 	});
 }
 
-// enter the deterministic state: search-mode pinned to the activities segment, whose first
-// page fills to 25 of the 30 seeded activities (so exactly one more page remains)
 async function enterActivitySearch(
 	page: Page,
 	gotoHydrated: (path: string) => Promise<void>,
