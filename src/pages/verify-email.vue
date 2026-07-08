@@ -8,18 +8,10 @@
 				<IonTitle>Verify Email</IonTitle>
 
 				<IonButtons slot="end">
-					<IonButton
+					<MTourButton
 						v-if="user && !user.account.email_verified"
-						fill="outline"
-						color="secondary"
-						aria-label="Help"
-						@click="startTour('verify-email')"
-					>
-						<UIcon
-							name="mdi:progress-question"
-							class="size-5"
-						/>
-					</IonButton>
+						tour-id="verify-email"
+					/>
 				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
@@ -81,7 +73,7 @@ import { Toast } from '@capacitor/toast';
 
 const { user, fetchUser, sendVerificationEmail } = useAuth();
 const { notifySuccess } = useAppHaptics();
-const { startTour, startTourIfNew } = useSiteTour();
+const { startTourIfNew } = useSiteTour();
 // Ionic router so root-level redirects actually swap the outlet (navigateTo can't enter /tabs).
 const ionRouter = useIonRouter();
 

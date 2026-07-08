@@ -20,6 +20,7 @@
 					</div>
 				</IonTabButton>
 				<IonTabButton
+					id="tab-quests"
 					tab="quests"
 					href="/tabs/quests"
 				>
@@ -33,6 +34,7 @@
 				<!-- spacing placeholder for the centered create FAB -->
 				<IonTabButton disabled />
 				<IonTabButton
+					id="tab-discover"
 					tab="discover"
 					href="/tabs/discover"
 					@click.capture="handleDiscoverButtonClick"

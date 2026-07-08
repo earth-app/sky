@@ -1,18 +1,7 @@
 <template>
 	<div class="flex flex-col items-center w-full">
 		<div class="flex justify-end w-full pr-4 mt-2">
-			<IonButton
-				fill="outline"
-				size="small"
-				color="secondary"
-				aria-label="Help"
-				@click="startTour('article-profile')"
-			>
-				<UIcon
-					name="mdi:progress-question"
-					class="size-5"
-				/>
-			</IonButton>
+			<MTourButton tour-id="article-profile" />
 		</div>
 		<div class="mt-2 mb-4 text-wrap max-w-full px-4">
 			<div
@@ -278,8 +267,6 @@ async function removeArticle() {
 }
 
 // article tour
-
-const { startTour } = useSiteTour();
 
 const articleTour = computed<SiteTourStep[]>(() => [
 	{

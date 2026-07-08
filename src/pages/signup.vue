@@ -9,18 +9,7 @@
 					>
 						Sign Up
 					</h1>
-					<IonButton
-						fill="outline"
-						size="small"
-						color="secondary"
-						aria-label="Help"
-						@click="startTour('signup')"
-					>
-						<UIcon
-							name="mdi:progress-question"
-							class="size-5"
-						/>
-					</IonButton>
+					<MTourButton tour-id="signup" />
 				</div>
 				<div
 					id="signup-oauth"
@@ -176,8 +165,6 @@ async function handleSignupSuccess(_: User, hasEmail: boolean) {
 function goToLogin() {
 	ionRouter.push('/login', slide);
 }
-
-const { startTour } = useSiteTour();
 
 const signupTour: SiteTourStep[] = [
 	{

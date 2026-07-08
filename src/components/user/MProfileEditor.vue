@@ -29,19 +29,10 @@
 				/>
 				<span class="mr-2">Regenerate Avatar</span>
 			</IonButton>
-			<IonButton
+			<MTourButton
+				tour-id="user-profile"
 				class="ml-2"
-				size="small"
-				fill="outline"
-				color="secondary"
-				aria-label="Help"
-				@click="startTour('user-profile')"
-			>
-				<UIcon
-					name="mdi:progress-question"
-					class="size-5 mx-2"
-				/>
-			</IonButton>
+			/>
 		</div>
 
 		<div class="flex flex-col items-center w-full px-3">
@@ -1726,8 +1717,6 @@ async function confirmActivityChanges() {
 }
 
 // profile editor tour
-
-const { startTour } = useSiteTour();
 
 const userProfileTour: SiteTourStep[] = [
 	{

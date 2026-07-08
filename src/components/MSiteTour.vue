@@ -1193,8 +1193,11 @@ function updateBoxPosition() {
 	});
 }
 
-function positionFallbackTooltip() {
-	const padding = 16;
+// centered fallback for a missing target or a target with no visible bounds: sit the card in
+// the MIDDLE of the viewport (both axes), clamped inside the safe-area so it never strands
+// under the notch / home indicator. re-runs once after the card paints so the true measured
+// height centers precisely (the first pass may use the 220px default before it mounts)
+function positionFallbackTooltip(scheduleRemeasure = true) {
 	boxStyle.value = {
 		...boxStyle.value,
 		display: 'none'
@@ -1207,14 +1210,63 @@ function positionFallbackTooltip() {
 		height: '0px'
 	};
 
+	if (!import.meta.client) {
+		tooltipStyle.value = {
+			...tooltipStyle.value,
+			top: '50%',
+			left: '50%',
+			right: 'auto',
+			maxWidth: '90vw',
+			transform: 'translate(-50%, -50%)'
+		};
+		return;
+	}
+
+	const padding = 16;
+	const viewportWidth = window.innerWidth;
+	const viewportHeight = window.innerHeight;
+	const topPadding = padding + safeAreaInsets.top;
+	const bottomPadding = padding + safeAreaInsets.bottom;
+	const leftPadding = padding + safeAreaInsets.left;
+	const rightPadding = padding + safeAreaInsets.right;
+
+	const maxTooltipWidth = Math.max(280, Math.min(viewportWidth - leftPadding - rightPadding, 800));
+	const tooltipWidth = Math.min(tooltipCard.value?.offsetWidth || maxTooltipWidth, maxTooltipWidth);
+	const tooltipHeight = tooltipCard.value?.offsetHeight || 220;
+
+	const centeredTop = viewportHeight / 2 - tooltipHeight / 2;
+	const centeredLeft = viewportWidth / 2 - tooltipWidth / 2;
+	const top = Math.max(
+		topPadding,
+		Math.min(centeredTop, viewportHeight - tooltipHeight - bottomPadding)
+	);
+	const left = Math.max(
+		leftPadding,
+		Math.min(centeredLeft, viewportWidth - tooltipWidth - rightPadding)
+	);
+
 	tooltipStyle.value = {
 		...tooltipStyle.value,
-		top: `${padding + safeAreaInsets.top}px`,
-		left: '50%',
+		top: `${Math.round(top)}px`,
+		left: `${Math.round(left)}px`,
 		right: 'auto',
-		maxWidth: '90vw',
-		transform: 'translateX(-50%)'
+		maxWidth: `${maxTooltipWidth}px`,
+		transform: 'none'
 	};
+
+	if (scheduleRemeasure) {
+		nextTick(() => {
+			// a real target may have resolved since; only re-center if still in fallback
+			if (currentElementId) {
+				const el = resolveCurrentElement();
+				if (el) {
+					const r = el.getBoundingClientRect();
+					if (r.width > 0 || r.height > 0) return;
+				}
+			}
+			positionFallbackTooltip(false);
+		});
+	}
 }
 
 function scrollToFallbackTooltip() {

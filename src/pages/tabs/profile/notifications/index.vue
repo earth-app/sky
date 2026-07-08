@@ -9,16 +9,7 @@
 				<IonTitle id="notifications-title">Notifications</IonTitle>
 
 				<IonButtons slot="end">
-					<IonButton
-						color="secondary"
-						aria-label="Help"
-						@click="startTour('notifications')"
-					>
-						<UIcon
-							name="mdi:progress-question"
-							class="size-5"
-						/>
-					</IonButton>
+					<MTourButton tour-id="notifications" />
 				</IonButtons>
 			</IonToolbar>
 		</IonHeader>
@@ -38,7 +29,7 @@
 
 <script setup lang="ts">
 const { unreadCount, fetch, fetchNotifications, markAllNotificationsRead } = useNotifications();
-const { startTour, startTourIfNew } = useSiteTour();
+const { startTourIfNew } = useSiteTour();
 
 onMounted(() => {
 	fetchNotifications();

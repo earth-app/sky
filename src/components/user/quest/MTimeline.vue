@@ -44,17 +44,10 @@
 				>Quest Completed</IonButton
 			>
 
-			<IonButton
-				color="secondary"
+			<MTourButton
+				:tour-id="`quest-timeline-${props.quest.id}`"
 				class="ml-2 max-w-6 max-h-6 rounded-xl"
-				fill="outline"
-				@click="startTour(`quest-timeline-${props.quest.id}`)"
-			>
-				<UIcon
-					name="mdi:progress-question"
-					class="min-h-6 min-w-6"
-				/>
-			</IonButton>
+			/>
 		</div>
 		<div
 			v-for="(item, index) in items"
@@ -557,8 +550,6 @@ const currentIndex = computed(() => {
 });
 
 // quest timeline tour
-
-const { startTour } = useSiteTour();
 
 const hasAltStepGroup = computed(() => (props.quest?.steps ?? []).some((s) => Array.isArray(s)));
 

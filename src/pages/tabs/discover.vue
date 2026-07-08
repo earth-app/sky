@@ -9,20 +9,11 @@
 					:color="theme"
 					class="flex-1 max-w-2xl mt-12 border-b-2 border-black/15 dark:border-white/30"
 				/>
-				<IonButton
+				<MTourButton
 					id="discover-help"
-					fill="outline"
-					size="small"
-					color="secondary"
+					tour-id="discover-index"
 					class="mt-12 mr-2"
-					aria-label="Help"
-					@click="startTour('discover-index')"
-				>
-					<UIcon
-						name="mdi:progress-question"
-						class="size-5"
-					/>
-				</IonButton>
+				/>
 			</div>
 		</IonHeader>
 		<IonContent
@@ -178,6 +169,13 @@
 				</div>
 			</div>
 
+			<IonInfiniteScroll
+				:disabled="!canAutoLoad"
+				threshold="40%"
+				@ionInfinite="onInfiniteScroll"
+			>
+				<IonInfiniteScrollContent />
+			</IonInfiniteScroll>
 			<ClientOnly>
 				<MSiteTour
 					:steps="discoverTour"
@@ -194,6 +192,7 @@ import { Toast } from '@capacitor/toast';
 import { onIonViewWillEnter, onIonViewWillLeave } from '@ionic/vue';
 import { type Event } from 'types/event';
 import { capitalizeFully, comma } from 'utils';
+import { dataSaverModeEnabled } from '~/composables/useNetwork';
 import { theme } from '~/composables/useSettings';
 import { interleaveFeed } from '~/utils/feed';
 
@@ -251,6 +250,7 @@ const {
 	fetch: getEvents
 } = useEvents(makeMServerRequest);
 const { fetch: getUsers } = useUsers();
+const { settings: appSettings } = useAppSettings();
 
 const hasMoreActivities = ref(true);
 const hasMorePrompts = ref(true);
@@ -347,6 +347,12 @@ const displayedResults = computed(() => {
 });
 
 const page = ref(1);
+
+// auto-load mirrors the dashboard IonInfiniteScroll; data saver forces explicit-only loading
+const autoLoadEnabled = computed(
+	() => appSettings.value.discoverAutoLoad && !dataSaverModeEnabled.value
+);
+const canAutoLoad = computed(() => autoLoadEnabled.value && canLoadMore.value);
 
 watch(search, (nextValue) => {
 	if (searchDebounceTimer) {
@@ -954,7 +960,14 @@ async function loadMore() {
 	}
 }
 
-const { startTour } = useSiteTour();
+// IonInfiniteScroll delegates to loadMore, which owns the overlap + hasMore guards
+async function onInfiniteScroll(event: CustomEvent) {
+	try {
+		await loadMore();
+	} finally {
+		(event.target as any)?.complete();
+	}
+}
 
 const discoverTour = computed<SiteTourStep[]>(() => [
 	{

@@ -101,6 +101,7 @@ import {
 	setDataSaverModeEnabled,
 	setOfflineModeEnabled
 } from './composables/useNetwork';
+import { useRateApp } from './composables/useRateApp';
 import { OAUTH_USERNAME_PROMPT_KEY } from './utils/username';
 
 if (import.meta.client) {
@@ -118,16 +119,21 @@ const { settings: appSettings, init: initSettings } = useAppSettings();
 const {
 	activeStepIndex,
 	hasCompleted: tourCompleted,
-	markCompleted: markTourCompleted
+	markCompleted: markTourCompleted,
+	isActiveTour
 } = useSiteTour();
 const router = useIonRouter();
 const isNative = Capacitor.isNativePlatform();
+const { recordSession, recordMeaningfulAction, maybePromptForReview } = useRateApp();
 
 const WELCOME_TOUR_RESUME_KEY = 'sky:welcome-tour-resume-step';
 // crust tracks tour completion in localStorage, which ios/WKWebView reclaims under storage
 // pressure -> the whole tour re-auto-plays for users who already finished it. mirror welcome
 // completion into durable Preferences and re-seed on boot so it never replays
 const WELCOME_TOUR_COMPLETED_KEY = 'sky:welcome-tour-completed';
+
+// defer the rate-app prompt well past the splash + any welcome-tour auto-play
+const RATE_APP_PROMPT_DELAY_MS = 6000;
 
 // compact last-known user, persisted so cold launch paints the avatar tab before the network resolves
 const CURRENT_USER_KEY = 'current_user';
@@ -216,14 +222,15 @@ async function shareCelebration() {
 }
 
 // short, in-place orientation: stays on the dashboard + tab bar (no cross-app navigation,
-// which is fragile), points at the durable Getting Started card, and ends with one clear CTA
+// which is fragile). the welcome + finish steps are intentionally centered (no id); the middle
+// steps point at real, always-visible targets (tab bar, tab buttons, Getting Started card) so
+// none reference a phantom element. a missing/hidden target degrades to the centered fallback
 const welcomeTour = computed<SiteTourStep[]>(() => [
 	{
-		id: 'title',
 		title: 'Welcome to The Earth App',
 		description:
-			'A new kind of social experience: discover hobbies, read short articles, answer creative prompts, complete quests, and meet people who share your interests.\n\nThis is a quick 30-second orientation: skip it any time with the X or by tapping outside.',
-		footer: 'Tap Next to continue, or the hardware back button to exit.',
+			'Discover hobbies, read short articles, answer creative prompts, complete quests, and meet people who share your interests.\n\nThis is a quick 30-second tour. Skip it any time with the X or by tapping outside.',
+		footer: 'Tap Next to continue.',
 		icon: 'mdi:earth',
 		placement: 'center',
 		dim: true,
@@ -233,7 +240,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'navbar',
 		title: 'Your Tab Bar',
 		description:
-			'Your home base, pinned to the bottom everywhere you go: Dashboard for your feed, Discover to explore, Quests for guided adventures, and Profile for your account.',
+			'Your home base, pinned to the bottom on every screen. Dashboard is your feed, Discover explores content, Quests are guided adventures, and Profile is your account.',
 		footer: 'Tap any tab to jump straight there.',
 		icon: 'mdi:compass-outline'
 	},
@@ -241,36 +248,35 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 		id: 'getting-started',
 		title: 'Start Here',
 		description:
-			'This is your Getting Started checklist. A few quick steps set up your account and unlock personalized recommendations across the app. It lives right here on your dashboard, so you can pick up where you left off any time.',
-		footer: 'Complete it at your own pace: nothing is mandatory.',
+			'This Getting Started checklist sets up your account and unlocks personalized recommendations. It stays on your dashboard, so you can finish it whenever you like.',
+		footer: 'Complete it at your own pace; nothing is mandatory.',
 		icon: 'mdi:flag-checkered',
 		highlightPadding: 10
 	},
 	{
-		id: 'discover-orientation',
+		id: 'tab-discover',
 		title: 'Discover What You Love',
 		description:
-			'The Discover tab is where you find activities, articles, prompts, and events tailored to your interests. Pick a few activities and the whole app personalizes to you.',
-		footer: 'Fresh content rotates in daily: articles and prompts do not stick around forever.',
+			'Tap Discover to browse activities, articles, prompts, and events. Pick a few activities and the whole app personalizes to you.',
+		footer: 'Fresh content rotates in daily.',
 		icon: 'mdi:magnify',
-		placement: 'center',
+		placement: 'top',
 		dim: true
 	},
 	{
-		id: 'quests-orientation',
+		id: 'tab-quests',
 		title: 'Quests: Guided Adventures',
 		description:
-			'Quests turn an activity into a step-by-step adventure with rewards and a satisfying finish. You can have one active at a time, and each completed quest earns badges and Impact Points.',
-		footer: 'Start with a quest tied to an activity you already enjoy.',
-		icon: 'mdi:map-marker-path',
-		placement: 'center',
+			'Tap Quests to start a step-by-step adventure tied to an activity. You can have one active at a time, and finishing it earns badges and Impact Points.',
+		footer: 'Start with an activity you already enjoy.',
+		icon: 'mdi:sword-cross',
+		placement: 'top',
 		dim: true
 	},
 	{
-		id: 'finish',
 		title: "You're All Set",
 		description:
-			"That's the tour! Everything else you'll pick up as you explore. The best first move is to start a quest: it walks you through the app while you earn your first rewards.",
+			"That's the tour. The best first move is to start a quest: it walks you through the app while you earn your first rewards.",
 		footer: 'You can replay this tour any time from the dashboard.',
 		icon: 'mdi:rocket-launch-outline',
 		placement: 'center',
@@ -295,6 +301,8 @@ let dailyNotificationTeardown: (() => void) | null = null;
 let watchBridgeTeardown: (() => void) | null = null;
 let questCelebrationTeardown: (() => void) | null = null;
 let offlineQueueTeardown: (() => void) | null = null;
+let rateAppPromptTimer: ReturnType<typeof setTimeout> | null = null;
+let stopCelebrationWatch: (() => void) | null = null;
 
 const handledDeepLinkTimestamps = new Map<string, number>();
 const MAX_DEEP_LINK_HISTORY = 64;
@@ -641,6 +649,28 @@ onMounted(async () => {
 	// setup still sees a resolved currentUser
 	await authReady;
 
+	// item 15: rate-app engagement prompt (native store builds only). count this launch as a
+	// session, flag a completed quest as a meaningful action, then - well after the splash and
+	// any welcome-tour auto-play - ask an engaged user once whether they'd leave a review
+	if (isNative && import.meta.client && user.value) {
+		void recordSession();
+
+		// a completed quest opens the celebration overlay; treat that as meaningful engagement
+		stopCelebrationWatch = watch(
+			() => celebrationOpen.value,
+			(open) => {
+				if (open) void recordMeaningfulAction();
+			}
+		);
+
+		rateAppPromptTimer = setTimeout(() => {
+			rateAppPromptTimer = null;
+			if (!user.value) return;
+			if (isActiveTour('welcome')) return; // never surface during the welcome tour
+			void maybePromptForReview();
+		}, RATE_APP_PROMPT_DELAY_MS);
+	}
+
 	if (isNative) {
 		// keep a quest Live Activity (iOS) in sync with the active quest + schedule step-unlock reminders
 		useQuestLiveActivity().init();
@@ -805,6 +835,16 @@ onBeforeUnmount(() => {
 	if (offlineQueueTeardown) {
 		offlineQueueTeardown();
 		offlineQueueTeardown = null;
+	}
+
+	if (rateAppPromptTimer) {
+		clearTimeout(rateAppPromptTimer);
+		rateAppPromptTimer = null;
+	}
+
+	if (stopCelebrationWatch) {
+		stopCelebrationWatch();
+		stopCelebrationWatch = null;
 	}
 });
 

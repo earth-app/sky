@@ -8,18 +8,7 @@
 			<IonRefresherContent />
 		</IonRefresher>
 		<div class="flex justify-end w-full pr-2 mt-2">
-			<IonButton
-				fill="outline"
-				size="small"
-				color="secondary"
-				aria-label="Help"
-				@click="startTour('prompt-profile')"
-			>
-				<UIcon
-					name="mdi:progress-question"
-					class="size-5"
-				/>
-			</IonButton>
+			<MTourButton tour-id="prompt-profile" />
 		</div>
 		<div class="flex flex-col items-center justify-center">
 			<PromptMCard
@@ -256,8 +245,6 @@ onMounted(async () => {
 });
 
 // prompt tour
-
-const { startTour } = useSiteTour();
 
 const promptTour: SiteTourStep[] = [
 	{

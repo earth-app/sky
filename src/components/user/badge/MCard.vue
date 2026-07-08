@@ -94,18 +94,10 @@
 							/>
 							<span>{{ masteryButton.label }}</span>
 						</IonButton>
-						<IonButton
+						<MTourButton
 							id="badge-mastery-help"
-							fill="outline"
-							color="secondary"
-							size="small"
-							@click="startTour('badge-mastery')"
-						>
-							<UIcon
-								name="mdi:progress-question"
-								class="min-h-5 min-w-5"
-							/>
-						</IonButton>
+							tour-id="badge-mastery"
+						/>
 					</div>
 					<UserBadgeMasteryStatusText v-bind="masteryStatusProps" />
 
@@ -157,7 +149,6 @@ const props = withDefaults(
 
 const userStore = useUserStore();
 const { user: authUser } = useAuth();
-const { startTour } = useSiteTour();
 const router = useIonRouter();
 
 const showDetails = ref(false);

@@ -1,18 +1,7 @@
 <template>
 	<div class="flex flex-col items-center w-full pt-8">
 		<div class="flex justify-end w-full pr-4">
-			<IonButton
-				fill="outline"
-				size="small"
-				color="secondary"
-				aria-label="Help"
-				@click="startTour('event-profile')"
-			>
-				<UIcon
-					name="mdi:progress-question"
-					class="size-5"
-				/>
-			</IonButton>
+			<MTourButton tour-id="event-profile" />
 		</div>
 		<div class="flex items-start justify-center w-full px-4">
 			<div class="flex flex-col w-full">
@@ -386,8 +375,6 @@ function closeInfo() {
 }
 
 // event tour
-
-const { startTour } = useSiteTour();
 
 const eventTour: SiteTourStep[] = [
 	{
