@@ -126,8 +126,13 @@ const emptyLabel = computed(() =>
 		: `No active ${metricLabel.value.toLowerCase()} streaks yet.`
 );
 
-const rows = computed(() =>
-	leaderboard.value.slice(0, 3).map((entry, i) => {
+const rows = computed(() => {
+	// in friends/circle streak widgets a 0-streak friend shouldn't take a top-3 slot
+	const source =
+		props.scope !== 'global' && !isPoints.value
+			? leaderboard.value.filter((e) => e.value > 0)
+			: leaderboard.value;
+	return source.slice(0, 3).map((entry, i) => {
 		const url = entry.user.account?.avatar_url;
 		const avatarSrc = avatarStore.safeUrl(url, 'avatar128');
 		return {
@@ -139,8 +144,8 @@ const rows = computed(() =>
 			avatarSrc,
 			isSelf: currentUser.value?.id === entry.id
 		};
-	})
-);
+	});
+});
 
 // prefetch avatar blobs for top 3
 watch(
