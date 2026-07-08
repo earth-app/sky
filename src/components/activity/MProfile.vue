@@ -57,25 +57,51 @@
 					View Completed Quest
 				</IonButton>
 
-				<IonButton
-					fill="outline"
-					size="small"
-					color="secondary"
-					@click="startTour('activities')"
-				>
-					<UIcon
-						name="mdi:progress-question"
-						class="size-5"
-					/>
-				</IonButton>
+				<MTourButton tour-id="activities" />
 			</div>
 		</div>
-		<h3
-			class="text-md min-w-85 w-4/5 mt-8 font-normal!"
+		<div
 			id="activity-description"
+			class="relative flex flex-col items-center gap-3 min-w-85 w-4/5 mt-8"
 		>
-			{{ activity.description }}
-		</h3>
+			<div
+				v-if="typeChips.length"
+				class="flex flex-wrap items-center justify-center gap-2"
+			>
+				<span
+					v-for="chip in typeChips"
+					:key="chip.label"
+					class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ring-1"
+					:class="chip.classes"
+				>
+					<UIcon
+						name="mdi:tag-outline"
+						class="size-3.5"
+					/>
+					{{ chip.label }}
+				</span>
+			</div>
+			<div
+				class="relative flex items-start gap-3 w-full overflow-hidden rounded-2xl px-4 py-4 ring-1 ring-primary-500/15 bg-primary-500/5 dark:bg-primary-500/10"
+			>
+				<span
+					class="shrink-0 grid place-items-center size-9 rounded-xl ring-1 ring-primary-500/25 bg-primary-500/15 text-primary-600 dark:text-primary-300"
+				>
+					<UIcon
+						:name="activity.fields['icon'] || 'mdi:sprout'"
+						class="size-5"
+					/>
+				</span>
+				<h3 class="flex-1 min-w-0 text-md leading-relaxed font-normal! m-0!">
+					{{ activity.description }}
+				</h3>
+				<UIcon
+					v-if="activity.fields['icon']"
+					:name="activity.fields['icon']"
+					class="pointer-events-none absolute -bottom-3 -right-3 size-20 rotate-12 text-primary-500 opacity-10"
+				/>
+			</div>
+		</div>
 		<IonCard
 			v-if="showNoveltyHint"
 			id="activity-novelty-hint"
@@ -175,6 +201,7 @@
 <script setup lang="ts">
 import { Preferences } from '@capacitor/preferences';
 import type { Activity } from 'types/activity';
+import { capitalizeFully } from 'utils';
 
 const NOVELTY_HINT_KEY = 'sky:activity-novelty-hint-dismissed';
 
@@ -208,6 +235,19 @@ const offlineMode = computed(() => Boolean(props.offlineMode));
 
 const noveltyHintDismissed = ref(true); // default hidden until we read Preferences to avoid a flash
 const showNoveltyHint = computed(() => !noveltyHintDismissed.value && !offlineMode.value);
+
+// topic chips around the description; mirrors crust Card.vue's palette cycling
+const TYPE_CHIP_TINTS = [
+	'bg-primary-500/15 text-primary-600 ring-primary-500/30 dark:text-primary-300',
+	'bg-warning-500/15 text-warning-600 ring-warning-500/30 dark:text-warning-300',
+	'bg-info-500/15 text-info-600 ring-info-500/30 dark:text-info-300'
+];
+const typeChips = computed(() =>
+	(props.activity.types || []).map((type, i) => ({
+		label: capitalizeFully(type.replace(/_/g, ' ')),
+		classes: TYPE_CHIP_TINTS[Math.min(TYPE_CHIP_TINTS.length - 1, i)]
+	}))
+);
 
 onMounted(async () => {
 	try {
@@ -291,8 +331,6 @@ watch(
 );
 
 // activity tour
-
-const { startTour } = useSiteTour();
 
 const activityTour: SiteTourStep[] = [
 	{
