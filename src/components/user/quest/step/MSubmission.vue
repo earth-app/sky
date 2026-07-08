@@ -401,7 +401,12 @@
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { DateTime } from 'luxon';
-import { makeMServerRequest } from '~/composables/useServer';
+import { isOffline } from '~/composables/useNetwork';
+import {
+	makeMServerRequest,
+	type MServerRequestOptions,
+	type ServerRequestResult
+} from '~/composables/useServer';
 import { injectMissingExif } from '~/utils/exif';
 
 const props = defineProps<{
@@ -636,9 +641,51 @@ function formatTime(seconds: number) {
 	return `${secs}s`;
 }
 
+// wrap the server request so a failed step submit exposes its HTTP status; the crust store's
+// updateQuest collapses to { message, completed, validated } and drops the status, so we
+// capture it here (fresh per submit -> no cross-call races)
+function createStatusTrackingRequest() {
+	const state = { failed: false, status: null as number | null };
+	async function request<T>(
+		key: string | null,
+		suburl: string,
+		token: string | null | undefined = null,
+		options: MServerRequestOptions = {}
+	): Promise<ServerRequestResult<T>> {
+		const res = await makeMServerRequest<T>(key, suburl, token, options);
+		state.failed = !res.success;
+		state.status = res.success ? null : (res.status ?? null);
+		return res;
+	}
+	return { request, state };
+}
+
+// descriptive, reassuring failure copy keyed off the HTTP status
+function describeSubmitFailure(
+	res: { message: string },
+	state: { failed: boolean; status: number | null },
+	validationFallback: string
+): string {
+	// server (5xx) or transport (no response) failure: reassure the user nothing was lost
+	if (state.failed && (state.status === null || state.status >= 500)) {
+		const code = state.status;
+		return `The server had a problem saving this step${
+			code ? ` (error ${code})` : ''
+		}. Your progress wasn't lost - please try again in a moment.`;
+	}
+	// 4xx client errors + HTTP-200 validation misses: surface the server's short reason
+	return formatApiError(res.message, validationFallback);
+}
+
 async function submitPhoto(file: File) {
 	if (!user.value) {
 		submitError.value = 'Your account is still loading. Please try again in a moment.';
+		return;
+	}
+
+	if (isOffline.value) {
+		submitError.value = 'You appear to be offline. Reconnect and try this step again.';
+		await showErrorToast(submitError.value, { duration: 'long' });
 		return;
 	}
 
@@ -656,7 +703,8 @@ async function submitPhoto(file: File) {
 		await fetchNativeLocation();
 	}
 
-	const { updateQuest } = useUser(user.value!.id, makeMServerRequest);
+	const tracker = createStatusTrackingRequest();
+	const { updateQuest } = useUser(user.value!.id, tracker.request);
 
 	submitError.value = '';
 	submitting.value = true;
@@ -700,8 +748,9 @@ async function submitPhoto(file: File) {
 			return;
 		}
 
-		submitError.value = formatApiError(
-			res.message,
+		submitError.value = describeSubmitFailure(
+			res,
+			tracker.state,
 			'We could not validate that submission. Please try again.'
 		);
 		await showErrorToast(submitError.value, { duration: 'long' });
@@ -724,7 +773,14 @@ async function submitStepResponse(extra: Record<string, unknown>, validatingLabe
 		return;
 	}
 
-	const { updateQuest } = useUser(user.value!.id, makeMServerRequest);
+	if (isOffline.value) {
+		submitError.value = 'You appear to be offline. Reconnect and try this step again.';
+		await showErrorToast(submitError.value, { duration: 'long' });
+		return;
+	}
+
+	const tracker = createStatusTrackingRequest();
+	const { updateQuest } = useUser(user.value!.id, tracker.request);
 
 	submitError.value = '';
 	submitting.value = true;
@@ -748,8 +804,9 @@ async function submitStepResponse(extra: Record<string, unknown>, validatingLabe
 			return;
 		}
 
-		submitError.value = formatApiError(
-			res.message,
+		submitError.value = describeSubmitFailure(
+			res,
+			tracker.state,
 			`We could not validate that ${validatingLabel}. Please try again.`
 		);
 		await showErrorToast(submitError.value, { duration: 'long' });
