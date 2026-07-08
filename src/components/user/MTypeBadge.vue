@@ -14,11 +14,11 @@
 		/>
 	</button>
 	<UBadge
-		v-else-if="props.user.account?.account_type && props.user.account.account_type !== 'FREE'"
+		v-else-if="effectiveType && effectiveType !== 'FREE'"
 		:label="badgeLabel"
 		:class="badgeStyling"
 		:ui="{ base: 'justify-center' }"
-		class="px-1 sm:px-2 md:px-3 py-1 rounded-full text-white text-sm font-semibold"
+		class="px-2! md:px-3! py-1! rounded-full! text-white! text-sm! font-semibold!"
 	/>
 </template>
 
@@ -34,17 +34,29 @@ const props = defineProps<{
 const { setAccountType } = useUser(() => props.user.id);
 const { user: currentUser } = useAuth();
 
+// a successful set writes here; it sticks even when the store swaps in a stale server echo (flash-revert fix)
+const overrideType = ref<AccountType | null>(null);
+const effectiveType = computed(() => overrideType.value ?? props.user.account?.account_type);
+
+// clear the override once the store's authoritative value catches up, so external changes still show
+watch(
+	() => props.user.account?.account_type,
+	(val) => {
+		if (overrideType.value && val === overrideType.value) overrideType.value = null;
+	}
+);
+
 // only an admin viewer may edit; non-admins see the badge as before
 const editable = computed(() => currentUser.value?.account?.account_type === 'ADMINISTRATOR');
 
 const badgeLabel = computed(() => {
-	const type = props.user.account?.account_type;
+	const type = effectiveType.value;
 	if (!type) return 'Free';
 	return accountTypeLabel(type);
 });
 
 const badgeStyling = computed(() => {
-	switch (props.user.account?.account_type) {
+	switch (effectiveType.value) {
 		case 'ADMINISTRATOR':
 			return 'bg-red-500! font-bold';
 		case 'ORGANIZER':
@@ -59,7 +71,7 @@ const badgeStyling = computed(() => {
 });
 
 async function openEditor() {
-	const current = props.user.account?.account_type;
+	const current = effectiveType.value;
 	const sheet = await actionSheetController.create({
 		header: 'Set Account Level',
 		buttons: [
@@ -78,16 +90,15 @@ async function openEditor() {
 
 async function handleSetAccountType(type: AccountType) {
 	if (!props.user.account) return;
+	if (type === effectiveType.value) return;
 
-	const old = props.user.account.account_type;
-	if (type === old) return;
-
-	// optimistic; revert on failure
-	props.user.account.account_type = type;
+	// optimistic via override only (no shared-object mutation, which would trip the watcher and
+	// re-expose a stale echo); effectiveType shows it immediately and it survives the store swap
+	overrideType.value = type;
 	const res = await setAccountType(type);
 
 	if (!res?.success) {
-		props.user.account.account_type = old;
+		overrideType.value = null;
 		await showErrorToast(res?.message, {
 			fallback: 'Failed to Update Account Level. Please Try Again.'
 		});

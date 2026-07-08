@@ -102,7 +102,11 @@
 				<span class="flex flex-wrap gap-2 items-center justify-center w-full">
 					<UIcon name="mdi:badge-account-horizontal-outline" />
 					<span>View Badges Collected</span>
-					<span>({{ grantedBadges.length }} / {{ badges.length }})</span>
+					<span v-if="badgesLoaded">({{ grantedBadges.length }} / {{ badges.length }})</span>
+					<span
+						v-else
+						class="inline-block! h-3! w-10! animate-pulse! rounded-full! bg-current/30!"
+					></span>
 				</span>
 			</IonButton>
 			<MContentDrawer
@@ -130,7 +134,11 @@
 				<span class="flex flex-wrap gap-2 items-center justify-center w-full">
 					<UIcon name="mdi:star-circle-outline" />
 					<span>View Points</span>
-					<span>({{ comma(points) }})</span>
+					<span v-if="pointsLoaded">({{ comma(points) }})</span>
+					<span
+						v-else
+						class="inline-block! h-3! w-10! animate-pulse! rounded-full! bg-current/30!"
+					></span>
 				</span>
 			</IonButton>
 			<MContentDrawer
@@ -144,7 +152,7 @@
 						<h2 class="self-center">{{ comma(points) }} Points</h2>
 						<UTable
 							:data="pointsHistory ? [...pointsHistory].reverse() : []"
-							:loading="pointsHistory === undefined"
+							:loading="!pointsLoaded"
 							:columns="[
 								{
 									accessorKey: 'timestamp',
@@ -370,6 +378,10 @@ const {
 const { name: displayName } = useDisplayName(props.user);
 const i18n = useI18n();
 
+// defer the title parenthetical counts until the first fetch resolves so we never flash (0 / 0) / (0)
+const badgesLoaded = ref(false);
+const pointsLoaded = ref(false);
+
 const user = computed(() => userState.value || props.user);
 const { user: currentUser } = useAuth();
 
@@ -406,8 +418,8 @@ function goToActivity(id: string) {
 onMounted(async () => {
 	fetchUser();
 	fetchAvatar();
-	fetchBadges();
-	fetchPoints();
+	fetchBadges().finally(() => (badgesLoaded.value = true));
+	fetchPoints().finally(() => (pointsLoaded.value = true));
 
 	fetchFriends();
 	fetchPrompts();
