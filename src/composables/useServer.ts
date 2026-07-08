@@ -59,7 +59,7 @@ function isTransientError(error: unknown): boolean {
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export type ServerRequestResult<T> =
-	{ success: true; data: T } | { success: false; message: string };
+	{ success: true; data: T } | { success: false; message: string; status?: number };
 
 export interface MServerRequestOptions extends Record<string, any> {
 	/** Number of retries on transient failures (default {@link DEFAULT_RETRIES}). Set to 0 to disable. */
@@ -144,7 +144,10 @@ export async function makeMServerRequest<T>(
 		message: formatApiError(
 			lastError,
 			'An error occurred while fetching server data. Please try again.'
-		)
+		),
+		// surface the HTTP status so callers can distinguish server/transport (5xx / none)
+		// from client (4xx) failures; null (transport) is normalized to undefined
+		status: getErrorStatus(lastError) ?? undefined
 	};
 }
 
