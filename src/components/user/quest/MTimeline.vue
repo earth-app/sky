@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-col w-full h-full">
-		<div class="flex justify-center my-2">
+		<div class="flex justify-center items-center my-2">
 			<IonButton
 				v-if="isCurrentQuest"
 				id="quest-button"
@@ -46,7 +46,7 @@
 
 			<MTourButton
 				:tour-id="`quest-timeline-${props.quest.id}`"
-				class="ml-2 max-w-6 max-h-6 rounded-xl"
+				class="ml-2 max-w-8 max-h-8 rounded-xl"
 			/>
 		</div>
 		<div

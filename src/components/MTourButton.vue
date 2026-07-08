@@ -10,7 +10,7 @@
 	>
 		<UIcon
 			name="mdi:progress-question"
-			class="size-5"
+			class="min-h-5 min-w-5"
 		/>
 	</IonButton>
 </template>
