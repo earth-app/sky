@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { computeMoodPercentages, moodMyVoteStorageKey, moodTodayUtc } from '~/utils/mood';
+import {
+	computeMoodPercentages,
+	hasVotedToday,
+	moodMyVoteStorageKey,
+	moodTodayUtc,
+	moodVotedLatchKey
+} from '~/utils/mood';
 
 const EMOJIS = ['😍', '😊', '🤔', '😐', '😟', '😤'] as const;
 
@@ -25,6 +31,49 @@ describe('moodMyVoteStorageKey', () => {
 		expect(moodMyVoteStorageKey('  Activity-ABC  ', '2026-07-06')).toBe(
 			'mood_myvote:activity-abc:2026-07-06'
 		);
+	});
+});
+
+describe('moodVotedLatchKey', () => {
+	it("matches useMood's guard format (mood_voted:<topic>:<date>)", () => {
+		expect(moodVotedLatchKey('today', '2026-07-06')).toBe('mood_voted:today:2026-07-06');
+	});
+
+	it('lowercases and trims the topic so it matches the sanitized request topic', () => {
+		expect(moodVotedLatchKey('  Activity-ABC  ', '2026-07-06')).toBe(
+			'mood_voted:activity-abc:2026-07-06'
+		);
+	});
+
+	it('is stable within a UTC day but changes with the date (re-votable next day only)', () => {
+		expect(moodVotedLatchKey('today', '2026-07-06')).toBe(moodVotedLatchKey('today', '2026-07-06'));
+		expect(moodVotedLatchKey('today', '2026-07-06')).not.toBe(
+			moodVotedLatchKey('today', '2026-07-07')
+		);
+	});
+});
+
+describe('hasVotedToday', () => {
+	const DATE = '2026-07-06';
+
+	it('is false on an empty store so the first vote of the day is allowed', () => {
+		expect(hasVotedToday({}, 'today', DATE)).toBe(false);
+	});
+
+	it("is true once today's latch is stored, so a same-day remount stays closed", () => {
+		const store = { [moodVotedLatchKey('today', DATE)]: String(Date.now()) };
+		expect(hasVotedToday(store, 'today', DATE)).toBe(true);
+	});
+
+	it("ignores a prior day's latch (voting reopens the next day)", () => {
+		const store = { [moodVotedLatchKey('today', '2026-07-05')]: '123' };
+		expect(hasVotedToday(store, 'today', DATE)).toBe(false);
+	});
+
+	it('scopes per topic so different activities remain separately votable', () => {
+		const store = { [moodVotedLatchKey('activity-a', DATE)]: '123' };
+		expect(hasVotedToday(store, 'activity-a', DATE)).toBe(true);
+		expect(hasVotedToday(store, 'activity-b', DATE)).toBe(false);
 	});
 });
 

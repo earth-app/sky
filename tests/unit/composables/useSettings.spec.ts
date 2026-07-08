@@ -1,17 +1,39 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// stateful Map-backed Preferences mock so persistence can actually round-trip
+const { store, prefsGet, prefsSet, prefsRemove, prefsClear } = vi.hoisted(() => {
+	const store = new Map<string, string>();
+	return {
+		store,
+		prefsGet: vi.fn(async ({ key }: { key: string }) => ({
+			value: store.has(key) ? store.get(key)! : null
+		})),
+		prefsSet: vi.fn(async ({ key, value }: { key: string; value: string }) => {
+			store.set(key, value);
+		}),
+		prefsRemove: vi.fn(async ({ key }: { key: string }) => {
+			store.delete(key);
+		}),
+		prefsClear: vi.fn(async () => {
+			store.clear();
+		})
+	};
+});
 
 vi.mock('@capacitor/preferences', () => ({
 	Preferences: {
-		get: vi.fn(async () => ({ value: null })),
-		set: vi.fn(async () => {}),
-		remove: vi.fn(async () => {})
+		get: prefsGet,
+		set: prefsSet,
+		remove: prefsRemove,
+		clear: prefsClear
 	}
 }));
 
 import {
 	APP_SETTINGS_DEFAULTS,
 	formatDistanceUnits,
-	toSettingStorageKey
+	toSettingStorageKey,
+	useSettings
 } from '~/composables/useSettings';
 
 describe('toSettingStorageKey', () => {
@@ -65,5 +87,42 @@ describe('formatDistanceUnits (metric)', () => {
 
 	it('rounds sub-kilometer meters', () => {
 		expect(formatDistanceUnits(999.6, 'metric')).toBe('1000 m');
+	});
+});
+
+describe('discoverAutoLoad setting', () => {
+	beforeEach(() => {
+		store.clear();
+		// drop the module-level write-through cache so reads hit storage, not memory
+		useSettings().cache.clear();
+		vi.clearAllMocks();
+	});
+
+	it('defaults to true', () => {
+		expect(APP_SETTINGS_DEFAULTS.discoverAutoLoad).toBe(true);
+	});
+
+	it('round-trips false through persistence as the JSON form the reader expects', async () => {
+		const settings = useSettings();
+		await settings.set(toSettingStorageKey('discoverAutoLoad'), false);
+
+		// persisted to storage exactly as the getter's parser expects
+		expect(prefsSet).toHaveBeenCalledWith({
+			key: 'app.setting.discoverAutoLoad',
+			value: 'false'
+		});
+		expect(store.get('app.setting.discoverAutoLoad')).toBe('false');
+
+		// clear the cache so the read comes from storage, not the write-through map
+		settings.cache.clear();
+		const readBack = await settings.get<boolean>(toSettingStorageKey('discoverAutoLoad'));
+		expect(readBack).toBe(false);
+	});
+
+	it('reads a stored true value back as a boolean', async () => {
+		const settings = useSettings();
+		store.set('app.setting.discoverAutoLoad', JSON.stringify(true));
+		const readBack = await settings.get<boolean>(toSettingStorageKey('discoverAutoLoad'));
+		expect(readBack).toBe(true);
 	});
 });

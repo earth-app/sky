@@ -31,6 +31,33 @@
 						label="Report"
 					/>
 				</div>
+
+				<!-- carousel mode: a deterministic multi-slide MInfoCardGroup by ?group=1 -->
+				<div
+					v-if="groupMode"
+					data-testid="group-slot"
+				>
+					<div
+						data-testid="tap-count"
+						class="text-xs text-gray-500"
+					>
+						{{ tapCount }}
+					</div>
+					<MInfoCardGroup
+						title="Card Carousel"
+						description="Deterministic multi-slide group for E2E"
+						icon="material-symbols:apps"
+						show-dots
+					>
+						<MInfoCard
+							v-for="n in 3"
+							:key="n"
+							:title="`Slide Card ${n}`"
+							:content="`Body for card ${n}`"
+							:buttons="[{ text: `Action ${n}`, onClick: bumpTap }]"
+						/>
+					</MInfoCardGroup>
+				</div>
 			</div>
 		</IonContent>
 	</IonPage>
@@ -50,6 +77,13 @@ const params = new URLSearchParams(import.meta.client ? window.location.search :
 const kind = ref<FeedWidgetKind | null>((params.get('kind') as FeedWidgetKind | null) || null);
 const topic = ref(params.get('topic') || 'today');
 const reportMode = ref(params.get('report') === '1');
+const groupMode = ref(params.get('group') === '1');
+
+// observable tap counter so the carousel spec can prove a card's own click still fired
+const tapCount = ref(0);
+function bumpTap() {
+	tapCount.value += 1;
+}
 
 const ready = ref(false);
 onMounted(() => {

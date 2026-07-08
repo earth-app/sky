@@ -191,6 +191,50 @@ export async function respondNextSubmissionRaw(
 	});
 }
 
+/**
+ * Force the next quest-step submission to come back as a hard HTTP failure so a spec can
+ * assert MSubmission's `describeSubmitFailure` copy. `status >= 500` (or the transport-style
+ * `null` the mock maps from a bodyless error) drives the reassuring server-error message;
+ * a 4xx drives the "surface the server's short reason" branch. `message` is the body the
+ * client extracts as that reason (ignored by the 5xx copy, which is status-keyed).
+ */
+export async function failNextSubmission(
+	mockApi: MockClient,
+	opts: { status?: number; message?: string } = {}
+): Promise<void> {
+	const status = opts.status ?? 500;
+	await mockApi.set({
+		backend: 'mantle',
+		method: 'POST',
+		path: /^\/api\/user\/updateQuest/,
+		status,
+		// ofetch surfaces this body as error.data, which formatApiError reads for the 4xx reason
+		body: { message: opts.message ?? 'Internal Server Error' },
+		// NOT one-shot: makeMServerRequest retries transient 5xx failures, so a one-shot override
+		// would be consumed on attempt 1 and the retry would fall through to the (successful)
+		// default updateQuest handler - the failure must persist across every retry attempt
+		once: false
+	});
+}
+
+/**
+ * Reply to the next submission with a 200 whose body carries none of the
+ * validated/completed/message keys, so `coerceQuestUpdateResult` returns null and the
+ * store reports the submit as not-validated. Distinct from {@link respondNextSubmissionRaw}
+ * (which returns a *valid* result in a mangled wrapper the store must still accept): this is
+ * genuinely uncoercible, so the client must fail safe - no celebration, no advance, no crash.
+ */
+export async function respondNextSubmissionMalformed(mockApi: MockClient): Promise<void> {
+	await mockApi.set({
+		backend: 'mantle',
+		method: 'POST',
+		path: /^\/api\/user\/updateQuest/,
+		status: 200,
+		body: { unexpected: 'shape', note: 'no validated/completed/message keys' },
+		once: true
+	});
+}
+
 // android default stride the tracker uses to convert cumulative steps -> meters
 // (DEFAULT_STRIDE_M in useHealthKit.ts); keep in sync if that constant changes
 const DEFAULT_STRIDE_M = 0.762;

@@ -191,4 +191,48 @@ test.describe('MoodSpark widget', () => {
 		const toasts = await page.evaluate(() => (window as any).__toasts ?? []);
 		expect(toasts).not.toContainEqual('Mood recorded.');
 	});
+
+	test('a same-day remount (reload) keeps the vote latched and cannot re-vote', async ({
+		page,
+		gotoHydrated,
+		asUser,
+		testId
+	}) => {
+		skipIfIntegration('mood aggregation is mock-only');
+		await asUser({ username: 'mooduser' });
+
+		const topic = `mood-${testId.slice(0, 8)}`;
+		await gotoHydrated(harnessUrl(topic));
+		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
+
+		const loveButton = page.getByRole('button', { name: 'Vote Love' });
+		await expect(loveButton).toBeVisible({ timeout: 12_000 });
+
+		const postSeen = page.waitForRequest(
+			(req) => req.method() === 'POST' && MOOD_PATH.test(new URL(req.url()).pathname),
+			{ timeout: 10_000 }
+		);
+		await loveButton.click();
+		await postSeen;
+
+		// results replace the grid after a successful vote
+		await expect(page.getByRole('button', { name: 'Vote Love' })).toHaveCount(0, { timeout: 8000 });
+		await expect(page.getByText('Thanks for Sharing Today')).toBeVisible({ timeout: 8000 });
+
+		// remount the widget: the per-day guard written on the vote survives the reload, so the
+		// reactive latch rehydrates and the vote grid must NOT come back (no second POST)
+		let moodPosts = 0;
+		page.on('request', (req) => {
+			if (req.method() === 'POST' && MOOD_PATH.test(new URL(req.url()).pathname)) moodPosts++;
+		});
+		await page.reload({ waitUntil: 'domcontentloaded' });
+		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
+
+		await expect(page.locator('[data-testid="widget-slot"] ion-card')).toBeVisible({
+			timeout: 12_000
+		});
+		await expect(page.getByRole('button', { name: 'Vote Love' })).toHaveCount(0, { timeout: 8000 });
+		await expect(page.getByText("You've Already Shared Today")).toBeVisible({ timeout: 8000 });
+		expect(moodPosts).toBe(0);
+	});
 });

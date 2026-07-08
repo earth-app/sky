@@ -232,3 +232,95 @@ test.describe('Welcome tour', () => {
 		});
 	});
 });
+
+test.describe('Welcome tour resilience (no phantom-id errors)', () => {
+	// ids removed from the reshaped tour: the welcome/finish steps are centered (no id) and the
+	// discover/quests steps now point at the real tab buttons, so these must never be looked up
+	const REMOVED_PHANTOM_IDS = [
+		'"title"',
+		'"discover-orientation"',
+		'"quests-orientation"',
+		'"finish"'
+	];
+
+	test('replays cleanly with no missing-target warnings and centers the first step', async ({
+		page,
+		gotoHydrated,
+		asUser
+	}) => {
+		skipIfIntegration('opens the tour via the dashboard replay button');
+		await asUser({ username: 'touruser' });
+
+		const tourWarnings: string[] = [];
+		page.on('console', (msg) => {
+			const text = msg.text();
+			if (text.includes('not found for tour highlight') || text.includes('no visible bounds')) {
+				tourWarnings.push(text);
+			}
+		});
+
+		await page.emulateMedia({ reducedMotion: 'no-preference' });
+		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
+
+		await page.getByRole('button', { name: 'Replay Welcome Tour' }).click();
+		const dialog = tourDialog(page);
+		await expect(dialog).toBeVisible({ timeout: 8_000 });
+		await expect(dialog.getByRole('heading', { name: TOUR_TITLES[0] })).toBeVisible();
+
+		// the first step is an intentional centered welcome step (no target id): its card sits in
+		// the MIDDLE of the viewport, not pinned to the top under the notch (the fallback fix)
+		const viewport = page.viewportSize();
+		expect(viewport).not.toBeNull();
+		if (viewport) {
+			await expect
+				.poll(
+					async () => {
+						const box = await dialog.boundingBox();
+						if (!box) return Number.POSITIVE_INFINITY;
+						return Math.abs(box.y + box.height / 2 - viewport.height / 2);
+					},
+					{ timeout: 5_000 }
+				)
+				.toBeLessThan(viewport.height * 0.3);
+		}
+
+		// advance through every remaining step; a phantom id would throw or blank the step
+		for (const title of TOUR_TITLES.slice(1)) {
+			await dialog.locator('[data-tour-next]').click();
+			await expect(dialog.getByRole('heading', { name: title })).toBeVisible({ timeout: 8_000 });
+		}
+
+		// no removed phantom id was ever looked up (getting-started may still warn-and-center if
+		// the onboarding card is absent - that path is allowed and handled by the fallback)
+		for (const warning of tourWarnings) {
+			for (const id of REMOVED_PHANTOM_IDS) {
+				expect(warning).not.toContain(id);
+			}
+		}
+	});
+
+	test('MTourButton shows an attention ring when unseen and starts its tour on click', async ({
+		page,
+		gotoHydrated,
+		asUser
+	}) => {
+		skipIfIntegration('drives the discover MTourButton + its site tour');
+		await asUser({ username: 'touruser' });
+
+		// discover-index is not in the fixture completed-tours seed, so the ring should surface
+		await page.emulateMedia({ reducedMotion: 'no-preference' });
+		await gotoTab(page, gotoHydrated, '/tabs/discover');
+
+		const tourButton = page.locator('#discover-help');
+		await expect(tourButton).toBeVisible({ timeout: 12_000 });
+		// ring appears once the empty seen-flag resolves from Preferences
+		await expect(tourButton).toHaveClass(/m-tour-button--attn/, { timeout: 8_000 });
+
+		await tourButton.click();
+		const dialog = tourDialog(page);
+		await expect(dialog).toBeVisible({ timeout: 8_000 });
+
+		// clicking marks the tour seen, so the ring stops pulsing
+		await expect(tourButton).not.toHaveClass(/m-tour-button--attn/, { timeout: 8_000 });
+	});
+});
