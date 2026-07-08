@@ -45,6 +45,21 @@
 					@keyup.enter="refreshQuestData"
 				/>
 
+				<IonButton
+					id="challenge-friend-trigger"
+					expand="block"
+					fill="outline"
+					color="warning"
+					class="w-full max-w-2xl m-0!"
+					@click="showChallengePicker = true"
+				>
+					<UIcon
+						name="mdi:sword-cross"
+						class="size-5 mr-2!"
+					/>
+					Challenge a Friend
+				</IonButton>
+
 				<div
 					v-if="quest?.quest"
 					class="flex flex-col items-center gap-6"
@@ -90,6 +105,8 @@
 					/>
 				</div>
 			</div>
+
+			<UserMChallengeFriendPicker v-model:is-open="showChallengePicker" />
 		</IonContent>
 	</IonPage>
 </template>
@@ -107,6 +124,7 @@ const { quests, fetchQuests } = useQuests();
 
 const search = ref('');
 const isRefreshing = ref(false);
+const showChallengePicker = ref(false);
 
 // challenge / deep-link entry; /tabs/quests?open=<questId> jumps straight to that quest.
 // guard against re-firing on tab re-entry by clearing the query once handled.
