@@ -186,27 +186,20 @@ private struct CompactTrailing: View {
                 .font(.caption2).monospacedDigit().frame(maxWidth: 44)
         } else if state.progress >= 0 {
             Text("\(Int(min(1, max(0, state.progress)) * 100))%").font(.caption2).monospacedDigit()
+        } else if state.totalSteps > 0 {
+            Text("Step \(state.stepIndex + 1)/\(state.totalSteps)")
+                .font(.caption2).fontWeight(.semibold).monospacedDigit()
         }
     }
 }
 
-// app icon from the widget asset catalog, falling back to a globe if the catalog hasn't compiled it
 @available(iOS 16.1, *)
 private struct BrandMark: View {
     var body: some View {
-        Group {
-            #if canImport(UIKit)
-            if UIImage(named: "AppLogo") != nil {
-                Image("AppLogo").resizable().aspectRatio(contentMode: .fit)
-            } else {
-                Image(systemName: "globe.americas.fill").foregroundStyle(.green)
-            }
-            #else
-            Image(systemName: "globe.americas.fill").foregroundStyle(.green)
-            #endif
-        }
-        .frame(width: 15, height: 15)
-        .clipShape(RoundedRectangle(cornerRadius: 3))
+        Image(systemName: "globe.americas.fill")
+            .font(.caption2)
+            .foregroundStyle(.green)
+            .frame(width: 15, height: 15)
     }
 }
 
