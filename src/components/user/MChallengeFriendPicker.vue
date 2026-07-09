@@ -32,6 +32,31 @@
 		</IonHeader>
 
 		<IonContent>
+			<div class="flex justify-between items-center w-full px-2 mt-2">
+				<LazyIonSearchbar
+					id="challenge-friend-search"
+					v-model="search"
+					placeholder="Search Friends..."
+					:color="theme"
+					class="w-full max-w-2xl p-0!"
+					@keyup.enter="loadFriends"
+					hydrate-on-interaction
+				/>
+
+				<IonButton
+					:disabled="loading"
+					@click="loadFriends"
+					fill="clear"
+					size="small"
+					class="ml-2 size-8"
+				>
+					<UIcon
+						name="mdi:refresh"
+						class="min-w-5 min-h-5"
+					/>
+				</IonButton>
+			</div>
+
 			<div
 				v-if="loading"
 				class="flex justify-center py-12"
@@ -40,7 +65,7 @@
 			</div>
 
 			<div
-				v-else-if="rows.length === 0"
+				v-else-if="rows.length === 0 && friends.length === 0 && circle.length === 0"
 				id="challenge-empty-state"
 				class="flex flex-col items-center gap-3 px-6 py-16 text-center"
 			>
@@ -58,57 +83,91 @@
 				</IonButton>
 			</div>
 
-			<IonList
-				v-else
-				id="challenge-friend-list"
-				lines="full"
+			<div
+				v-else-if="rows.length === 0"
+				id="challenge-no-results"
+				class="flex flex-col items-center gap-3 px-6 py-16 text-center"
 			>
-				<IonItem
-					v-for="row in rows"
-					:key="row.user.id"
-					button
-					class="challenge-friend-row"
-					:data-username="row.user.username"
-					:disabled="!!sendingId"
-					@click="onSelect(row)"
+				<UIcon
+					name="mdi:account-multiple-outline"
+					class="size-12 text-gray-400"
+				/>
+				<p class="text-sm text-gray-500">
+					No friends found matching your search. Try refreshing the list.
+				</p>
+			</div>
+
+			<div
+				class="flex flex-col items-center w-full"
+				v-else
+			>
+				<LazyIonList
+					id="challenge-friend-list"
+					class="w-full"
+					lines="full"
+					hydrate-on-interaction
 				>
-					<UAvatar
-						slot="start"
-						:src="avatarSrc(row.user)"
-						:alt="row.user.username"
-						size="md"
-					/>
-					<IonLabel class="ml-2">
-						<h2 class="font-semibold!">{{ displayName(row.user) }}</h2>
-						<p class="text-xs! text-gray-500!">@{{ row.user.username }}</p>
-					</IonLabel>
-					<div
-						slot="end"
-						class="flex items-center gap-2"
+					<IonItem
+						v-for="row in rows"
+						:key="row.user.id"
+						button
+						class="challenge-friend-row w-full"
+						:data-username="row.user.username"
+						:disabled="!!sendingId"
+						@click="onSelect(row)"
 					>
-						<IonChip
-							v-if="row.recommended"
-							color="primary"
-							class="text-xs! font-semibold! m-0!"
+						<UAvatar
+							slot="start"
+							:src="avatarSrc(row.user)"
+							:alt="row.user.username"
+							size="md"
+						/>
+						<IonLabel class="ml-2">
+							<h2 class="font-semibold!">{{ displayName(row.user) }}</h2>
+							<p class="text-xs! text-gray-500!">@{{ row.user.username }}</p>
+						</IonLabel>
+						<div
+							slot="end"
+							class="flex items-center gap-2"
 						>
-							<UIcon
-								name="mdi:star-four-points"
-								class="size-3! mr-1!"
+							<IonChip
+								v-if="row.user.is_in_my_circle"
+								color="warning"
+								class="text-xs! font-semibold! m-0! h-8! px-2"
+							>
+								<UIcon
+									name="mdi:account-group"
+									class="size-3! mr-1!"
+								/>
+								In Your Circle
+							</IonChip>
+
+							<IonChip
+								v-if="row.recommended"
+								color="primary"
+								class="text-xs! font-semibold! m-0!"
+							>
+								<UIcon
+									name="mdi:star-four-points"
+									class="size-3! mr-1!"
+								/>
+								Recommended
+							</IonChip>
+							<IonSpinner
+								v-if="sendingId === row.user.id"
+								name="crescent"
 							/>
-							Recommended
-						</IonChip>
-						<IonSpinner
-							v-if="sendingId === row.user.id"
-							name="crescent"
-						/>
-						<UIcon
-							v-else
-							name="mdi:sword-cross"
-							class="size-5! text-warning!"
-						/>
-					</div>
-				</IonItem>
-			</IonList>
+							<UIcon
+								v-else
+								name="mdi:sword-cross"
+								class="size-5! text-success!"
+							/>
+						</div>
+					</IonItem>
+				</LazyIonList>
+
+				<span class="text-sm text-gray-500 mt-2"> Showing {{ rows.length }} friends </span>
+			</div>
 		</IonContent>
 	</IonModal>
 </template>
@@ -122,7 +181,6 @@ import {
 	IonHeader,
 	IonItem,
 	IonLabel,
-	IonList,
 	IonModal,
 	IonSpinner,
 	IonTitle,
@@ -151,18 +209,24 @@ const { challenge } = useChallengeFriend();
 
 const loading = ref(false);
 const sendingId = ref<string | null>(null);
+const search = ref('');
 
 // friends + circle (deduped); circle members are marked so they float to the top, then
 // sorted (circle-first / last_login desc / alpha) with the newest friend tagged
 const rows = computed(() => {
+	const searchLower = search.value.toLowerCase();
 	const circleIds = new Set(circle.value.map((c) => c.id));
 	const merged = new Map<string, User>();
 	for (const f of friends.value) merged.set(f.id, f);
 	for (const c of circle.value) if (!merged.has(c.id)) merged.set(c.id, c);
 
-	const list = Array.from(merged.values()).map((u) =>
-		circleIds.has(u.id) && !u.is_in_my_circle ? { ...u, is_in_my_circle: true } : u
-	);
+	const list = Array.from(merged.values())
+		.map((u) => (circleIds.has(u.id) && !u.is_in_my_circle ? { ...u, is_in_my_circle: true } : u))
+		.filter(
+			(u) =>
+				u.username.toLowerCase().includes(searchLower) ||
+				getUserDisplayName(u).toLowerCase().includes(searchLower)
+		);
 	return sortFriendsForChallenge(list, authStore.currentUser?.friends ?? []);
 });
 
