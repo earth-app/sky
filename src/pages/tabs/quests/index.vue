@@ -138,11 +138,14 @@ const HISTORY_PAGE_LIMIT = 100;
 async function refreshQuestData() {
 	if (!userId.value || isRefreshing.value) return;
 	isRefreshing.value = true;
+
 	try {
 		await Promise.all([
+			fetchQuests(true),
 			fetchUserQuest(true),
 			fetchQuestHistory({ force: true, limit: HISTORY_PAGE_LIMIT, search: search.value })
 		]);
+
 		// manual checker: re-arm the quest Live Activity now that the active quest is fresh
 		void useQuestLiveActivity().forceResync();
 	} finally {
@@ -162,7 +165,7 @@ async function onRefresh(event: CustomEvent) {
 onMounted(() => {
 	fetchUserQuest();
 	fetchQuests();
-	fetchQuestHistory();
+	fetchQuestHistory({ limit: HISTORY_PAGE_LIMIT, search: search.value });
 	maybeOpenQuest();
 });
 
