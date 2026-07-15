@@ -9,30 +9,62 @@
 			</IonToolbar>
 		</IonHeader>
 		<IonContent :scroll-y="true">
-			<!-- membership purchase UI disabled pending app store review (guideline 2.1(b)) -->
-			<!-- <MRanks :highlighted="highlighted" /> -->
-			<div class="flex flex-col items-center justify-center text-center gap-3 px-8 py-16">
-				<UIcon
-					name="mdi:rocket-launch-outline"
-					class="size-12 text-primary"
-				/>
-				<h2 class="text-xl font-semibold">Memberships Are Coming Soon</h2>
-				<p class="opacity-80 text-sm max-w-xs">
-					Writer, Organizer, and Pro memberships aren't available just yet. Hang tight; we're
-					putting the finishing touches on them.
+			<div class="flex flex-col w-full px-4 pb-10 max-w-3xl mx-auto">
+				<p class="text-sm opacity-80 text-center mt-4 mb-6">
+					Upgrade to unlock more events, faster quests, creator tools, and more. Plans renew monthly
+					and can be canceled anytime from Settings.
 				</p>
+
+				<MRanks :highlighted="highlighted" />
+
+				<div class="flex flex-col items-center gap-1 mt-6">
+					<IonButton
+						fill="clear"
+						size="small"
+						color="medium"
+						:disabled="restoring"
+						@click="onRestore"
+					>
+						{{ restoring ? 'Restoring...' : 'Restore Purchases' }}
+					</IonButton>
+					<p class="text-xs opacity-70 text-center max-w-xs">
+						Payment is charged to your app store account. Subscriptions renew automatically unless
+						canceled at least 24 hours before the end of the period.
+					</p>
+				</div>
 			</div>
 		</IonContent>
 	</IonPage>
 </template>
 
 <script setup lang="ts">
-import { Toast } from '@capacitor/toast';
+import { showErrorToast, showInfoToast } from '~/composables/useNotify';
 
-onMounted(async () => {
-	await Toast.show({
-		text: 'Memberships are coming soon!',
-		duration: 'long'
-	});
+const route = useRoute();
+const { restore } = useIapPurchase();
+const restoring = ref(false);
+
+const highlighted = computed<'FREE' | 'PRO' | 'WRITER' | 'ORGANIZER' | undefined>(() => {
+	const raw = String(route.query.plan ?? '').toUpperCase();
+	return raw === 'FREE' || raw === 'PRO' || raw === 'WRITER' || raw === 'ORGANIZER'
+		? (raw as 'FREE' | 'PRO' | 'WRITER' | 'ORGANIZER')
+		: undefined;
 });
+
+async function onRestore() {
+	if (restoring.value) return;
+	restoring.value = true;
+	try {
+		const res = await restore();
+		if (res.success) {
+			await showInfoToast('Your Purchases Have Been Restored.');
+		} else if (res.reason === 'nothing_to_restore') {
+			await showInfoToast('No Previous Purchases Were Found to Restore.');
+		} else if (res.reason !== 'cancelled') {
+			await showErrorToast(res.error, { fallback: 'Could not restore your purchases.' });
+		}
+	} finally {
+		restoring.value = false;
+	}
+}
 </script>

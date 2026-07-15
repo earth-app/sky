@@ -617,6 +617,15 @@ const settingSections = computed<SettingSection[]>(() => [
 		items: [
 			{
 				kind: 'link',
+				title: 'Subscription',
+				description:
+					'View your current plan, redeem a code, and cancel or manage your subscription',
+				placeholder: 'Manage',
+				color: 'primary',
+				link: '/tabs/settings/subscription'
+			},
+			{
+				kind: 'link',
 				title: 'API Keys',
 				description:
 					'Generate, view, and revoke API keys for scripts or third-party tools acting on your behalf',
