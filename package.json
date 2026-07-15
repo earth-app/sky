@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@earth-app/sky",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "generate": "NODE_OPTIONS='--max-old-space-size=8192' nuxt build",
@@ -65,6 +65,7 @@
     "@capgo/capacitor-audio-recorder": "^8.2.5",
     "@capgo/capacitor-pedometer": "^8.0.37",
     "@capgo/capacitor-watch": "^8.1.0",
+    "@capgo/native-purchases": "^8.6.4",
     "@codecov/nuxt-plugin": "^2.0.1",
     "@earth-app/crust": "0.5.1-8dd712a",
     "@earth-app/ocean": "1.1.0",
