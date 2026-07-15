@@ -67,7 +67,7 @@
     "@capgo/capacitor-watch": "^8.1.0",
     "@capgo/native-purchases": "^8.6.4",
     "@codecov/nuxt-plugin": "^2.0.1",
-    "@earth-app/crust": "0.5.1-8dd712a",
+    "@earth-app/crust": "0.6.0-5396db7",
     "@earth-app/ocean": "1.1.0",
     "@ionic/pwa-elements": "^3.4.0",
     "@ionic/vue": "8.8.13",
