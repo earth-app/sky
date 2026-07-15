@@ -38,6 +38,18 @@ async function loginAndCacheAdminSession() {
 }
 
 export default async function globalSetup() {
+	process.on('unhandledRejection', (reason: any) => {
+		try {
+			writeFileSync(
+				resolve(PROJECT_ROOT, '.unhandled-rejection.log'),
+				`[unhandledRejection] ${reason?.stack || reason}\n`,
+				{ flag: 'a' }
+			);
+		} catch {}
+		// eslint-disable-next-line no-console
+		console.error('[DIAG unhandledRejection]', reason?.stack || reason);
+	});
+
 	// Clear any previous coverage run
 	if (existsSync(RAW_COVERAGE_DIR)) {
 		rmSync(RAW_COVERAGE_DIR, { recursive: true, force: true });
