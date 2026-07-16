@@ -37,7 +37,10 @@
 					</IonButtons>
 				</IonToolbar>
 				<IonToolbar>
-					<IonSearchbar @ionInput="handleSearch" />
+					<IonSearchbar
+						:debounce="250"
+						@ionInput="handleSearch"
+					/>
 				</IonToolbar>
 			</IonHeader>
 
@@ -88,13 +91,9 @@ import { Toast } from '@capacitor/toast';
 import { com } from '@earth-app/ocean';
 import type { Activity } from 'types/activity';
 import { capitalizeFully } from 'utils';
+import { type ActivitySelectorItem, filterActivityItems } from '~/utils/activitySelector';
 
-type ActivityItem = {
-	label: string;
-	value: string;
-	icon: string;
-	isActivityType?: boolean;
-};
+type ActivityItem = ActivitySelectorItem;
 
 const props = defineProps<{
 	modelValue: string[] | Activity[];
@@ -121,6 +120,11 @@ const { user } = useAuth();
 const allActivities = ref<ActivityItem[]>([]);
 const committedSelection = ref<string[]>([]);
 const workingSelection = ref<string[]>([]);
+// values the server returned for the active query (null = no server search yet). the server
+// matches id/name/description/aliases, so we trust this set instead of re-filtering by label
+const activeSearchValues = ref<Set<string> | null>(null);
+// only the latest search may write shared state; a slow earlier response can't clobber it
+let searchSeq = 0;
 
 // populate allActivities with user's activities
 onMounted(() => {
@@ -142,12 +146,9 @@ const activityTypes = computed<ActivityItem[]>(() => {
 	}));
 });
 
-const filteredActivities = computed(() => {
-	const query = searchTerm.value.trim().toLowerCase();
-	if (!query) return allActivities.value;
-
-	return allActivities.value.filter((activity) => activity.label.toLowerCase().includes(query));
-});
+const filteredActivities = computed(() =>
+	filterActivityItems(allActivities.value, searchTerm.value, activeSearchValues.value)
+);
 
 const selectedSummary = computed(() => {
 	if (committedSelection.value.length === 0) return '';
@@ -193,6 +194,7 @@ function mergeActivityItems(items: ActivityItem[], beginning = false) {
 }
 
 async function loadActivities(search: string) {
+	const seq = ++searchSeq;
 	activitiesLoading.value = true;
 	searchTerm.value = search;
 
@@ -200,9 +202,13 @@ async function loadActivities(search: string) {
 		const { fetchAll } = useActivities();
 		const res = await fetchAll(-1, search);
 
+		// a newer search superseded this one; drop the stale response
+		if (seq !== searchSeq) return;
+
 		if (res.success) {
 			const fetched = (res.data || []).map((activity: Activity) => toActivityItem(activity));
 			mergeActivityItems(fetched);
+			activeSearchValues.value = search.trim() ? new Set(fetched.map((item) => item.value)) : null;
 		} else {
 			await Toast.show({
 				text: res.message || 'Failed to fetch activities.',
@@ -210,12 +216,13 @@ async function loadActivities(search: string) {
 			});
 		}
 	} catch (error: any) {
+		if (seq !== searchSeq) return;
 		await Toast.show({
 			text: extractServerMessage(error, 'Failed to fetch activities.'),
 			duration: 'long'
 		});
 	} finally {
-		activitiesLoading.value = false;
+		if (seq === searchSeq) activitiesLoading.value = false;
 	}
 }
 
@@ -271,12 +278,14 @@ function openModal() {
 	if (props.disabled) return;
 
 	searchTerm.value = '';
+	activeSearchValues.value = null;
 	modalOpen.value = true;
 }
 
 function closeModal() {
 	modalOpen.value = false;
 	searchTerm.value = '';
+	activeSearchValues.value = null;
 	workingSelection.value = [...committedSelection.value];
 }
 
