@@ -32,6 +32,18 @@
 					/>
 				</div>
 
+				<!-- poll mode: an explicit-id MicroPoll for the vote-expiry spec by ?poll=1 -->
+				<div
+					v-if="pollMode"
+					data-testid="poll-slot"
+				>
+					<WidgetsMMicroPoll
+						:poll-id="pollId"
+						:question="pollQuestion"
+						:options="pollOptions"
+					/>
+				</div>
+
 				<!-- carousel mode: a deterministic multi-slide MInfoCardGroup by ?group=1 -->
 				<div
 					v-if="groupMode"
@@ -78,6 +90,12 @@ const kind = ref<FeedWidgetKind | null>((params.get('kind') as FeedWidgetKind | 
 const topic = ref(params.get('topic') || 'today');
 const reportMode = ref(params.get('report') === '1');
 const groupMode = ref(params.get('group') === '1');
+
+// poll-expiry spec drives an explicit-id MicroPoll so the prior-vote mock can target it
+const pollMode = ref(params.get('poll') === '1');
+const pollId = ref(params.get('pollId') || 'e2e-poll');
+const pollQuestion = ref(params.get('q') || 'E2E: Which do you prefer?');
+const pollOptions = ['Alpha', 'Beta', 'Gamma'];
 
 // observable tap counter so the carousel spec can prove a card's own click still fired
 const tapCount = ref(0);
