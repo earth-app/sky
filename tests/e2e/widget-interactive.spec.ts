@@ -1,9 +1,13 @@
 import { expect, skipIfIntegration, test } from './utils/fixtures';
+import { makePollVote } from './utils/mock-data';
 import { installNativeMock } from './utils/native-mock';
 
 function harnessUrl(kind: string): string {
 	return `/__test__/widget-harness?kind=${kind}`;
 }
+
+const POLL_HARNESS = '/__test__/widget-harness?poll=1&pollId=e2e-poll';
+const POLL_OPTIONS = ['Alpha', 'Beta', 'Gamma'];
 
 // 4 activities with clear, distinct descriptions -> a full real-activity round after filtering
 const RANDOM_ACTIVITIES = [
@@ -212,5 +216,76 @@ test.describe('Interactive feed widgets', () => {
 
 		await expect(page.getByText(/done for today/i)).toBeVisible({ timeout: 8000 });
 		await expect(page.getByText(/streak:\s*1\s*consecutive day/i)).toBeVisible();
+	});
+});
+
+test.describe('MicroPoll vote expiry', () => {
+	test.beforeEach(async ({ context, asUser }) => {
+		await installNativeMock(context, { platform: 'ios' });
+		await asUser({ username: 'polluser' });
+	});
+
+	async function seedPriorVote(mockApi: any, votedAtSeconds: number) {
+		await mockApi.set({
+			backend: 'mantle',
+			method: 'GET',
+			path: /^\/v2\/users\/current\/poll\/?$/,
+			body: {
+				items: [
+					makePollVote({
+						poll_id: 'e2e-poll',
+						option_index: 1,
+						options: POLL_OPTIONS,
+						question: 'E2E: Which do you prefer?',
+						voted_at: votedAtSeconds
+					})
+				]
+			},
+			once: false
+		});
+	}
+
+	test('a vote from within the last day keeps the poll in its answered state', async ({
+		page,
+		mockApi,
+		gotoHydrated
+	}) => {
+		skipIfIntegration('poll vote expiry is mock-only');
+		await seedPriorVote(mockApi, Math.floor(Date.now() / 1000) - 60 * 60);
+		await gotoHydrated(POLL_HARNESS);
+		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
+		await expect(page.getByText(/quick poll/i)).toBeVisible({ timeout: 12_000 });
+
+		// the restored fresh vote surfaces the aggregate ("votes so far") and locks the options
+		await expect(page.getByText(/votes? so far/i)).toBeVisible({ timeout: 8000 });
+		await expect(page.locator('[data-testid="poll-slot"] ion-button').first()).toHaveClass(
+			/button-disabled/
+		);
+	});
+
+	test('a vote older than 24h reopens the poll so it can be answered again', async ({
+		page,
+		mockApi,
+		gotoHydrated
+	}) => {
+		skipIfIntegration('poll vote expiry is mock-only');
+		await seedPriorVote(mockApi, Math.floor(Date.now() / 1000) - 3 * 24 * 60 * 60);
+		await gotoHydrated(POLL_HARNESS);
+		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
+		await expect(page.getByText(/quick poll/i)).toBeVisible({ timeout: 12_000 });
+
+		// the expired vote is not restored: no aggregate, and the options stay live
+		const firstOption = page.locator('[data-testid="poll-slot"] ion-button').first();
+		await expect(firstOption).not.toHaveClass(/button-disabled/, { timeout: 8000 });
+		await expect(page.getByText(/votes? so far/i)).toHaveCount(0);
+
+		// answering now round-trips a fresh POST (the regression: an expired vote used to block this)
+		const postSeen = page.waitForRequest(
+			(req) => req.method() === 'POST' && /\/v2\/users\/current\/poll/.test(req.url()),
+			{ timeout: 10_000 }
+		);
+		await firstOption.click();
+		const post = await postSeen;
+		expect(post.postDataJSON()).toMatchObject({ poll_id: 'e2e-poll', option_index: 0 });
 	});
 });
