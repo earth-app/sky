@@ -31,7 +31,6 @@ import { fileURLToPath } from 'node:url';
 
 const PROJECT_ROOT = fileURLToPath(new URL('.', import.meta.url));
 const isCI = !!process.env.CI;
-const coverage = process.env.COVERAGE === '1';
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3001';
 const prodServer = process.env.PLAYWRIGHT_PROD === '1';
 
@@ -54,7 +53,7 @@ export default defineConfig<ConfigOptions>({
 	fullyParallel: true,
 	forbidOnly: isCI,
 	retries: isCI ? 2 : 3,
-	workers: prodServer ? 4 : coverage ? 2 : isCI ? 2 : undefined,
+	workers: isCI ? 2 : prodServer ? 4 : undefined,
 	timeout: 120_000,
 	expect: {
 		timeout: 12_000
@@ -62,9 +61,6 @@ export default defineConfig<ConfigOptions>({
 	globalSetup: fileURLToPath(new URL('./tests/e2e/utils/global-setup.ts', import.meta.url)),
 	globalTeardown: fileURLToPath(new URL('./tests/e2e/utils/global-teardown.ts', import.meta.url)),
 	reporter: reporters,
-	// Keep test artifacts OUT of the HTML reporter folder. The HTML reporter
-	// clears its output dir before generating the report, which would wipe out
-	// failure screenshots / traces and produce a CI warning. Two distinct dirs.
 	outputDir: 'playwright-results',
 	webServer: {
 		command: prodServer
