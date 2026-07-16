@@ -192,10 +192,16 @@ const progress = computed(() => {
 const MAX_INDICATOR_SLIDES = 10;
 const indicatorOverflow = computed(() => totalSlides.value > MAX_INDICATOR_SLIDES);
 
+// ionic overlays (ion-modal/popover) can ride along as an extra root of a slotted card; they are
+// not real slides, so a closed one would otherwise count as a phantom blank slide in the paging
+const OVERLAY_TAGS = 'ion-modal, ion-popover, ion-action-sheet, ion-alert, ion-toast, ion-picker';
+
 function calculateSlides() {
 	if (!carouselContainer.value || !carouselViewport.value) return;
 
-	const children = Array.from(carouselContainer.value.children);
+	const children = Array.from(carouselContainer.value.children).filter(
+		(el) => !el.matches(OVERLAY_TAGS)
+	);
 	if (children.length === 0) return;
 
 	const viewportWidth = carouselViewport.value.clientWidth;

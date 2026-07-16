@@ -212,7 +212,6 @@
 									v-for="activity in item.data"
 									:key="activity.id"
 									:activity="activity"
-									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<div
@@ -236,7 +235,6 @@
 									v-for="prompt in item.data"
 									:key="prompt.id"
 									:prompt="prompt"
-									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<div
@@ -260,7 +258,6 @@
 									v-for="article in item.data"
 									:key="article.id"
 									:article="article"
-									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<div
@@ -284,7 +281,6 @@
 									v-for="event in item.data"
 									:key="event.id"
 									:event="event"
-									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<div
@@ -308,7 +304,6 @@
 									v-for="user in item.data"
 									:key="user.id"
 									:user="user"
-									hydrate-on-visible
 								/>
 							</MInfoCardGroup>
 							<LazyMWidgetSlot

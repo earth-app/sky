@@ -23,51 +23,52 @@
 			"
 			class="p-4"
 		/>
-	</div>
-	<IonModal
-		v-if="hasButtons"
-		can-dismiss
-		:is-open="editOpen"
-		@did-dismiss="editOpen = false"
-	>
-		<IonHeader>
-			<IonToolbar>
-				<IonTitle>Edit Prompt</IonTitle>
-				<IonButtons slot="end">
+
+		<IonModal
+			v-if="hasButtons"
+			can-dismiss
+			:is-open="editOpen"
+			@did-dismiss="editOpen = false"
+		>
+			<IonHeader>
+				<IonToolbar>
+					<IonTitle>Edit Prompt</IonTitle>
+					<IonButtons slot="end">
+						<IonButton
+							fill="clear"
+							strong
+							@click="editOpen = false"
+							>Close</IonButton
+						>
+					</IonButtons>
+				</IonToolbar>
+			</IonHeader>
+			<IonContent>
+				<div class="flex flex-col space-y-4 p-4">
+					<IonTextarea
+						:value="promptText"
+						label="Prompt Question"
+						label-placement="stacked"
+						:minlength="10"
+						:maxlength="100"
+						counter
+						class="p-2"
+						@ion-input="
+							(event) => {
+								promptText = event.target.value || '';
+							}
+						"
+					/>
 					<IonButton
-						fill="clear"
-						strong
-						@click="editOpen = false"
-						>Close</IonButton
+						@click="savePrompt"
+						:loading="editLoading"
+						:disabled="editLoading || promptText.trim().length === 0"
+						>Save</IonButton
 					>
-				</IonButtons>
-			</IonToolbar>
-		</IonHeader>
-		<IonContent>
-			<div class="flex flex-col space-y-4 p-4">
-				<IonTextarea
-					:value="promptText"
-					label="Prompt Question"
-					label-placement="stacked"
-					:minlength="10"
-					:maxlength="100"
-					counter
-					class="p-2"
-					@ion-input="
-						(event) => {
-							promptText = event.target.value || '';
-						}
-					"
-				/>
-				<IonButton
-					@click="savePrompt"
-					:loading="editLoading"
-					:disabled="editLoading || promptText.trim().length === 0"
-					>Save</IonButton
-				>
-			</div>
-		</IonContent>
-	</IonModal>
+				</div>
+			</IonContent>
+		</IonModal>
+	</div>
 </template>
 
 <script setup lang="ts">

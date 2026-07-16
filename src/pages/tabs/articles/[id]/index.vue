@@ -109,7 +109,6 @@
 							v-for="article in relatedArticles"
 							:key="article.id"
 							:article="article"
-							hydrate-on-visible
 						/>
 					</MInfoCardGroup>
 				</div>

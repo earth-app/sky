@@ -25,22 +25,23 @@
 			:footer="footer"
 			:report="canReport ? { contentType: 'event', contentId: event.id } : undefined"
 		/>
+
+		<MContentDrawer
+			ref="attendeesDrawerRef"
+			:title="`Event Attendees (${comma(attendeeCount)})`"
+			:is-loading="false"
+		>
+			<template #default="{ search }">
+				<div class="flex flex-col w-full px-4 gap-3">
+					<UserMCard
+						v-for="attendee in filteredAttendees(search)"
+						:key="attendee.id"
+						:user="attendee"
+					/>
+				</div>
+			</template>
+		</MContentDrawer>
 	</div>
-	<MContentDrawer
-		ref="attendeesDrawerRef"
-		:title="`Event Attendees (${comma(attendeeCount)})`"
-		:is-loading="false"
-	>
-		<template #default="{ search }">
-			<div class="flex flex-col w-full px-4 gap-3">
-				<UserMCard
-					v-for="attendee in filteredAttendees(search)"
-					:key="attendee.id"
-					:user="attendee"
-				/>
-			</div>
-		</template>
-	</MContentDrawer>
 </template>
 
 <script setup lang="ts">

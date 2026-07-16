@@ -230,7 +230,6 @@
 						:key="friend.id"
 						:user="friend"
 						class="min-w-40"
-						hydrate-on-visible
 					/>
 				</MInfoCardGroup>
 			</div>
@@ -252,7 +251,6 @@
 						v-for="prompt in prompts"
 						:key="prompt.id"
 						:prompt="prompt"
-						hydrate-on-visible
 					/>
 				</MInfoCardGroup>
 			</div>
@@ -274,7 +272,6 @@
 						v-for="article in articles"
 						:key="article.id"
 						:article="article"
-						hydrate-on-visible
 					/>
 				</MInfoCardGroup>
 			</div>
@@ -323,7 +320,6 @@
 								v-for="event in attendingEventsDay.slice(0, 25)"
 								:key="event.id"
 								:event="event"
-								hydrate-on-visible
 							/>
 						</MInfoCardGroup>
 						<LazyEventMCard

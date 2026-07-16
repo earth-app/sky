@@ -49,7 +49,6 @@
 							v-for="event in relatedEvents"
 							:key="event.id"
 							:event="event"
-							hydrate-on-visible
 						/>
 					</MInfoCardGroup>
 				</div>
