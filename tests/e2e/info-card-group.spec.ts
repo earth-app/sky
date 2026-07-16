@@ -156,3 +156,45 @@ test.describe('MInfoCardGroup carousel', () => {
 		await expect(nextArrow(page)).toBeDisabled();
 	});
 });
+
+test.describe('Dashboard feed carousel renders every slide', () => {
+	test.beforeEach(async ({ context, page, asUser }) => {
+		await installNativeMock(context, { platform: 'ios' });
+		await page.addInitScript(() => {
+			Math.random = () => 0.45;
+		});
+		await asUser({ username: 'feeduser' });
+	});
+
+	test('no feed-group slide renders blank, including off-screen carousel slides', async ({
+		page,
+		gotoHydrated
+	}) => {
+		skipIfIntegration('forces a deterministic mock feed group via Math.random');
+		await gotoHydrated('/tabs/dashboard');
+		await expect(page.getByRole('heading', { name: /your feed/i })).toBeVisible({
+			timeout: 12_000
+		});
+
+		await expect
+			.poll(
+				async () =>
+					page.locator('[data-testid="info-card-track"]').evaluateAll((tracks) => {
+						if (tracks.length === 0) return 'no-tracks';
+						let maxSlides = 0;
+						for (const track of tracks) {
+							const slides = Array.from(track.children);
+							maxSlides = Math.max(maxSlides, slides.length);
+							const allFilled = slides.every(
+								(s) => (s.textContent || '').replace(/\s+/g, '').length > 10
+							);
+							if (!allFilled) return 'blank';
+						}
+						// >=3 slides guarantees at least one slide is off-screen (the regression surface)
+						return maxSlides >= 3 ? 'ok' : 'too-small';
+					}),
+				{ timeout: 20_000 }
+			)
+			.toBe('ok');
+	});
+});
