@@ -68,7 +68,7 @@
 								<IonRadio
 									:value="option.value"
 									:disabled="!!score"
-									class="mr-2"
+									class="quiz-option mr-2"
 									>{{ option.label }}</IonRadio
 								>
 							</IonItem>
@@ -91,7 +91,7 @@
 									:disabled="!!score"
 									@ionChange="(ev) => handleMultiSelect(index, i, !!ev.detail.checked)"
 								/>
-								<IonLabel class="ml-2!">{{ option }}</IonLabel>
+								<IonLabel class="ion-text-wrap ml-2!">{{ option }}</IonLabel>
 							</IonItem>
 						</div>
 
@@ -123,14 +123,14 @@
 									class="flex items-center justify-between p-2 rounded-md"
 									:class="multiSelectResultClass(i, currentResult)"
 								>
-									<span>#{{ i + 1 }}. {{ option }}</span>
+									<span class="min-w-0 wrap-break-word">#{{ i + 1 }}. {{ option }}</span>
 									<UIcon
 										v-if="
 											Array.isArray(currentResult.correct_answer_indices) &&
 											currentResult.correct_answer_indices.includes(i)
 										"
 										name="mdi:check-circle"
-										class="text-green-500"
+										class="shrink-0 text-green-500"
 									/>
 									<UIcon
 										v-else-if="
@@ -138,7 +138,7 @@
 											currentResult.user_answer_indices.includes(i)
 										"
 										name="mdi:close-circle"
-										class="text-red-500"
+										class="shrink-0 text-red-500"
 									/>
 								</div>
 							</template>
@@ -178,16 +178,16 @@
 											i !== currentResult?.correct_answer_index
 									}"
 								>
-									<span>#{{ i + 1 }}. {{ option.label }}</span>
+									<span class="min-w-0 wrap-break-word">#{{ i + 1 }}. {{ option.label }}</span>
 									<UIcon
 										v-if="i === currentResult?.correct_answer_index"
 										name="mdi:check-circle"
-										class="text-green-500"
+										class="shrink-0 text-green-500"
 									/>
 									<UIcon
 										v-else-if="i === singlePickAnswers[index] && !currentResult?.correct"
 										name="mdi:close-circle"
-										class="text-red-500"
+										class="shrink-0 text-red-500"
 									/>
 								</div>
 							</template>
@@ -448,5 +448,13 @@ function multiSelectResultClass(i: number, result: any): Record<string, boolean>
 .fade-enter-from,
 .fade-leave-to {
 	opacity: 0;
+}
+
+/* ionic truncates the radio label (nowrap + ellipsis) by default; let long answers wrap
+   so the whole option stays readable. !important beats the shadow-part class specificity */
+.quiz-option::part(label) {
+	white-space: normal !important;
+	overflow: visible !important;
+	text-overflow: clip !important;
 }
 </style>
