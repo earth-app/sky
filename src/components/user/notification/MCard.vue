@@ -41,7 +41,7 @@
 							type="button"
 							title="Mark as Read"
 							aria-label="Mark as Read"
-							class="flex! items-center justify-center size-5! -my-2! mx-0! p-0! bg-transparent! border-0!"
+							class="flex! items-center justify-center size-11! -m-3! p-0! bg-transparent! border-0!"
 							@click.stop="markAsRead"
 						>
 							<span
