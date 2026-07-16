@@ -85,6 +85,7 @@
 <script setup lang="ts">
 import { IonButton, IonCard, IonProgressBar } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
+import { isPollVoteFresh } from '~/utils/poll';
 
 const props = withDefaults(
 	defineProps<{
@@ -171,7 +172,8 @@ onMounted(async () => {
 	const res = await fetchMyVotes();
 	if (!valid(res)) return;
 	const prior = res.data.find((v) => v.poll_id === effectivePollId.value);
-	if (prior) {
+	// only restore a still-fresh vote; an expired one leaves the poll open to answer again
+	if (prior && isPollVoteFresh(prior.voted_at)) {
 		voted.value = prior.option_index;
 		aggregate.value = prior.aggregate ?? null;
 	}
