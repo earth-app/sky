@@ -50,6 +50,21 @@ const TAKEN_QUIZ = makeArticleQuizV2({
 	]
 });
 
+// an answer far wider than any phone screen; with nowrap it truncates to an ellipsis and can't be read
+const LONG_OPTION =
+	'The correct yet remarkably verbose answer that keeps going well past the width of any phone screen, so it would truncate with an ellipsis unless the option label is allowed to wrap onto multiple lines.';
+
+const LONG_ANSWER_QUIZ = makeArticleQuizV2({
+	questions: [
+		{
+			type: 'multiple_choice',
+			question: 'Which statement is correct?',
+			options: [LONG_OPTION, 'A short wrong answer', 'Another short one'],
+			correct_answer: LONG_OPTION
+		}
+	]
+});
+
 const TAKEN_SCORE = makeArticleQuizScore({
 	score: 3,
 	total: 3,
@@ -343,5 +358,72 @@ test.describe('Journey: article author -> reader -> quiz', () => {
 		await expect(page.getByText(/question 3 of 3/i)).toBeVisible();
 		await expect(page.getByText(/correct order/i)).toBeVisible({ timeout: 8000 });
 		await expect(page.getByText('Mercury').first()).toBeVisible();
+	});
+
+	test('Back is disabled on the first question and Next on the last', async ({
+		page,
+		asUser,
+		mockApi,
+		gotoHydrated
+	}) => {
+		skipIfIntegration('depends on mock art-1 + seeded quiz');
+		await asUser();
+		await mockApi.set({
+			backend: 'mantle',
+			method: 'GET',
+			path: /^\/v2\/articles\/art-1\/quiz$/,
+			body: MULTI_SELECT_QUIZ,
+			once: false
+		});
+		await gotoHydrated('/tabs/articles/art-1/quiz');
+
+		await expect(page.getByText(/question 1 of 2/i)).toBeVisible({ timeout: 12_000 });
+		// scope to the quiz nav; the ionic header carries its own back button
+		const quizNav = page.locator('#quiz-nav');
+		await expect(quizNav.getByRole('button', { name: /^back$/i })).toBeDisabled();
+
+		await quizNav.getByRole('button', { name: /^next$/i }).click();
+		await expect(page.getByText(/question 2 of 2/i)).toBeVisible();
+		await expect(quizNav.getByRole('button', { name: /^next$/i })).toBeDisabled();
+	});
+
+	test('a long answer option wraps instead of truncating (stays fully readable)', async ({
+		page,
+		asUser,
+		mockApi,
+		gotoHydrated
+	}) => {
+		skipIfIntegration('depends on mock art-1 + seeded long-option quiz');
+		await asUser();
+		await mockApi.set({
+			backend: 'mantle',
+			method: 'GET',
+			path: /^\/v2\/articles\/art-1\/quiz$/,
+			body: LONG_ANSWER_QUIZ,
+			once: false
+		});
+		await gotoHydrated('/tabs/articles/art-1/quiz');
+
+		await expect(page.getByText(/question 1 of 1/i)).toBeVisible({ timeout: 12_000 });
+
+		// the whole long option renders as one radio choice
+		const longRadio = page.locator('ion-radio', { hasText: /remarkably verbose answer/ });
+		await expect(longRadio).toBeVisible({ timeout: 8000 });
+
+		// ionic's label part must wrap (white-space: normal) and not clip horizontally. without the
+		// fix it stays nowrap + ellipsis, so scrollWidth exceeds clientWidth and the text is unreadable
+		const label = await longRadio.evaluate((el) => {
+			const part = (
+				el as HTMLElement & { shadowRoot: ShadowRoot | null }
+			).shadowRoot?.querySelector('[part="label"]') as HTMLElement | null;
+			if (!part) return null;
+			return {
+				whiteSpace: getComputedStyle(part).whiteSpace,
+				clipped: part.scrollWidth > part.clientWidth + 1
+			};
+		});
+		expect(label).not.toBeNull();
+		expect(label!.whiteSpace).toBe('normal');
+		expect(label!.clipped).toBe(false);
 	});
 });
