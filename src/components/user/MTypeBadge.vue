@@ -1,6 +1,6 @@
 <template>
 	<button
-		v-if="editable"
+		v-if="editable && props.editor"
 		type="button"
 		data-testid="type-badge-editor"
 		class="appearance-none bg-transparent border-0 p-0 m-0 cursor-pointer"
@@ -18,7 +18,7 @@
 		:label="badgeLabel"
 		:class="badgeStyling"
 		:ui="{ base: 'justify-center' }"
-		class="px-2! md:px-3! py-1! rounded-full! text-white! text-sm! font-semibold!"
+		class="px-4! md:px-3! py-1! rounded-full! text-white! text-sm! font-semibold!"
 	/>
 </template>
 
@@ -29,6 +29,7 @@ import { ACCOUNT_TYPES, accountTypeLabel } from '~/utils/ranks';
 
 const props = defineProps<{
 	user: User;
+	editor?: boolean;
 }>();
 
 const { setAccountType } = useUser(() => props.user.id);
