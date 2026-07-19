@@ -114,6 +114,7 @@ Key goals when changing this repo:
 - `light` and `dark` classes are used for theme-specific values.
 - Keep Ion/utility classes consistent with the existing mobile shell instead of introducing desktop-first layouts.
 - When adding new app-level styles, ensure they work inside Ionic shadow DOM and the tab shell.
+- Section comments use `// #region <name>` ... `// #endregion` markers (editor-foldable, matches the mantle2/PHP style), NOT dashed dividers like `// ----- x`.
 
 ## Backend Integration
 
@@ -123,6 +124,12 @@ Key goals when changing this repo:
 - Treat `earth-app/cloud` as the Cloudflare/edge backend when a change crosses into worker-side behavior.
 - If a mobile UI change depends on a new API shape, update the upstream contract first or confirm that the existing shared types already cover it.
 - Avoid changing request or response shapes in isolation; mobile and shared frontend code should agree on the contract.
+
+### Request routing rule (mantle2-direct vs crust Nitro-proxy)
+
+- **mantle2 (`/v2/*`) is called DIRECT** from the shared crust stores/composables via `makeAPIRequest` / `makeClientAPIRequest` + `useAuthStore().sessionToken`. `apiBaseUrl` is absolute, so those calls work on native with no extra hop. Sky reuses such a composable verbatim (`useTrails()`, `useTrailmarks()`, `useCircles()`) — do NOT fork it, and do NOT pass `makeMServerRequest` into it.
+- **`makeMServerRequest` (`useServer.ts`) is ONLY for reaching a crust `src/server/api/*` Nitro route** that proxies to cloud with a server-side secret (admin key or another API key). Sky injects it into the composables that take a `serverRequest = makeServerRequest` param for exactly those cloud/secret calls (e.g. `useActivityInfo(makeMServerRequest)`).
+- A composable that only hits mantle2 has no `serverRequest` param — if you find yourself writing a sky-only `useM*` copy just to swap in `makeMServerRequest`, the underlying store is wrongly routing a mantle2 call through a Nitro proxy; fix the store to call mantle2 directly instead. (This is why `useMCircles` was deleted.)
 
 ## CI, Build, and Release
 
