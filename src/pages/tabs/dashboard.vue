@@ -1036,8 +1036,6 @@ onMounted(async () => {
 		void fetchMotd();
 	}
 
-	// kick off onboarding fetch from the parent; the checklist container is
-	// gated on onboarding.fetched, so we can't rely on the child's onMounted
 	if (user.value) void onboarding.fetchState();
 
 	// hydrate the daily ceiling before the first batch so notes aren't clobbered by a late load
