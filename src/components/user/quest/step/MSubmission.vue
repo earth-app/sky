@@ -399,7 +399,6 @@
 
 <script setup lang="ts">
 import { Capacitor } from '@capacitor/core';
-import { Geolocation } from '@capacitor/geolocation';
 import { DateTime } from 'luxon';
 import { isOffline } from '~/composables/useNetwork';
 import {
@@ -455,6 +454,7 @@ const readTimeProgress = computed(() => {
 });
 
 const { lat, lng, alt, fetchLocation } = useQuestGeolocation();
+const { getCurrentPosition, ensureLocationGranted } = useMGeolocation();
 const isNative = computed(() => Capacitor.isNativePlatform());
 
 const submitting = ref(false);
@@ -503,12 +503,8 @@ const nativeAlt = ref<number | null>(null);
 async function fetchNativeLocation() {
 	if (!isNative.value) return;
 	try {
-		const perm = await Geolocation.checkPermissions();
-		if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
-			const req = await Geolocation.requestPermissions({ permissions: ['location'] });
-			if (req.location !== 'granted' && req.coarseLocation !== 'granted') return;
-		}
-		const pos = await Geolocation.getCurrentPosition({
+		if (!(await ensureLocationGranted())) return;
+		const pos = await getCurrentPosition({
 			enableHighAccuracy: true,
 			timeout: 8000,
 			maximumAge: 60_000
@@ -517,7 +513,7 @@ async function fetchNativeLocation() {
 		nativeLng.value = pos.coords.longitude;
 		nativeAlt.value = pos.coords.altitude ?? null;
 	} catch {
-		// Permission denied or no fix; fall back to whatever useGeolocation() yielded.
+		// permission denied or no fix; fall back to whatever useQuestGeolocation() yielded
 	}
 }
 

@@ -1,7 +1,6 @@
 import { Camera } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
-import { Geolocation } from '@capacitor/geolocation';
 import { Toast } from '@capacitor/toast';
 import { CapacitorPedometer } from '@capgo/capacitor-pedometer';
 
@@ -42,10 +41,8 @@ export function useQuestPermissions() {
 
 	async function ensureLocation(): Promise<boolean> {
 		try {
-			const current = await Geolocation.checkPermissions();
-			if (current.location === 'granted' || current.coarseLocation === 'granted') return true;
-			const req = await Geolocation.requestPermissions({ permissions: ['location'] });
-			return req.location === 'granted' || req.coarseLocation === 'granted';
+			// routed through the sole geolocation plugin owner
+			return await useMGeolocation().ensureLocationGranted();
 		} catch (e) {
 			console.error('Location permission check failed:', e);
 			return false;
@@ -53,9 +50,6 @@ export function useQuestPermissions() {
 	}
 
 	async function ensureMicrophone(): Promise<boolean> {
-		// No Capacitor mic plugin; getUserMedia triggers the OS prompt through the
-		// webview on native and the browser on web. Stop the stream immediately so we
-		// do not hold the mic open.
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
 			stream.getTracks().forEach((t) => t.stop());
@@ -66,9 +60,6 @@ export function useQuestPermissions() {
 		}
 	}
 
-	// DeviceMotion (the webview accelerometer used by @capacitor/motion) requires an
-	// explicit grant on iOS 13+, requested from a user gesture. Older iOS, Android,
-	// and desktop expose it without a prompt, where requestPermission is absent.
 	async function ensureDeviceMotion(): Promise<boolean> {
 		const evt =
 			typeof DeviceMotionEvent !== 'undefined'
@@ -83,8 +74,6 @@ export function useQuestPermissions() {
 		}
 	}
 
-	// Distance tracking needs both the native pedometer (CoreMotion on iOS /
-	// ACTIVITY_RECOGNITION on Android) and the webview accelerometer.
 	async function ensureMotion(): Promise<boolean> {
 		try {
 			const current = await CapacitorPedometer.checkPermissions();
