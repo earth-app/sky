@@ -86,7 +86,7 @@
     "html5-qrcode": "^2.3.8",
     "luxon": "^3.7.2",
     "nsfwjs": "^4.3.0",
-    "nuxt": "^4.5.0",
+    "nuxt": "~4.4.8",
     "nuxt-viewport": "^2.4.0",
     "obscenity": "^0.4.6",
     "piexifjs": "^1.0.6",
@@ -121,7 +121,7 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "v8-to-istanbul": "^9.3.0",
-    "vitest": "^4.1.10",
+    "vitest": "4.1.9",
     "vue-tsc": "^3.3.7"
   },
   "lint-staged": {
