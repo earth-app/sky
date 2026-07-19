@@ -145,6 +145,8 @@
 					</div>
 
 					<UserMJourneyHero v-if="user" />
+					<TrailMNatureCard v-if="user" />
+					<MExploreStrip v-if="user" />
 					<UserMBadgeShowcase v-if="user" />
 					<WidgetsMSavedWordsBlock v-if="user" />
 
@@ -313,7 +315,14 @@
 								hydrate-on-visible
 							/>
 						</template>
+						<FeedMCaughtUp
+							v-if="feedCapReached && renderableFeedItems.length > 0"
+							class="w-11/12"
+							:reason="feedCapReason"
+							@keep-browsing="handleKeepBrowsing"
+						/>
 						<IonInfiniteScroll
+							:disabled="feedCapReached"
 							@ionInfinite="onInfinite"
 							threshold="40%"
 						>
@@ -428,6 +437,16 @@ const recentlyShownIds = ref<Record<ContentType, Set<string>>>({
 });
 const RECENT_ID_LOOKBACK = 30;
 const dashboardRefreshSignal = useState<number>('dashboard-refresh-signal', () => 0);
+
+// finite-session ceiling; past the soft cap the feed stops auto-loading and shows a calm exit cue
+const feedCap = useFeedSessionCap();
+const { capReached: feedCapReached, capReason: feedCapReason } = feedCap;
+
+// soft-cap escape hatch; user chose to keep scrolling, so extend the session and load a little more
+async function handleKeepBrowsing() {
+	feedCap.keepBrowsing();
+	await loadMoreItems(isDataConstrained.value ? 2 : 3);
+}
 
 const GROUP_SIZES = {
 	activity: 5,
@@ -848,6 +867,7 @@ async function loadMoreItems(count: number = 3) {
 			await new Promise((resolve) => setTimeout(resolve, 220));
 		}
 
+		const before = feedItems.value.length;
 		const promises = Array.from({ length: count }, (_, index) =>
 			withFeedItemTimeout(generateFeedItem(), `Feed item ${index + 1}`).then((item) => {
 				if (item !== null) {
@@ -859,6 +879,9 @@ async function loadMoreItems(count: number = 3) {
 			})
 		);
 		await Promise.all(promises);
+		// count what actually rendered toward the finite-session ceiling
+		const added = feedItems.value.length - before;
+		if (added > 0) void feedCap.note(added);
 	} catch (error) {
 		console.error('Error loading more items:', error);
 		await Toast.show({
@@ -871,6 +894,11 @@ async function loadMoreItems(count: number = 3) {
 }
 
 async function onInfinite(event: CustomEvent) {
+	// past the soft cap the caught-up cue takes over; don't keep pulling content
+	if (feedCap.capReached.value) {
+		(event.target as any).complete();
+		return;
+	}
 	await loadMoreItems(isDataConstrained.value ? 2 : 3);
 	(event.target as any).complete();
 }
@@ -950,6 +978,8 @@ async function refreshFeed(scrollDurationMs: number = 300) {
 	if (isRefreshing.value) return;
 
 	isRefreshing.value = true;
+	// pull-to-refresh is an explicit fresh start, so re-arm the finite-session ceiling
+	feedCap.resetSession();
 	recentContentTypes.value = [];
 	for (const type of Object.keys(recentlyShownIds.value) as ContentType[]) {
 		recentlyShownIds.value[type].clear();
@@ -1009,6 +1039,9 @@ onMounted(async () => {
 	// kick off onboarding fetch from the parent; the checklist container is
 	// gated on onboarding.fetched, so we can't rely on the child's onMounted
 	if (user.value) void onboarding.fetchState();
+
+	// hydrate the daily ceiling before the first batch so notes aren't clobbered by a late load
+	await feedCap.load();
 
 	await nextTick();
 	await refreshFeed(0);
