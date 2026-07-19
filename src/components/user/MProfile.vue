@@ -34,6 +34,7 @@
 					<h3 class="text-sm! my-0! text-gray-600 light:text-gray-400">{{ user.username }}</h3>
 					<UserMTypeBadge
 						:user="user"
+						editor
 						class="mt-4"
 					/>
 					<div
