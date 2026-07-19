@@ -33,13 +33,14 @@
 				Journal
 			</IonButton>
 
-			<div class="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
+			<div class="flex flex-wrap gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1">
 				<IonChip
 					v-for="opt in themeOptions"
 					:key="opt.value"
 					:color="activeTheme === opt.value ? 'primary' : 'medium'"
 					:outline="activeTheme !== opt.value"
 					@click="activeTheme = opt.value"
+					class="px-2"
 				>
 					<IonLabel class="text-xs font-semibold">{{ opt.label }}</IonLabel>
 				</IonChip>

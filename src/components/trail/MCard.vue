@@ -4,7 +4,8 @@
 		class="rounded-xl"
 	>
 		<div
-			class="flex flex-col h-full p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-default active:border-primary/50 transition-colors"
+			class="flex flex-col h-full p-4 rounded-xl border bg-default active:border-primary/50 transition-colors"
+			:class="trail.premium ? 'border-warning/90' : 'border-neutral-200 dark:border-neutral-800'"
 		>
 			<div class="flex items-start gap-3">
 				<div class="size-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -40,7 +41,13 @@
 							color="primary"
 							variant="soft"
 							size="sm"
-							>Premium</UBadge
+							class="flex items-center"
+						>
+							<UIcon
+								name="mdi:diamond-stone"
+								class="size-3"
+							/>
+							Premium</UBadge
 						>
 					</div>
 				</div>
@@ -75,8 +82,8 @@
 				</div>
 				<div class="flex items-center gap-1 shrink-0">
 					<IonButton
-						fill="clear"
-						color="medium"
+						fill="outline"
+						color="tertiary"
 						size="small"
 						aria-label="Preview Trail"
 						@click="emit('preview', trail.id)"
@@ -87,7 +94,7 @@
 						/>
 					</IonButton>
 					<IonButton
-						color="primary"
+						:color="trail.premium ? 'warning' : 'primary'"
 						size="small"
 						@click="emit('select', trail.id)"
 					>
