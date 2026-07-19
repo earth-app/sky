@@ -59,7 +59,7 @@
 				:key="m.id"
 				button
 				:detail="false"
-				class="rounded-lg"
+				class="rounded-lg border border-neutral-200 dark:border-neutral-700 mb-1 last:mb-0"
 				@click="openProfile(m)"
 			>
 				<UAvatar
@@ -69,6 +69,7 @@
 					size="sm"
 				/>
 				<IonLabel class="ml-2 truncate text-sm font-medium">{{ m.username }}</IonLabel>
+				<UserMTypeBadge :user="m" />
 			</IonItem>
 			<IonItem
 				v-if="!filtered.length"
@@ -130,7 +131,7 @@ const filtered = computed(() => {
 });
 
 function avatarOf(m: User): string {
-	return avatarStore.safeUrl(m.account?.avatar_url, 'avatar32');
+	return avatarStore.safeUrl(m.account?.avatar_url, 'avatar128');
 }
 
 function openProfile(m: User) {

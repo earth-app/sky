@@ -136,9 +136,9 @@
 						:name="guidance.icon"
 						class="size-4 mt-0.5 shrink-0"
 					/>
-					<span class="min-w-0">
+					<span class="min-w-10 text-wrap">
 						<span class="font-semibold">{{ guidance.title }}</span>
-						<span class="opacity-80"> {{ guidance.message }}</span>
+						<span class="opacity-80 ml-1"> {{ guidance.message }}</span>
 					</span>
 				</div>
 
