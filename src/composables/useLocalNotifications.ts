@@ -50,8 +50,8 @@ export async function createLocalNotificationChannels(): Promise<void> {
 		});
 		await LocalNotifications.createChannel({
 			id: LOCAL_NOTIF_CHANNELS.DAILY_CONTENT,
-			name: 'Daily Highlights',
-			description: 'A daily activity, article, and prompt picked for you.',
+			name: 'Gentle Nudges',
+			description: 'A few calm, goal-shaped nudges a day (never content spam).',
 			importance: 3
 		});
 	} catch (e) {
