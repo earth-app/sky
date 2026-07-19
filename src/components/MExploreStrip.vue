@@ -25,7 +25,7 @@ const { selection } = useAppHaptics();
 
 const tiles = [
 	{ label: 'Trails', icon: 'mdi:map-marker-path', route: '/tabs/trails' },
-	{ label: 'Your Circle', icon: 'mdi:account-group-outline', route: '/tabs/circle' },
+	{ label: 'Your Garden', icon: 'mdi:leaf-maple', route: '/tabs/circle' },
 	{ label: 'Trailmarks', icon: 'mdi:map-marker-radius-outline', route: '/tabs/trailmarks' }
 ];
 
