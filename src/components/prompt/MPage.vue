@@ -56,6 +56,57 @@
 		</div>
 		<div
 			v-if="!isOfflineMode"
+			class="flex flex-col gap-2 w-full px-2 my-2"
+		>
+			<div class="flex items-center justify-between gap-2">
+				<div class="flex items-center gap-2">
+					<UIcon
+						name="mdi:map-marker-radius-outline"
+						class="size-5 text-primary"
+					/>
+					<h3 class="font-semibold m-0!">From Outside</h3>
+					<UBadge
+						v-if="promptTrailmarks.length"
+						color="primary"
+						variant="subtle"
+						size="sm"
+						>{{ promptTrailmarks.length }}</UBadge
+					>
+				</div>
+				<IonButton
+					size="small"
+					fill="outline"
+					color="primary"
+					:disabled="!user"
+					@click="outsideOpen = true"
+				>
+					<UIcon
+						name="mdi:map-marker-plus-outline"
+						class="size-4 mr-1"
+					/>
+					Answer From Outside
+				</IonButton>
+			</div>
+			<p
+				v-if="!promptTrailmarks.length"
+				class="text-sm opacity-60"
+			>
+				No one has answered this from a trail yet. Head outside and leave the first.
+			</p>
+			<div
+				v-else
+				class="flex flex-col gap-2"
+			>
+				<TrailmarkMCard
+					v-for="m in promptTrailmarks"
+					:key="m.id"
+					:mark="m"
+				/>
+			</div>
+		</div>
+
+		<div
+			v-if="!isOfflineMode"
 			class="flex flex-col items-center justify-center"
 		>
 			<div
@@ -88,6 +139,39 @@
 		>
 			Prompt responses are unavailable offline.
 		</p>
+
+		<IonModal
+			:is-open="outsideOpen"
+			@did-dismiss="outsideOpen = false"
+		>
+			<IonHeader>
+				<IonToolbar>
+					<IonTitle>
+						<span class="font-semibold text-base!">Answer From Outside</span>
+					</IonTitle>
+					<IonButtons slot="end">
+						<IonButton
+							color="medium"
+							aria-label="Close"
+							@click="outsideOpen = false"
+						>
+							<UIcon
+								name="mdi:close"
+								class="min-h-6 min-w-6"
+							/>
+						</IonButton>
+					</IonButtons>
+				</IonToolbar>
+			</IonHeader>
+			<IonContent :scroll-y="true">
+				<div class="px-4 py-4">
+					<TrailmarkMComposer
+						:prompt-id="prompt.id"
+						@created="onOutsideCreated"
+					/>
+				</div>
+			</IonContent>
+		</IonModal>
 
 		<ClientOnly>
 			<MSiteTour
@@ -156,6 +240,19 @@ function removeResponse(id: string) {
 
 const posting = ref(false);
 const newResponse = ref('');
+
+// #region from-outside trailmarks
+// trailmark answers left for this prompt from outside (a distinct 'from outside' section)
+const { fetchForPrompt, forPrompt } = useTrailmarks();
+const outsideOpen = ref(false);
+const promptTrailmarks = computed(() => forPrompt(props.prompt.id));
+
+function onOutsideCreated() {
+	outsideOpen.value = false;
+	void fetchForPrompt(props.prompt.id, true);
+	void showInfoToast('Answer left outside. It now shows under this prompt.');
+}
+// #endregion
 
 const emailGate = useEmailGate();
 const { checkText } = useClientModeration();
@@ -242,6 +339,7 @@ onMounted(async () => {
 	hasMore.value = true;
 
 	await loadResponses();
+	void fetchForPrompt(props.prompt.id);
 });
 
 // prompt tour
