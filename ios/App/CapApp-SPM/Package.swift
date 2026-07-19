@@ -11,7 +11,7 @@ let package = Package(
             targets: ["CapApp-SPM"])
     ],
     dependencies: [
-        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.4.1"),
+        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.4.2"),
         .package(name: "CapacitorCommunityAppleSignIn", path: "../../../node_modules/@capacitor-community/apple-sign-in"),
         .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app"),
         .package(name: "CapacitorBarcodeScanner", path: "../../../node_modules/@capacitor/barcode-scanner"),
@@ -32,7 +32,8 @@ let package = Package(
         .package(name: "CapacitorToast", path: "../../../node_modules/@capacitor/toast"),
         .package(name: "CapgoCapacitorAudioRecorder", path: "../../../node_modules/@capgo/capacitor-audio-recorder"),
         .package(name: "CapgoCapacitorPedometer", path: "../../../node_modules/@capgo/capacitor-pedometer"),
-        .package(name: "CapgoCapacitorWatch", path: "../../../node_modules/@capgo/capacitor-watch")
+        .package(name: "CapgoCapacitorWatch", path: "../../../node_modules/@capgo/capacitor-watch"),
+        .package(name: "CapgoNativePurchases", path: "../../../node_modules/@capgo/native-purchases")
     ],
     targets: [
         .target(
@@ -60,7 +61,8 @@ let package = Package(
                 .product(name: "CapacitorToast", package: "CapacitorToast"),
                 .product(name: "CapgoCapacitorAudioRecorder", package: "CapgoCapacitorAudioRecorder"),
                 .product(name: "CapgoCapacitorPedometer", package: "CapgoCapacitorPedometer"),
-                .product(name: "CapgoCapacitorWatch", package: "CapgoCapacitorWatch")
+                .product(name: "CapgoCapacitorWatch", package: "CapgoCapacitorWatch"),
+                .product(name: "CapgoNativePurchases", package: "CapgoNativePurchases")
             ]
         )
     ]

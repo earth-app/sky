@@ -64,3 +64,6 @@ project(':capgo-capacitor-pedometer').projectDir = new File('../node_modules/@ca
 
 include ':capgo-capacitor-watch'
 project(':capgo-capacitor-watch').projectDir = new File('../node_modules/@capgo/capacitor-watch/android')
+
+include ':capgo-native-purchases'
+project(':capgo-native-purchases').projectDir = new File('../node_modules/@capgo/native-purchases/android')
