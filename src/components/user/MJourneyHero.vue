@@ -1,6 +1,7 @@
 <template>
 	<div
 		v-if="visible"
+		id="journeys-hero"
 		class="w-full max-w-2xl mx-auto px-4 mb-4"
 	>
 		<IonCard
@@ -30,6 +31,7 @@
 				class="px-3 pt-3"
 			>
 				<IonChip
+					id="daily-quest-chip"
 					:class="[
 						'm-0 quest-chip',
 						!dailyQuestTapped && !prefersReducedMotion ? 'daily-quest-pulse' : ''

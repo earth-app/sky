@@ -5,13 +5,18 @@
 	>
 		<IonCard :color="theme">
 			<div class="flex items-center gap-4 p-4">
-				<TrailMNatureRing
-					v-if="natureMinutes"
-					:minutes="natureMinutes.minutes"
-					:target="natureMinutes.target"
-					:best="natureMinutes.best"
-					:size="84"
-				/>
+				<div
+					id="nature-ring"
+					class="shrink-0"
+				>
+					<TrailMNatureRing
+						v-if="natureMinutes"
+						:minutes="natureMinutes.minutes"
+						:target="natureMinutes.target"
+						:best="natureMinutes.best"
+						:size="84"
+					/>
+				</div>
 				<div class="flex flex-col gap-1 min-w-0 flex-1">
 					<div class="flex items-center gap-2">
 						<UIcon

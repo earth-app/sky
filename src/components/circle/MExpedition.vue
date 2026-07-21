@@ -21,12 +21,17 @@
 			</div>
 
 			<div class="grid sm:grid-cols-[auto_1fr] gap-4 items-center mt-4">
-				<CircleMRing :expedition="expedition" />
+				<div id="expedition-ring">
+					<CircleMRing :expedition="expedition" />
+				</div>
 				<div>
 					<p class="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">
 						The Circle's Contribution
 					</p>
-					<ul class="flex flex-col gap-3">
+					<ul
+						id="circle-kudos"
+						class="flex flex-col gap-3"
+					>
 						<li
 							v-for="c in contributors"
 							:key="c.uid"

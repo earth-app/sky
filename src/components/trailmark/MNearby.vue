@@ -1,29 +1,38 @@
 <template>
 	<div class="flex flex-col gap-4 w-full max-w-3xl mx-auto px-4 pb-8">
 		<div class="flex items-start justify-between gap-3">
-			<div class="min-w-0">
+			<div
+				id="trailmark-nearby"
+				class="min-w-0"
+			>
 				<h2 class="text-xl! font-bold m-0!">Trailmarks Nearby</h2>
 				<p class="text-xs opacity-70 mt-1">
 					Notes left at real places by people who passed through.
 				</p>
 			</div>
-			<IonSelect
-				v-model="radius"
-				interface="popover"
-				label="Within"
-				label-placement="stacked"
-				class="w-28 shrink-0"
-			>
-				<IonSelectOption
-					v-for="opt in radiusOptions"
-					:key="opt.value"
-					:value="opt.value"
-					>{{ opt.label }}</IonSelectOption
+			<div class="flex items-start gap-2 shrink-0">
+				<IonSelect
+					id="trailmark-radius"
+					v-model="radius"
+					interface="popover"
+					label="Within"
+					label-placement="stacked"
+					class="w-28"
 				>
-			</IonSelect>
+					<IonSelectOption
+						v-for="opt in radiusOptions"
+						:key="opt.value"
+						:value="opt.value"
+						>{{ opt.label }}</IonSelectOption
+					>
+				</IonSelect>
+				<MTourButton tour-id="trailmarks" />
+			</div>
 		</div>
 
-		<TrailmarkMComposer @created="onCreated" />
+		<div id="trailmark-composer">
+			<TrailmarkMComposer @created="onCreated" />
+		</div>
 
 		<div
 			v-if="!ready && !error"
@@ -97,6 +106,15 @@
 			/>
 			<p class="text-sm">Be the First to Leave One.</p>
 		</div>
+
+		<ClientOnly>
+			<MSiteTour
+				:steps="trailmarksTour"
+				tour-id="trailmarks"
+				name="Trailmarks Tour"
+				:pulse="true"
+			/>
+		</ClientOnly>
 	</div>
 </template>
 
@@ -108,6 +126,38 @@ import type { Trailmark } from 'types/trailmarks';
 const { nearby, loading, fetchNearby } = useTrailmarks();
 const { lat, lng, error, ready, fetchLocation } = useMGeolocation();
 const { impactLight } = useAppHaptics();
+const { startTourIfNew } = useSiteTour();
+
+// #region tour
+const trailmarksTour = computed<SiteTourStep[]>(() => [
+	{
+		id: 'trailmark-nearby',
+		title: 'Trailmarks Nearby',
+		description:
+			'Trailmarks are short, encouraging notes people leave at real places for whoever comes next. When one lifts you, you thank the note itself - never the person - so kindness stays quiet and pressure-free.',
+		footer: 'A small message from a stranger who stood right where you are.',
+		icon: 'mdi:map-marker-radius-outline',
+		waitFor: 'trailmark-nearby'
+	},
+	{
+		id: 'trailmark-composer',
+		title: 'Leave One From Here',
+		description:
+			'Write a brief, kind note tied to the spot you are standing in right now. Someone passing through later will find it exactly where you left it.',
+		footer: 'Keep it warm and welcoming - it is a gift to a stranger.',
+		icon: 'mdi:map-marker-plus-outline',
+		placement: 'bottom'
+	},
+	{
+		id: 'trailmark-radius',
+		title: 'Widen or Narrow Your Search',
+		description:
+			'Change how far out to look for notes. Tighten the radius for what is right around you, or widen it to discover marks a little further afield.',
+		footer: 'Explore close by, then reach further when you wander.',
+		icon: 'mdi:map-marker-distance'
+	}
+]);
+// #endregion
 
 const radiusOptions = [
 	{ label: '250 m', value: 250 },
@@ -159,6 +209,7 @@ onMounted(async () => {
 		if (state.isActive) onResume();
 	});
 	if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility);
+	startTourIfNew('trailmarks');
 });
 
 onBeforeUnmount(() => {
