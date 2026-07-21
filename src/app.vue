@@ -221,10 +221,6 @@ async function shareCelebration() {
 	closeCelebration();
 }
 
-// short, in-place orientation: stays on the dashboard + tab bar (no cross-app navigation,
-// which is fragile). the welcome + finish steps are intentionally centered (no id); the middle
-// steps point at real, always-visible targets (tab bar, tab buttons, Getting Started card) so
-// none reference a phantom element. a missing/hidden target degrades to the centered fallback
 const welcomeTour = computed<SiteTourStep[]>(() => [
 	{
 		title: 'Welcome to The Earth App',
@@ -251,6 +247,16 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 			'This Getting Started checklist sets up your account and unlocks personalized recommendations. It stays on your dashboard, so you can finish it whenever you like.',
 		footer: 'Complete it at your own pace; nothing is mandatory.',
 		icon: 'mdi:flag-checkered',
+		highlightPadding: 10
+	},
+	{
+		id: 'explore-strip',
+		title: 'Head Outside',
+		description:
+			'Curiosity Trails, your Shared Garden, and Trailmarks turn real time outdoors into something you can grow with friends. Tap any of these to start a calm outdoor practice whenever you feel the pull.',
+		footer: 'Time outside is the whole point, not the point total.',
+		icon: 'mdi:pine-tree',
+		waitFor: 'explore-strip',
 		highlightPadding: 10
 	},
 	{
