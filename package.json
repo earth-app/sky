@@ -76,7 +76,7 @@
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.10.0",
     "@nuxtjs/google-fonts": "^3.2.0",
-    "@nuxtjs/i18n": "^10.4.1",
+    "@nuxtjs/i18n": "^10.5.0",
     "@nuxtjs/ionic": "^1.0.2",
     "@tensorflow/tfjs": "^4.22.0",
     "@tiptap/extension-drag-handle": "^3.28.0",
@@ -87,7 +87,7 @@
     "luxon": "^3.7.2",
     "nsfwjs": "^4.3.0",
     "nuxt": "~4.4.8",
-    "nuxt-viewport": "^2.4.0",
+    "nuxt-viewport": "^2.5.0",
     "obscenity": "^0.4.6",
     "piexifjs": "^1.0.6",
     "tesseract.js": "^7.0.0",
@@ -114,15 +114,15 @@
     "@types/piexifjs": "^1.0.0",
     "@vitest/coverage-v8": "4.1.9",
     "@vue/cli-service": "5.0.9",
-    "happy-dom": "^20.11.0",
+    "happy-dom": "^20.11.1",
     "husky": "^9.1.7",
-    "lint-staged": "^17.1.0",
-    "prettier": "^3.9.5",
+    "lint-staged": "^17.2.0",
+    "prettier": "^3.9.6",
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "v8-to-istanbul": "^9.3.0",
     "vitest": "4.1.9",
-    "vue-tsc": "^3.3.7"
+    "vue-tsc": "^3.3.8"
   },
   "lint-staged": {
     "*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
