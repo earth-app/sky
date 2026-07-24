@@ -1,6 +1,7 @@
 <template>
 	<component
 		:is="highlight ? 'UiAnimatedGradientBorder' : 'div'"
+		:data-trail-id="trail.id"
 		class="rounded-xl"
 	>
 		<div
