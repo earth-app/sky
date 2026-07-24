@@ -256,7 +256,10 @@ export type QuestStepType =
 	| 'describe_text'
 	| 'submit_event_image'
 	| 'distance_covered'
-	| 'scan_barcode';
+	| 'scan_barcode'
+	// v0.6.0 cloud-validated step types; the client renders them via the passive branch
+	| 'nature_minutes'
+	| 'trailmarker_added';
 
 /**
  * Build a single quest step. `parameters` is the positional arg array the
@@ -543,6 +546,142 @@ export function makeReport(overrides: Record<string, any> = {}): Record<string, 
 		updated_at: overrides.updated_at ?? Date.parse(FIXED_NOW)
 	};
 }
+
+// #region v0.6.0 - Curiosity Trails / Circles+Expeditions+Garden / Trailmarks / Nature Minutes
+// factories ported from crust so sky's inherited trails/circles/trailmark stores validate the
+// same shapes (the crust zod schemas are .loose(), so the extra presentation fields are fine)
+
+export function makeTrail(overrides: Record<string, any> = {}): Record<string, any> {
+	const id = overrides.id ?? `trail-${Math.random().toString(36).slice(2, 8)}`;
+	const practice = overrides.practice ?? 'sit_spot';
+	return {
+		id,
+		title: overrides.title ?? 'Neighborhood Wonders',
+		theme: overrides.theme ?? 'nature',
+		practice,
+		description:
+			overrides.description ?? 'A short, unhurried practice that ends in a small moment of awe.',
+		icon: overrides.icon ?? 'mdi:map-marker-path',
+		rarity: overrides.rarity ?? 'normal',
+		curiosity: overrides.curiosity ?? 'What hides in plain sight on this street?',
+		duration: overrides.duration ?? 12,
+		reflectionPrompt:
+			overrides.reflectionPrompt ?? 'What did you notice that you would have walked past?',
+		reveal:
+			overrides.reveal ?? 'The oldest tree on this block likely predates every building around it.',
+		// cloud-authored presentation metadata, embedded on every real trail response
+		practiceMeta: overrides.practiceMeta ?? {
+			practice,
+			label: 'Sit Spot',
+			icon: 'mdi:meditation',
+			verb: 'sit',
+			cue: 'Find one spot, settle in, and let the place come to you.',
+			defaultMinutes: 12,
+			photos: false
+		},
+		...(overrides.premium !== undefined ? { premium: overrides.premium } : {}),
+		...(overrides.seasonal !== undefined ? { seasonal: overrides.seasonal } : {})
+	};
+}
+
+/** A private trail reflection (self-expression; never public). */
+export function makeTrailReflection(overrides: Record<string, any> = {}): Record<string, any> {
+	return {
+		at: overrides.at ?? FIXED_NOW,
+		note: overrides.note ?? 'The light through the leaves kept shifting.',
+		mood: overrides.mood ?? 'calm',
+		...(overrides.photoCount !== undefined ? { photoCount: overrides.photoCount } : {}),
+		sharedToGarden: overrides.sharedToGarden ?? true
+	};
+}
+
+/** One journal entry = a completed trail run. */
+export function makeTrailJournalEntry(overrides: Record<string, any> = {}): Record<string, any> {
+	return {
+		trailId: overrides.trailId ?? 'trail-1',
+		title: overrides.title ?? 'Neighborhood Wonders',
+		practice: overrides.practice ?? 'sit_spot',
+		presenceMinutes: overrides.presenceMinutes ?? 12,
+		reflection: overrides.reflection ?? makeTrailReflection(),
+		completedAt: overrides.completedAt ?? FIXED_NOW
+	};
+}
+
+/** The personal weekly Nature Minutes ring payload. */
+export function makeNatureMinutes(overrides: Record<string, any> = {}): Record<string, any> {
+	const minutes = overrides.minutes ?? 45;
+	return {
+		week: overrides.week ?? '2026-W29',
+		minutes,
+		target: overrides.target ?? 120,
+		best: overrides.best ?? minutes,
+		sources: overrides.sources ?? [],
+		updated_at: overrides.updated_at ?? FIXED_NOW
+	};
+}
+
+/** One member's contribution to a shared expedition (contribution, never a rank). */
+export function makeExpeditionContributor(
+	overrides: Record<string, any> = {}
+): Record<string, any> {
+	return {
+		uid: overrides.uid ?? 'test-user-1',
+		username: overrides.username ?? 'testuser',
+		contribution: overrides.contribution ?? 0,
+		...(overrides.last_contributed_at ? { last_contributed_at: overrides.last_contributed_at } : {})
+	};
+}
+
+/** A circle's shared Expedition. `ends_at` is anchored to real now so it reads as active. */
+export function makeExpedition(overrides: Record<string, any> = {}): Record<string, any> {
+	const id = overrides.id ?? `exp-${Math.random().toString(36).slice(2, 8)}`;
+	const contributors = overrides.contributors ?? [makeExpeditionContributor()];
+	const progress =
+		overrides.progress ?? contributors.reduce((s: number, c: any) => s + (c.contribution || 0), 0);
+	const days = overrides.days ?? 7;
+	return {
+		id,
+		owner_uid: overrides.owner_uid ?? 'test-user-1',
+		title: overrides.title ?? 'Weekend Woods Challenge',
+		goal: overrides.goal ?? 'nature_minutes',
+		target: overrides.target ?? 600,
+		progress,
+		contributors,
+		status: overrides.status ?? 'active',
+		starts_at: overrides.starts_at ?? new Date(Date.now() - 86_400_000).toISOString(),
+		ends_at: overrides.ends_at ?? new Date(Date.now() + days * 86_400_000).toISOString()
+	};
+}
+
+/** A single generative garden element. */
+export function makeGardenElement(overrides: Record<string, any> = {}): Record<string, any> {
+	return {
+		kind: overrides.kind ?? 'tree',
+		seed: overrides.seed ?? Math.floor(Math.random() * 1e9),
+		growth: overrides.growth ?? 0.6,
+		...(overrides.contributor_uid ? { contributor_uid: overrides.contributor_uid } : {})
+	};
+}
+
+/** The shared CircleGarden projection (grows from combined outdoor minutes). */
+export function makeGarden(overrides: Record<string, any> = {}): Record<string, any> {
+	const kinds = ['tree', 'flower', 'water', 'stone', 'creature', 'star'];
+	const count = overrides.elementCount ?? 24;
+	const elements =
+		overrides.elements ??
+		Array.from({ length: count }, (_, i) =>
+			makeGardenElement({ kind: kinds[i % kinds.length], seed: 1000 + i })
+		);
+	return {
+		owner_uid: overrides.owner_uid ?? 'test-user-1',
+		level: overrides.level ?? 5,
+		total_minutes: overrides.total_minutes ?? 640,
+		elements,
+		animated: overrides.animated ?? true,
+		updated_at: overrides.updated_at ?? FIXED_NOW
+	};
+}
+// #endregion
 
 export interface PaginatedResponse<T> {
 	items: T[];

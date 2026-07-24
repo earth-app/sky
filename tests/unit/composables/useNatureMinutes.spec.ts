@@ -114,4 +114,38 @@ describe('useNatureMinutes.syncFromHealthKit', () => {
 		expect(res.success).toBe(false);
 		expect(creditFn).not.toHaveBeenCalled();
 	});
+
+	it('does not advance the credit window when the server credit fails', async () => {
+		const trails = fakeTrails();
+		trails.creditNatureMinutes = vi.fn(async () => ({ success: false, error: 'server down' }));
+		const res = await useNatureMinutes(trails, fakeHealthKit()).syncFromHealthKit();
+		expect(trails.creditNatureMinutes).toHaveBeenCalled();
+		expect(res.success).toBe(false);
+		// the window must NOT advance on a failed credit, so the same distance is retried later
+		expect(prefSet).not.toHaveBeenCalled();
+	});
+
+	it('tolerates a null distance reading from the plugin (no credit, window advances)', async () => {
+		const hk = fakeHealthKit({
+			getActivityDistance: vi.fn(async () => ({ distance: null, source: 'hk' }))
+		});
+		const res = await useNatureMinutes(fakeTrails(), hk).syncFromHealthKit();
+		expect(res.success).toBe(false);
+		expect(creditFn).not.toHaveBeenCalled();
+		expect(prefSet).toHaveBeenCalled();
+	});
+
+	it('rejects a concurrent sync while one is already in progress', async () => {
+		const hk = fakeHealthKit({
+			// hold the first sync open so the second observes syncing === true
+			getActivityDistance: vi.fn(
+				() => new Promise((r) => setTimeout(() => r({ distance: 1600, source: 'hk' }), 40))
+			)
+		});
+		const nm = useNatureMinutes(fakeTrails(), hk);
+		const first = nm.syncFromHealthKit();
+		const second = await nm.syncFromHealthKit();
+		expect(second.success).toBe(false);
+		await first;
+	});
 });

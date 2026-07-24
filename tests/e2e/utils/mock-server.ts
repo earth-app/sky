@@ -11,7 +11,10 @@ import {
 	makeArticleQuizV2,
 	makeBadge,
 	makeEvent,
+	makeExpedition,
+	makeGarden,
 	makeMoodSnapshot,
+	makeNatureMinutes,
 	makeNotification,
 	makePollVote,
 	makePrompt,
@@ -20,6 +23,7 @@ import {
 	makeQuestStep,
 	makeReferralStats,
 	makeReport,
+	makeTrail,
 	makeUser,
 	makeUserQuestProgress,
 	paginate
@@ -67,7 +71,30 @@ interface BackendState {
 	currentUserByTestId: Record<string, string | null>; // testId -> userId (overrides currentUserByToken)
 	onboarding: Record<string, any>; // userId -> OnboardingState
 	avatars: Record<string, boolean>; // userId -> has a generated (non-default) avatar
+	// v0.6.0: recipient-scoped notifications (kudos/trailmark-thanks land here, keyed by uid so a
+	// multi-user flow doesn't bleed); merged with the shared `notifications` array on GET
+	notificationsByUid: Record<string, any[]>;
+	trails: Record<string, any>; // shared read-only catalog by id
+	trailmarks: TrailmarkRecord[]; // geo-queried; specs use a unique per-test location
+	natureMinutes: Record<string, any>; // uid -> NatureMinutes
+	trailJournal: Record<string, any[]>; // uid -> completed journal entries (newest first)
+	trailRuns: Record<string, any>; // `${uid}:${trailId}` -> active run
+	circleOwnerOf: Record<string, string>; // memberUid -> circle owner uid
+	expeditionByOwner: Record<string, any>; // ownerUid -> Expedition
+	gardenByOwner: Record<string, any>; // ownerUid -> CircleGarden
+	kudos: { from: string; to: string; key: string; phrase: string }[];
 	overrides: Override[];
+}
+
+interface TrailmarkRecord {
+	id: string;
+	author_uid: string;
+	author_username: string;
+	geo: { lat: number; lng: number; place_label?: string };
+	note: string;
+	created_at: string;
+	thanks: string[]; // uids that thanked
+	prompt_id?: string;
 }
 
 // a single catalog quest carrying one of every non-mobile-gated step type plus the
@@ -143,6 +170,16 @@ function freshState(): BackendState {
 		stepTypeQuest
 	];
 
+	// v0.6.0 curiosity-trail catalog (read-only), matching crust's seed so the same specs port
+	const trailDefs = [
+		makeTrail({ id: 'trail-1', title: 'Neighborhood Wonders', theme: 'nature' }),
+		makeTrail({ id: 'trail-2', title: 'Hidden Histories', theme: 'curiosity' }),
+		makeTrail({ id: 'trail-3', title: 'Sketch the Skyline', theme: 'creative' }),
+		makeTrail({ id: 'trail-4', title: 'Sunset Circuit', theme: 'mixed', rarity: 'amazing' }),
+		makeTrail({ id: 'trail-5', title: 'Rare River Path', theme: 'nature', rarity: 'green' }),
+		makeTrail({ id: 'trail-6', title: 'Premium Peaks', theme: 'nature', premium: true })
+	];
+
 	return {
 		users: usersObj,
 		activities: Object.fromEntries(activities.map((a) => [a.id, a])),
@@ -151,6 +188,16 @@ function freshState(): BackendState {
 		prompts: Object.fromEntries(prompts.map((p) => [p.id, p])),
 		quests: Object.fromEntries(catalog.map((q) => [q.id, q])),
 		notifications: [],
+		notificationsByUid: {},
+		trails: Object.fromEntries(trailDefs.map((t) => [t.id, t])),
+		trailmarks: [],
+		natureMinutes: {},
+		trailJournal: {},
+		trailRuns: {},
+		circleOwnerOf: {},
+		expeditionByOwner: {},
+		gardenByOwner: {},
+		kudos: [],
 		// default: no active quest. specs that need one POST /v2/users/<id>/quest (start)
 		// or register an override; activeQuestByTestId holds per-test state.
 		activeQuestByTestId: {},
@@ -290,6 +337,81 @@ function onboardingFor(userId: string): any {
 	return state.onboarding[userId];
 }
 
+// #region v0.6.0 helpers (trails / circle / trailmarks / nature minutes)
+
+// great-circle distance in meters; deterministic (same as the crust composable)
+function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+	const R = 6371000;
+	const toRad = (deg: number) => (deg * Math.PI) / 180;
+	const dLat = toRad(b.lat - a.lat);
+	const dLng = toRad(b.lng - a.lng);
+	const lat1 = toRad(a.lat);
+	const lat2 = toRad(b.lat);
+	const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+	return Math.round(2 * R * Math.asin(Math.min(1, Math.sqrt(h))));
+}
+
+// recipient-scoped notification push (kudos/trailmark-thanks feed)
+function pushNotificationTo(uid: string, notif: any) {
+	(state.notificationsByUid[uid] ??= []).unshift(notif);
+}
+
+// the private thanks tally is only ever returned to the author (never a public number)
+function serializeTrailmark(m: TrailmarkRecord, viewer: string | null) {
+	const out: any = {
+		id: m.id,
+		author_uid: m.author_uid,
+		author_username: m.author_username,
+		geo: m.geo,
+		note: m.note,
+		created_at: m.created_at,
+		thanked_by_me: !!viewer && m.thanks.includes(viewer),
+		...(m.prompt_id ? { prompt_id: m.prompt_id } : {})
+	};
+	if (viewer && viewer === m.author_uid) out.thanks_for_author = m.thanks.length;
+	return out;
+}
+
+// grow the shared garden from combined outdoor minutes (deterministic level + element count)
+function growGarden(owner: string, minutes: number) {
+	const g =
+		state.gardenByOwner[owner] ??
+		makeGarden({ owner_uid: owner, level: 1, total_minutes: 0, elementCount: 0 });
+	g.total_minutes += minutes;
+	g.level = Math.max(1, Math.min(12, Math.floor(g.total_minutes / 120) + 1));
+	const kinds = ['tree', 'flower', 'water', 'stone', 'creature', 'star'];
+	const targetCount = Math.min(80, Math.floor(g.total_minutes / 15));
+	while (g.elements.length < targetCount) {
+		g.elements.push({
+			kind: kinds[g.elements.length % kinds.length],
+			seed: 2000 + g.elements.length,
+			growth: 0.6
+		});
+	}
+	g.updated_at = new Date().toISOString();
+	state.gardenByOwner[owner] = g;
+}
+
+// outdoor time credits the member's circle expedition (nature_minutes goal) and shared garden
+function creditExpeditionAndGarden(uid: string, minutes: number) {
+	if (minutes <= 0) return;
+	const owner = state.circleOwnerOf[uid];
+	if (!owner) return;
+	const exp = state.expeditionByOwner[owner];
+	if (exp && exp.goal === 'nature_minutes' && exp.status === 'active') {
+		let c = exp.contributors.find((x: any) => x.uid === uid);
+		if (!c) {
+			c = { uid, username: state.users[uid]?.username ?? uid, contribution: 0 };
+			exp.contributors.push(c);
+		}
+		c.contribution += minutes;
+		c.last_contributed_at = new Date().toISOString();
+		exp.progress = exp.contributors.reduce((s: number, x: any) => s + x.contribution, 0);
+	}
+	growGarden(owner, minutes);
+}
+// #endregion
+
 // ---------------------------------------------------------------------------
 // Route table - mantle2 (/v2/*)
 // ---------------------------------------------------------------------------
@@ -421,8 +543,10 @@ const mantleRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }>
 		method: 'GET',
 		pattern: /^\/v2\/users\/current\/notifications\/?$/,
 		handler: (_req, res, ctx) => {
-			if (!currentUserId(ctx)) return unauthorized(res);
-			const items = state.notifications;
+			const uid = currentUserId(ctx);
+			if (!uid) return unauthorized(res);
+			// recipient-scoped v0.6.0 notifications (kudos/thanks) first, then the shared feed
+			const items = [...(state.notificationsByUid[uid] ?? []), ...state.notifications];
 			json(res, 200, {
 				items,
 				total: items.length,
@@ -576,6 +700,322 @@ const mantleRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }>
 			json(res, 200, { state: ob });
 		}
 	},
+
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/trails\/?$/,
+		handler: (_req, res, ctx) => {
+			const theme = ctx.url.searchParams.get('theme');
+			const premium = ctx.url.searchParams.get('premium') === 'true';
+			let items = Object.values(state.trails);
+			if (theme) items = items.filter((t: any) => t.theme === theme);
+			if (premium) items = items.filter((t: any) => t.premium === true);
+			json(res, 200, { items });
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/trails\/([^/?]+)\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = decodeURIComponent(ctx.url.pathname.split('/').pop()!);
+			const trail = state.trails[id];
+			if (!trail) return notFound(res, 'Trail not found');
+			json(res, 200, trail);
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/([^/]+)\/nature-minutes\/?$/,
+		handler: (_req, res, ctx) => {
+			const asked = decodeURIComponent(ctx.url.pathname.split('/')[3]!);
+			const uid = asked === 'current' ? (currentUserId(ctx) ?? asked) : asked;
+			json(res, 200, state.natureMinutes[uid] ?? makeNatureMinutes({ minutes: 0, best: 0 }));
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/([^/]+)\/nature-minutes\/?$/,
+		handler: (_req, res, ctx) => {
+			const asked = decodeURIComponent(ctx.url.pathname.split('/')[3]!);
+			const uid = asked === 'current' ? (currentUserId(ctx) ?? asked) : asked;
+			const source = ctx.body?.source ?? {};
+			const add = Math.max(0, Number(source.minutes) || 0);
+			const cur =
+				state.natureMinutes[uid] ?? makeNatureMinutes({ minutes: 0, best: 0, sources: [] });
+			const minutes = (cur.minutes || 0) + add;
+			const updated = {
+				...cur,
+				minutes,
+				best: Math.max(cur.best || 0, minutes),
+				sources: [...(cur.sources ?? []), source],
+				updated_at: new Date().toISOString()
+			};
+			state.natureMinutes[uid] = updated;
+			creditExpeditionAndGarden(uid, add);
+			json(res, 200, updated);
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/trails\/([^/]+)\/start\/?$/,
+		handler: (_req, res, ctx) => {
+			const uid = currentUserId(ctx);
+			if (!uid) return unauthorized(res);
+			const trailId = decodeURIComponent(ctx.url.pathname.split('/')[5]!);
+			const run = {
+				trailId,
+				pledge: ctx.body?.pledge ?? undefined,
+				startedAt: new Date().toISOString(),
+				presenceMinutes: 0,
+				completed: false
+			};
+			state.trailRuns[`${uid}:${trailId}`] = run;
+			json(res, 201, run);
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/trails\/([^/]+)\/complete\/?$/,
+		handler: (_req, res, ctx) => {
+			const uid = currentUserId(ctx);
+			if (!uid) return unauthorized(res);
+			const trailId = decodeURIComponent(ctx.url.pathname.split('/')[5]!);
+			const minutes = Math.max(0, Math.min(180, Number(ctx.body?.presenceMinutes) || 0));
+			const reflection = ctx.body?.reflection ?? { at: new Date().toISOString() };
+			const trail = state.trails[trailId];
+			const cur =
+				state.natureMinutes[uid] ?? makeNatureMinutes({ minutes: 0, best: 0, sources: [] });
+			const total = (cur.minutes || 0) + minutes;
+			const natureMinutes = {
+				...cur,
+				minutes: total,
+				best: Math.max(cur.best || 0, total),
+				sources: [
+					...(cur.sources ?? []),
+					{ kind: 'trail', ref_id: trailId, minutes, at: reflection.at }
+				],
+				updated_at: new Date().toISOString()
+			};
+			state.natureMinutes[uid] = natureMinutes;
+			creditExpeditionAndGarden(uid, minutes);
+			const entry = {
+				trailId,
+				title: trail?.title ?? 'Trail',
+				practice: trail?.practice ?? 'sit_spot',
+				presenceMinutes: minutes,
+				reflection,
+				completedAt: new Date().toISOString()
+			};
+			(state.trailJournal[uid] ??= []).unshift(entry);
+			const run = {
+				...(state.trailRuns[`${uid}:${trailId}`] ?? { trailId, startedAt: entry.completedAt }),
+				presenceMinutes: minutes,
+				completed: true
+			};
+			state.trailRuns[`${uid}:${trailId}`] = run;
+			json(res, 200, { run, entry, natureMinutes });
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/current\/trail-journal\/?$/,
+		handler: (_req, res, ctx) => {
+			const uid = currentUserId(ctx);
+			if (!uid) return unauthorized(res);
+			json(res, 200, { items: state.trailJournal[uid] ?? [] });
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/current\/expedition\/?$/,
+		handler: (_req, res, ctx) => {
+			const uid = currentUserId(ctx);
+			if (!uid) return unauthorized(res);
+			const owner = state.circleOwnerOf[uid] ?? uid;
+			const exp = state.expeditionByOwner[owner];
+			if (!exp) return json(res, 204, '');
+			json(res, 200, exp);
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/expedition\/?$/,
+		handler: (_req, res, ctx) => {
+			const uid = currentUserId(ctx);
+			if (!uid) return unauthorized(res);
+			const body = ctx.body ?? {};
+			const owner = state.circleOwnerOf[uid] ?? uid;
+			const memberUids = Object.keys(state.circleOwnerOf).filter(
+				(m) => state.circleOwnerOf[m] === owner
+			);
+			const members = memberUids.length ? memberUids : [uid];
+			const contributors = members.map((m) => ({
+				uid: m,
+				username: state.users[m]?.username ?? m,
+				contribution: 0
+			}));
+			const exp = makeExpedition({
+				id: `exp-${owner}`,
+				owner_uid: owner,
+				title: body.title ?? 'Expedition',
+				goal: body.goal ?? 'nature_minutes',
+				target: Math.max(1, Math.round(Number(body.target)) || 600),
+				contributors,
+				progress: 0,
+				days: body.days ? Math.max(1, Math.round(body.days)) : 7
+			});
+			state.expeditionByOwner[owner] = exp;
+			json(res, 201, exp);
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/([^/]+)\/garden\/?$/,
+		handler: (_req, res, ctx) => {
+			const asked = decodeURIComponent(ctx.url.pathname.split('/')[3]!);
+			const owner = asked === 'current' ? (currentUserId(ctx) ?? asked) : asked;
+			const key = state.circleOwnerOf[owner] ?? owner;
+			const g = state.gardenByOwner[key];
+			if (!g) return json(res, 204, '');
+			json(res, 200, g);
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/([^/]+)\/kudos\/?$/,
+		handler: (_req, res, ctx) => {
+			const giver = currentUserId(ctx);
+			if (!giver) return unauthorized(res);
+			const toUid = decodeURIComponent(ctx.url.pathname.split('/')[3]!);
+			const body = ctx.body ?? {};
+			const key = `${body.context_type}:${body.context_ref ?? ''}:${giver}:${toUid}`;
+			if (state.kudos.some((k) => k.key === key)) {
+				return json(res, 200, { success: true, alreadySent: true });
+			}
+			state.kudos.push({ from: giver, to: toUid, key, phrase: body.phrase });
+			const giverName = state.users[giver]?.username ?? 'someone';
+			pushNotificationTo(
+				toUid,
+				makeNotification({
+					id: `kudos-${state.kudos.length}`,
+					user_id: toUid,
+					title: 'A Cheer From Your Circle',
+					message: `@${giverName} cheered you on. A little encouragement goes a long way.`,
+					type: 'success',
+					source: 'kudos'
+				})
+			);
+			json(res, 200, { success: true, alreadySent: false });
+		}
+	},
+	// current user's circle members (other people), paginated {items,total}. drives MMembers +
+	// the expedition empty-circle guard. registered before the greedy user route
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/([^/]+)\/circle\/?$/,
+		handler: (_req, res, ctx) => {
+			const asked = decodeURIComponent(ctx.url.pathname.split('/')[3]!);
+			const self = asked === 'current' ? currentUserId(ctx) : asked;
+			if (!self) return unauthorized(res);
+			const owner = state.circleOwnerOf[self] ?? self;
+			const items = Object.keys(state.circleOwnerOf)
+				.filter((m) => state.circleOwnerOf[m] === owner && m !== self)
+				.map((uid) => state.users[uid])
+				.filter(Boolean);
+			json(res, 200, { items, total: items.length });
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/v2\/trailmarks\/?$/,
+		handler: (_req, res, ctx) => {
+			const viewer = currentUserId(ctx);
+			const lat = Number(ctx.url.searchParams.get('lat'));
+			const lng = Number(ctx.url.searchParams.get('lng'));
+			const radius = Math.min(Number(ctx.url.searchParams.get('radius')) || 500, 2000);
+			const items = state.trailmarks
+				.filter((m) => Number.isFinite(lat) && haversineMeters({ lat, lng }, m.geo) <= radius)
+				.map((m) => serializeTrailmark(m, viewer));
+			json(res, 200, { items });
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/trailmarks\/?$/,
+		handler: (_req, res, ctx) => {
+			const uid = currentUserId(ctx);
+			if (!uid) return unauthorized(res);
+			const body = ctx.body ?? {};
+			if (!body?.note || !body?.geo) return json(res, 400, { message: 'note and geo required' });
+			// mock of the cloud sentiment gate: negative notes are gently rejected
+			if (/\b(hate|awful|terrible|worst|stupid)\b/i.test(String(body.note))) {
+				return json(res, 400, {
+					message: "Let's keep trailmarks kind and encouraging - try rephrasing."
+				});
+			}
+			const rec: TrailmarkRecord = {
+				id: `tm-${uid}-${state.trailmarks.length + 1}-${Math.random().toString(36).slice(2, 6)}`,
+				author_uid: uid,
+				author_username: state.users[uid]?.username ?? uid,
+				geo: body.geo,
+				note: String(body.note).slice(0, 240),
+				created_at: new Date().toISOString(),
+				thanks: [],
+				...(body.prompt_id ? { prompt_id: String(body.prompt_id) } : {})
+			};
+			state.trailmarks.push(rec);
+			// author's own fresh note omits the private tally so the card reads "Your Note"
+			json(res, 201, {
+				id: rec.id,
+				author_uid: rec.author_uid,
+				author_username: rec.author_username,
+				geo: rec.geo,
+				note: rec.note,
+				created_at: rec.created_at,
+				...(rec.prompt_id ? { prompt_id: rec.prompt_id } : {})
+			});
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/trailmarks\/([^/]+)\/thank\/?$/,
+		handler: (_req, res, ctx) => {
+			const uid = currentUserId(ctx);
+			if (!uid) return unauthorized(res);
+			const id = decodeURIComponent(ctx.url.pathname.split('/')[3]!);
+			const rec = state.trailmarks.find((m) => m.id === id);
+			if (!rec) return notFound(res, 'Trailmark not found');
+			if (rec.author_uid === uid) return json(res, 409, { message: 'Cannot thank your own note' });
+			if (rec.thanks.includes(uid)) return json(res, 200, { success: true, alreadyThanked: true });
+			rec.thanks.push(uid);
+			pushNotificationTo(
+				rec.author_uid,
+				makeNotification({
+					id: `thanks-${rec.id}-${rec.thanks.length}`,
+					user_id: rec.author_uid,
+					title: 'Someone Thanked Your Trailmark',
+					message: 'A passer-by appreciated the note you left. Your words reached them.',
+					type: 'success',
+					source: 'trailmark'
+				})
+			);
+			json(res, 200, { success: true });
+		}
+	},
+	// trailmarks left as answers to a given prompt (the 'From Outside' section)
+	{
+		method: 'GET',
+		pattern: /^\/v2\/prompts\/([^/]+)\/trailmarks\/?$/,
+		handler: (_req, res, ctx) => {
+			const viewer = currentUserId(ctx);
+			const promptId = decodeURIComponent(ctx.url.pathname.split('/')[3]!);
+			const items = state.trailmarks
+				.filter((m) => m.prompt_id === promptId)
+				.map((m) => serializeTrailmark(m, viewer));
+			json(res, 200, { items });
+		}
+	},
+	// #endregion
 
 	// Regenerate profile photo (AI avatar) -- returns image bytes; the client reads
 	// this as a Blob. Marks the user as having a (non-default) avatar so subsequent
@@ -817,10 +1257,6 @@ const mantleRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }>
 		handler: (_req, res) => json(res, 200, makeArticleQuizV2())
 	},
 
-	// Article quiz score fetch/submit -- crust server route shape /api/article/quiz.
-	// sky has no server, so makeMServerRequest hits {crustBaseUrl}/api/article/quiz; in tests
-	// crustBaseUrl points at this mantle mock port. GET (score fetch) returns no score yet so
-	// the quiz stays submittable; POST records the answers and returns a perfect score result.
 	{
 		method: 'GET',
 		pattern: /^\/api\/article\/quiz\/?$/,
@@ -1556,6 +1992,39 @@ const controlRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }
 			json(res, 200, { ok: true });
 		}
 	},
+	// v0.6.0: seed a shared circle (member uids all resolve to one owner), a shared expedition,
+	// and a shared garden so the multi-user shared-garden/journey flows are drivable
+	{
+		method: 'POST',
+		pattern: /^\/__mock__\/circle\/?$/,
+		handler: async (_req, res, ctx) => {
+			const owner = ctx.body?.ownerUid as string;
+			const members = (ctx.body?.members as string[]) ?? [];
+			if (!owner) return json(res, 400, { message: 'ownerUid required' });
+			for (const m of members) state.circleOwnerOf[m] = owner;
+			json(res, 200, { ok: true });
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/__mock__\/expedition\/?$/,
+		handler: async (_req, res, ctx) => {
+			const exp = ctx.body?.expedition;
+			if (!exp?.owner_uid) return json(res, 400, { message: 'expedition.owner_uid required' });
+			state.expeditionByOwner[exp.owner_uid] = exp;
+			json(res, 200, { ok: true });
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/__mock__\/garden\/?$/,
+		handler: async (_req, res, ctx) => {
+			const garden = ctx.body?.garden;
+			if (!garden?.owner_uid) return json(res, 400, { message: 'garden.owner_uid required' });
+			state.gardenByOwner[garden.owner_uid] = garden;
+			json(res, 200, { ok: true });
+		}
+	},
 	{
 		method: 'GET',
 		pattern: /^\/__mock__\/health\/?$/,
@@ -1567,13 +2036,8 @@ function findOverride(req: IncomingMessage, ctx: RouteContext): Override | undef
 	for (let i = 0; i < state.overrides.length; i++) {
 		const o = state.overrides[i]!;
 		if (o.method !== req.method) continue;
-		// An override registered for a specific test matches:
-		//   - browser requests carrying that test's X-Test-Id, AND
-		//   - SSR/Nitro-side requests that have no testId at all (since the
-		//     Nuxt server can't read browser headers when forwarding through
-		//     $fetch). Without this fallback, SSR-fetched data caches the
-		//     default response and overrides never take effect.
 		if (o.testId && ctx.testId && ctx.testId !== o.testId) continue;
+
 		const regex = new RegExp(o.path);
 		if (regex.test(ctx.url.pathname)) {
 			if (o.once) state.overrides.splice(i, 1);

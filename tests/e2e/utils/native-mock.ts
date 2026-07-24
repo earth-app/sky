@@ -10,6 +10,12 @@ export interface NativeMockOptions {
 	barcodeResult?: { ScanResult: string; format: number };
 	// fake confirm result for @capacitor/dialog (default: accept)
 	dialogConfirm?: boolean;
+	// device position @capacitor/geolocation reports; default a fixed Manhattan fix. trailmark
+	// specs pass a unique per-test position so parallel geo-bucketed queries never collide
+	geo?: { latitude: number; longitude: number };
+	// when true, geolocation permission is denied and getCurrentPosition rejects (tests the
+	// "Location Needed" fallback in the trailmark surfaces)
+	geoDenied?: boolean;
 }
 
 export async function installNativeMock(
@@ -29,9 +35,19 @@ export async function installNativeMock(
 	// default: a valid EAN-13 (format ordinal 9) so retail barcode steps validate
 	const barcodeResult = options.barcodeResult ?? { ScanResult: '0123456789012', format: 9 };
 	const dialogConfirm = options.dialogConfirm ?? true;
+	const geo = options.geo ?? { latitude: 40.785091, longitude: -73.968285 };
+	const geoDenied = options.geoDenied ?? false;
 
 	await context.addInitScript(
-		({ platform, appleAuthorization, healthKitDistance, barcodeResult, dialogConfirm }) => {
+		({
+			platform,
+			appleAuthorization,
+			healthKitDistance,
+			barcodeResult,
+			dialogConfirm,
+			geo,
+			geoDenied
+		}) => {
 			const w = window as any;
 
 			// ---- test-observable state ----------------------------------------
@@ -68,6 +84,15 @@ export async function installNativeMock(
 			w.__dialogConfirm = dialogConfirm;
 			w.__setDialogConfirm = (v: boolean) => {
 				w.__dialogConfirm = v;
+			};
+			// device position getCurrentPosition reports; specs can move it at runtime
+			w.__geo = { latitude: geo.latitude, longitude: geo.longitude };
+			w.__geoDenied = geoDenied;
+			w.__setGeo = (lat: number, lng: number) => {
+				w.__geo = { latitude: lat, longitude: lng };
+			};
+			w.__setGeoDenied = (v: boolean) => {
+				w.__geoDenied = v;
 			};
 			// records dialog prompts shown so specs can assert confirm copy
 			w.__dialogs = [];
@@ -275,25 +300,36 @@ export async function installNativeMock(
 					getPhoto: () => Promise.resolve(w.__cameraPhoto),
 					pickImages: () => Promise.resolve({ photos: [w.__cameraPhoto] })
 				},
-				// @capacitor/geolocation - a fixed Manhattan fix
+				// @capacitor/geolocation - reads w.__geo (default Manhattan; per-test overridable).
+				// when w.__geoDenied, permission is denied and the fix rejects
 				Geolocation: {
 					checkPermissions: () =>
-						Promise.resolve({ location: 'granted', coarseLocation: 'granted' }),
+						Promise.resolve(
+							w.__geoDenied
+								? { location: 'denied', coarseLocation: 'denied' }
+								: { location: 'granted', coarseLocation: 'granted' }
+						),
 					requestPermissions: () =>
-						Promise.resolve({ location: 'granted', coarseLocation: 'granted' }),
+						Promise.resolve(
+							w.__geoDenied
+								? { location: 'denied', coarseLocation: 'denied' }
+								: { location: 'granted', coarseLocation: 'granted' }
+						),
 					getCurrentPosition: () =>
-						Promise.resolve({
-							coords: {
-								latitude: 40.785091,
-								longitude: -73.968285,
-								altitude: 10,
-								accuracy: 5,
-								altitudeAccuracy: 5,
-								heading: 0,
-								speed: 0
-							},
-							timestamp: Date.now()
-						})
+						w.__geoDenied
+							? Promise.reject(new Error('User denied Geolocation'))
+							: Promise.resolve({
+									coords: {
+										latitude: w.__geo.latitude,
+										longitude: w.__geo.longitude,
+										altitude: 10,
+										accuracy: 5,
+										altitudeAccuracy: 5,
+										heading: 0,
+										speed: 0
+									},
+									timestamp: Date.now()
+								})
 				},
 				// @capacitor/dialog - confirm/alert; confirm result is test-driven
 				Dialog: {
@@ -426,6 +462,14 @@ export async function installNativeMock(
 				}
 			});
 		},
-		{ platform, appleAuthorization, healthKitDistance, barcodeResult, dialogConfirm }
+		{
+			platform,
+			appleAuthorization,
+			healthKitDistance,
+			barcodeResult,
+			dialogConfirm,
+			geo,
+			geoDenied
+		}
 	);
 }

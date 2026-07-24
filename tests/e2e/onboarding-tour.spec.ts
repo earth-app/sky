@@ -1,15 +1,11 @@
 import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 
-// the welcome tour is disabled in the base fixture (earth_app_completed_tours is seeded so it
-// never fires). these specs either drive it deterministically via the dashboard "Replay Welcome
-// Tour" button or, for the auto-play/durability cases, clear that seed per test so a fresh user
-// path runs. the tour renders a teleported role=dialog card (MSiteTour.vue) at body level.
-
 const TOUR_TITLES = [
 	'Welcome to The Earth App',
 	'Your Tab Bar',
 	'Start Here',
+	'Head Outside',
 	'Discover What You Love',
 	'Quests: Guided Adventures',
 	"You're All Set"

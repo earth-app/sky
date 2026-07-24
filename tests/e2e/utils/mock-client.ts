@@ -167,6 +167,36 @@ export class MockClient {
 		});
 	}
 
+	/**
+	 * v0.6.0: put a set of member uids into one shared circle (owner + members). Drives the
+	 * shared-garden / expedition / kudos multi-user flows and the empty-circle invite guard.
+	 */
+	async setCircle(ownerUid: string, members: string[]): Promise<void> {
+		await fetch(`${baseUrl('mantle')}/__mock__/circle`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ ownerUid, members })
+		});
+	}
+
+	/** v0.6.0: seed a shared expedition (contributors already recorded) for a circle owner. */
+	async seedExpedition(expedition: Record<string, any>): Promise<void> {
+		await fetch(`${baseUrl('mantle')}/__mock__/expedition`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ expedition })
+		});
+	}
+
+	/** v0.6.0: seed a grown shared garden for a circle owner. */
+	async seedGarden(garden: Record<string, any>): Promise<void> {
+		await fetch(`${baseUrl('mantle')}/__mock__/garden`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ garden })
+		});
+	}
+
 	async reset(opts: { signal?: AbortSignal } = {}): Promise<void> {
 		for (const backend of ['mantle', 'cloud'] as const) {
 			await fetch(`${baseUrl(backend)}/__mock__/reset`, {

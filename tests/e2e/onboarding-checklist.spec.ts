@@ -8,12 +8,14 @@ import { installNativeMock } from './utils/native-mock';
 const onboardingGet = /^\/v2\/users\/current\/onboarding\/?$/;
 const dismissPath = /\/v2\/users\/current\/onboarding\/dismiss\/?$/;
 
-// required (non-optional) steps; generate_avatar is the only optional row, so isComplete
-// flips exactly when these are all done and the Getting-Started denominator counts them
+// required (non-optional) steps; generate_avatar, first_trailmark, grow_shared_garden are the
+// optional rows, so isComplete flips exactly when these are all done and the Getting-Started
+// denominator counts them. first_trail is required (added with the v0.6.0 crust checklist)
 const REQUIRED_STEPS = [
 	'welcome',
 	'pick_interests',
 	'first_activity',
+	'first_trail',
 	'first_quest_started',
 	'first_prompt_response',
 	'first_article_read',
@@ -242,5 +244,48 @@ test.describe('Welcome checklist', () => {
 
 		await expect(page.locator('#welcome-checklist')).toBeVisible({ timeout: 12_000 });
 		await expect(page.locator('#welcome-checklist-error')).toHaveCount(0);
+	});
+});
+
+// the 3 v0.6.0 steps arrive with the crust ONBOARDING_CHECKLIST and render on sky automatically;
+// their CTAs deep-link to the new mobile tabs (/tabs/trails, /tabs/trailmarks, /tabs/circle)
+test.describe('Welcome checklist - v0.6.0 steps', () => {
+	test.beforeEach(async ({ context }) => {
+		await installNativeMock(context, { platform: 'ios' });
+	});
+
+	test('renders the three new outdoor steps for a fresh user', async ({
+		page,
+		gotoHydrated,
+		asUser
+	}) => {
+		skipIfIntegration('mock onboarding state');
+		await asUser(freshUser('v060checkuser'));
+		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
+
+		const checklist = page.locator('#welcome-checklist');
+		await expect(checklist).toBeVisible({ timeout: 12_000 });
+		await expect(checklist.getByText('Walk a Curiosity Trail')).toBeVisible();
+		await expect(checklist.getByText('Leave a Trailmark')).toBeVisible();
+		await expect(checklist.getByText('Grow Your Shared Garden')).toBeVisible();
+	});
+
+	test('the "Walk a Curiosity Trail" CTA deep-links to the trails tab', async ({
+		page,
+		gotoHydrated,
+		asUser
+	}) => {
+		skipIfIntegration('mock onboarding state');
+		await asUser(freshUser('v060trailcta'));
+		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
+
+		const checklist = page.locator('#welcome-checklist');
+		await expect(checklist).toBeVisible({ timeout: 12_000 });
+		await checklist.getByRole('button', { name: 'Explore Trails' }).click();
+
+		// scope to the page header (the auto-started trails tour reuses the same title)
+		await expect(
+			page.locator('#trails-header').getByRole('heading', { name: 'Curiosity Trails' })
+		).toBeVisible({ timeout: 12_000 });
 	});
 });

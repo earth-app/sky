@@ -8,6 +8,7 @@ const TOUR_TITLES = [
 	'Welcome to The Earth App',
 	'Your Tab Bar',
 	'Start Here',
+	'Head Outside',
 	'Discover What You Love',
 	'Quests: Guided Adventures',
 	"You're All Set"
@@ -22,10 +23,12 @@ const REMOVED_PHANTOM_IDS = [
 ];
 
 // required onboarding steps; all present flips isComplete so the card/checklist hide
+// (first_trail is required, added with the v0.6.0 crust checklist)
 const REQUIRED_STEPS = [
 	'welcome',
 	'pick_interests',
 	'first_activity',
+	'first_trail',
 	'first_quest_started',
 	'first_prompt_response',
 	'first_article_read',
