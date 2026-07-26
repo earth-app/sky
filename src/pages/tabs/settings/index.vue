@@ -241,9 +241,11 @@ type LinkSettingItem = {
 	link: string;
 };
 
+type SettingItem = SelectSettingItem | ToggleSettingItem | ActionSettingItem | LinkSettingItem;
+
 type SettingSection = {
 	section: string;
-	items: (SelectSettingItem | ToggleSettingItem | ActionSettingItem | LinkSettingItem)[];
+	items: SettingItem[];
 };
 
 const { settings: appSettings, init: initSettings, setValue, resetToDefaults } = useAppSettings();
@@ -446,6 +448,13 @@ async function clearLogsAction() {
 	await showInfoToast('Logs Cleared');
 }
 
+// only organizers can apply; a downgraded verified publisher keeps the row to see status
+const isOrganizer = computed(
+	() =>
+		authStore.currentUser?.account?.account_type === 'ORGANIZER' ||
+		!!authStore.currentUser?.verified_publisher
+);
+
 const settingSections = computed<SettingSection[]>(() => [
 	{
 		section: 'Appearence',
@@ -624,6 +633,19 @@ const settingSections = computed<SettingSection[]>(() => [
 				color: 'primary',
 				link: '/tabs/settings/subscription'
 			},
+			...(isOrganizer.value
+				? ([
+						{
+							kind: 'link',
+							title: 'Verified Publisher',
+							description:
+								'Apply for verified publisher status to submit official activities for review',
+							placeholder: 'Manage',
+							color: 'primary',
+							link: '/tabs/settings/verified-publisher'
+						}
+					] as SettingItem[])
+				: []),
 			{
 				kind: 'link',
 				title: 'API Keys',
