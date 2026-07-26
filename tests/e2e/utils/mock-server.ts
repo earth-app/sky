@@ -83,6 +83,7 @@ interface BackendState {
 	expeditionByOwner: Record<string, any>; // ownerUid -> Expedition
 	gardenByOwner: Record<string, any>; // ownerUid -> CircleGarden
 	kudos: { from: string; to: string; key: string; phrase: string }[];
+	verifiedPublisher: Record<string, any>; // uid -> VerifiedPublisher (roundtrip state)
 	overrides: Override[];
 }
 
@@ -208,6 +209,7 @@ function freshState(): BackendState {
 		currentUserByTestId: {},
 		onboarding: {},
 		avatars: {},
+		verifiedPublisher: {},
 		overrides: []
 	};
 }
@@ -479,6 +481,59 @@ const mantleRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }>
 		method: 'POST',
 		pattern: /^\/v2\/users\/logout\/?$/,
 		handler: (_req, res) => json(res, 200, { message: 'Logged out' })
+	},
+
+	// Current user
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/current\/verified_publisher\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			json(
+				res,
+				200,
+				state.verifiedPublisher[id] ?? {
+					state: 'none',
+					verified: false,
+					links: [],
+					applied_at: null,
+					reviewed_at: null,
+					notes: null,
+					can_reapply_at: null
+				}
+			);
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/verified_publisher\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+
+			state.verifiedPublisher[id] = {
+				state: 'pending',
+				verified: false,
+				reason: ctx.body?.reason ?? null,
+				organization: ctx.body?.organization ?? null,
+				links: ctx.body?.links ?? [],
+				applied_at: new Date().toISOString(),
+				reviewed_at: null,
+				notes: null,
+				can_reapply_at: null
+			};
+			json(res, 201, state.verifiedPublisher[id]);
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/v2\/activities\/staged\/mine\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			json(res, 200, { items: [], page: 1, limit: 25, total: 0 });
+		}
 	},
 
 	// Current user
