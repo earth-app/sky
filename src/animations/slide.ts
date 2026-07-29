@@ -1,7 +1,19 @@
 import { createAnimation } from '@ionic/vue';
 
+/**
+ * True when motion should be suppressed, from either the in-app setting or the OS.
+ *
+ * The OS query has to be read here rather than left to the css killswitch: ionic drives page
+ * transitions through the web animations api, which never reads `animation-duration`.
+ */
+function prefersStill(): boolean {
+	if (!import.meta.client) return false;
+	if (document.documentElement.classList.contains('animations-disabled')) return true;
+	return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
+
 export default (_: HTMLElement, opts?: any) => {
-	if (import.meta.client && document.documentElement.classList.contains('animations-disabled')) {
+	if (prefersStill()) {
 		return createAnimation()
 			.addElement(opts?.enteringEl)
 			.addElement(opts?.leavingEl)
