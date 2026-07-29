@@ -12,26 +12,43 @@ env:
 - tapOn:
     text: Login
     label: Open the login page
+# android's a11y bridge folds UFormField's required marker into the label's own text node
+# ("Username or Email*") while ios keeps it separate, and maestro matches on literal equality
+# or a FULL regex, never a substring, so every required label needs the optional asterisk
 - extendedWaitUntil:
-    visible: Username or Email
+    visible: 'Username or Email\*?'
     timeout: 20000
 
-# the IonInput placeholders are the only accessible names these two fields carry. the iOS
+# each field is picked by its own aria-label, anchored below the UFormField label so the pair
+# stays unambiguous on ios too, where the label carries no asterisk to tell them apart. the iOS
 # keyboard covers the lower half of the form and hideKeyboard is unsupported in a WKWebView,
 # so the page heading doubles as a non-interactive blur target between fields
 - tapOn:
-    text: cooldude78 or you@example.com
+    text: Username or Email
+    below:
+      text: 'Username or Email\*?'
 - inputText: ${SKY_USER}
-- tapOn:
-    text: Login
-    above:
-      text: Username or Email
-    label: Blur the field so the keyboard drops
+# best-effort, never fatal: focusing the field can scroll the heading out of the tree, and this
+# only exists to drop a keyboard that may not be up. tapping the next field blurs this one anyway
+- runFlow:
+    when:
+      visible:
+        text: Login
+        above:
+          text: 'Username or Email\*?'
+    commands:
+      - tapOn:
+          text: Login
+          above:
+            text: 'Username or Email\*?'
+          label: Blur the field so the keyboard drops
 - waitForAnimationToEnd:
     timeout: 5000
 
 - tapOn:
-    text: SuperSecretPassword_
+    text: Password
+    below:
+      text: 'Password\*?'
 - inputText: ${SKY_PASSWORD}
 - waitForAnimationToEnd:
     timeout: 5000
@@ -39,7 +56,7 @@ env:
 - tapOn:
     text: Login
     below:
-      text: Password
+      text: 'Password\*?'
     label: Submit the credentials form
 - waitForAnimationToEnd:
     timeout: 5000
@@ -47,7 +64,7 @@ env:
 # a clean container chains the text-size sheet on the dashboard, which only opens for an
 # authenticated user, so it doubles as the "login landed" assertion
 - extendedWaitUntil:
-    visible: How does this Look?
+    visible: 'How does this Look\?'
     timeout: 40000
     label: Authenticated and on the dashboard
 - tapOn:

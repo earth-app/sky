@@ -25,16 +25,16 @@ cloud_port="$(url_port "$cloud_url")"
 # made maestro fail with "Failed to get app binary directory", so the pick stays
 # deterministic and matches what ci does. MAESTRO_IOS_DEVICE overrides it
 pick_simulator() {
-	local udid=''
+	local udid='' want="${1:-1}"
 
 	if [ -n "${MAESTRO_IOS_DEVICE:-}" ]; then
 		printf '%s' "$MAESTRO_IOS_DEVICE"
 		return 0
 	fi
 
-	# runtimes are listed oldest first, so the last iphone is on the newest one available
+	# runtimes are listed oldest first, so the last iphones are on the newest one available
 	udid="$(xcrun simctl list devices available | grep -E '^[[:space:]]+iPhone' \
-		| grep -Eo '\([0-9A-Fa-f-]{36}\)' | tr -d '()' | tail -1 || true)"
+		| grep -Eo '\([0-9A-Fa-f-]{36}\)' | tr -d '()' | tail -"$want" | paste -sd, - || true)"
 	[ -n "$udid" ] || die "no available iphone simulator; create one in Xcode > Devices"
 	printf '%s' "$udid"
 }
@@ -77,12 +77,17 @@ xcodebuild \
 
 [ -d "$APP_PATH" ] || die "xcodebuild produced no app at $APP_PATH"
 
-UDID="$(pick_simulator)"
-boot_simulator "$UDID"
+# more simulators is the only speedup that does not run fewer flows; each is its own isolated
+# container, so they cannot race each other's Preferences
+SHARDS="${MAESTRO_IOS_SHARDS:-1}"
+UDIDS="$(pick_simulator "$SHARDS")"
 
-log "installing $APP_PATH"
-xcrun simctl install "$UDID" "$APP_PATH"
+for udid in ${UDIDS//,/ }; do
+	boot_simulator "$udid"
+	log "installing $APP_PATH on $udid"
+	xcrun simctl install "$udid" "$APP_PATH"
+done
 
-run_flows "$UDID"
+run_flows "$UDIDS"
 
 finish

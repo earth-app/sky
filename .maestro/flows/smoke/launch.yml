@@ -15,7 +15,7 @@ tags:
 - tapOn:
     text: Login
 - extendedWaitUntil:
-    visible: Username or Email
+    visible: 'Username or Email\*?'
     timeout: 20000
     label: First in-app route rendered
 - tapOn:

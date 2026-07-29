@@ -10,8 +10,12 @@ tags:
 # tab-bar button is only unambiguous once the dashboard is off screen
 - tapOn:
     text: Discover
+# ion-searchbar hardcodes aria-label="search text", so the "Explore..." placeholder is not
+# reachable on android; the selected tab is what proves the route committed
 - extendedWaitUntil:
-    visible: Explore...
+    visible:
+      text: Discover
+      selected: true
     timeout: 20000
 - tapOn:
     text: Quests

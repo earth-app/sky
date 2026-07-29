@@ -14,12 +14,19 @@ tags:
 # so leaving the dashboard makes the tab-bar button the only match
 - tapOn:
     text: Discover
-# ionic host elements do not forward aria-label into the accessibility tree, so the
-# searchbar's accessible name is its placeholder, not its aria-label
+# ion-searchbar hardcodes aria-label="search text" on its native input and inherits only
+# lang/dir from the host, so neither our aria-label nor the "Explore..." placeholder is
+# reachable; android exposes only that generic name. the selected tab proves the route
+# committed, the searchbar proves the page actually painted rather than going blank
 - extendedWaitUntil:
-    visible: Explore...
+    visible:
+      text: Discover
+      selected: true
     timeout: 20000
-    label: Discover tab rendered
+    label: Discover tab selected
+- assertVisible:
+    text: search text
+    label: Discover searchbar painted
 
 - tapOn:
     text: Quests

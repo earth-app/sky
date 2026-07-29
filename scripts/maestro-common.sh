@@ -214,9 +214,20 @@ run_flows() {
 
 	[ -d "$WORKSPACE/flows" ] || warn "no flows at $WORKSPACE/flows yet"
 
+	# a comma-separated udid list means one device per shard: maestro splits the flows evenly
+	# across them, so the lane still runs EVERY flow, it just runs them concurrently
+	local -a shard_args=()
+	local shard_count
+	shard_count="$(printf '%s' "$device" | awk -F, '{ print NF }')"
+	if [ "${shard_count:-1}" -gt 1 ]; then
+		shard_args=(--shard-split "$shard_count")
+		log "splitting flows across $shard_count devices"
+	fi
+
 	log "running '$TAGS' flows from $WORKSPACE on $device"
 	"$MAESTRO" test \
 		--udid "$device" \
+		${shard_args[@]+"${shard_args[@]}"} \
 		--include-tags="$TAGS" \
 		--format=JUNIT \
 		--output="$junit" \

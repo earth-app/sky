@@ -29,7 +29,7 @@ tags:
 - assertVisible:
     text: Sign Up
 - assertVisible:
-    text: Username
+    text: 'Username\*?'
 
 # every custom-scheme URL is treated as an oauth callback; with no session_token the
 # resolver has to fall back to the form that started the flow
@@ -46,11 +46,11 @@ tags:
       - waitForAnimationToEnd:
           timeout: 5000
 - extendedWaitUntil:
-    visible: Username or Email
+    visible: 'Username or Email\*?'
     timeout: 30000
     label: Bounced to the login form instead of a half-authenticated shell
 - assertVisible:
-    text: Forgot your Password?
+    text: 'Forgot your Password\?'
 - assertNotVisible:
     text: Open Your Profile
     label: No token means no dashboard

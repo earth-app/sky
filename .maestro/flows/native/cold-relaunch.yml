@@ -22,7 +22,7 @@ tags:
 - assertVisible:
     text: Time Outside
 - assertNotVisible:
-    text: Username or Email
+    text: 'Username or Email\*?'
     label: No login bounce
 
 # an unfinished welcome tour legitimately re-offers itself here, so clear it before

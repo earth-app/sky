@@ -27,7 +27,7 @@ env:
           timeout: 5000
 
 - extendedWaitUntil:
-    visible: How does this Look?
+    visible: 'How does this Look\?'
     timeout: 40000
     label: Token accepted, current user hydrated, dashboard mounted
 - tapOn:
@@ -61,7 +61,7 @@ env:
     timeout: 40000
     label: OAuth session restored from durable storage
 - assertNotVisible:
-    text: Username or Email
+    text: 'Username or Email\*?'
     label: Never bounced back to the login form
 - assertVisible:
     text: Time Outside
