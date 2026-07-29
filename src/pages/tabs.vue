@@ -5,14 +5,15 @@
 			<IonTabBar
 				id="navbar"
 				slot="bottom"
-				class="pb-4"
+				class="m-glass pb-4"
 			>
 				<IonTabButton
 					tab="dashboard"
 					href="/tabs/dashboard"
+					aria-label="Dashboard"
 					@click="handleHomeButtonClick"
 				>
-					<div class="flex items-center justify p-1 size-9 rounded-full">
+					<div class="m-tab-icon flex size-9 items-center justify-center rounded-full p-1">
 						<UIcon
 							name="mdi:home-circle"
 							class="size-full"
@@ -23,8 +24,9 @@
 					id="tab-quests"
 					tab="quests"
 					href="/tabs/quests"
+					aria-label="Quests"
 				>
-					<div class="flex items-center justify p-1 size-9 rounded-full">
+					<div class="m-tab-icon flex size-9 items-center justify-center rounded-full p-1">
 						<UIcon
 							name="mdi:sword-cross"
 							class="size-full"
@@ -37,20 +39,22 @@
 					id="tab-discover"
 					tab="discover"
 					href="/tabs/discover"
+					aria-label="Discover"
 					@click.capture="handleDiscoverButtonClick"
 				>
-					<div class="flex items-center justify p-1 size-9 rounded-full">
+					<div class="m-tab-icon flex size-9 items-center justify-center rounded-full p-1">
 						<UIcon
 							name="mdi:magnify"
-							class="w-full h-full"
+							class="size-full"
 						/>
 					</div>
 				</IonTabButton>
 				<IonTabButton
 					tab="profile"
 					:href="profileHref"
+					aria-label="Profile"
 				>
-					<div class="flex items-center justify-center rounded-full">
+					<div class="m-tab-icon flex size-9 items-center justify-center rounded-full p-1">
 						<UAvatar
 							:src="avatar128"
 							icon="mdi:account-circle"
@@ -61,7 +65,10 @@
 				</IonTabButton>
 
 				<IonFab class="create-fab">
-					<IonFabButton class="size-10">
+					<IonFabButton
+						class="size-11"
+						aria-label="Create Content"
+					>
 						<UIcon
 							name="mdi:plus-circle"
 							class="size-7"
@@ -70,11 +77,12 @@
 
 					<IonFabList
 						side="top"
-						class="gap-2 mb-14 *:size-10 min-w-11!"
+						class="gap-2 mb-14 *:size-11 min-w-11!"
 					>
 						<IonFabButton
 							color="secondary"
 							router-link="/tabs/prompts/new"
+							aria-label="New Prompt"
 						>
 							<UIcon
 								name="mdi:comment-plus-outline"
@@ -85,6 +93,7 @@
 						<IonFabButton
 							color="secondary"
 							router-link="/tabs/articles/new"
+							aria-label="New Article"
 						>
 							<UIcon
 								name="mdi:pencil-plus-outline"
@@ -95,6 +104,7 @@
 						<IonFabButton
 							color="secondary"
 							router-link="/tabs/events/new"
+							aria-label="New Event"
 						>
 							<UIcon
 								name="mdi:calendar-plus-outline"
@@ -164,22 +174,10 @@ onMounted(async () => {
 		transform: translateX(-50%);
 	}
 
-	.tab-selected div {
+	/* targeted: a bare `.tab-selected div` also ringed the profile tab's avatar wrapper */
+	.tab-selected .m-tab-icon {
 		outline: 2px solid var(--ion-tab-bar-color-selected);
-	}
-}
-
-@layer theme {
-	.light {
-		--ion-tab-bar-background: #faf9f9;
-		--ion-tab-bar-color: #232323;
-		--ion-tab-bar-color-selected: var(--ion-color-tertiary);
-	}
-
-	.dark {
-		--ion-tab-bar-background: #121116;
-		--ion-tab-bar-color: #efefef;
-		--ion-tab-bar-color-selected: var(--ion-color-primary);
+		outline-offset: 1px;
 	}
 }
 </style>

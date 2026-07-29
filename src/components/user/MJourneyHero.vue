@@ -2,20 +2,20 @@
 	<div
 		v-if="visible"
 		id="journeys-hero"
-		class="w-full max-w-2xl mx-auto px-4 mb-4"
+		class="w-full"
 	>
-		<IonCard
-			:color="theme"
-			class="m-0 p-0"
-		>
-			<div
-				v-if="currentQuest"
-				class="px-3 pt-3"
-			>
+		<MSurface class="gap-3">
+			<div v-if="currentQuest">
 				<IonChip
 					:class="['m-0 quest-chip', !prefersReducedMotion ? 'current-quest-pulse' : '']"
 					color="warning"
+					outline
+					role="button"
+					tabindex="0"
+					:aria-label="`Continue Quest: ${truncatedCurrentTitle}`"
 					@click="openCurrentQuest"
+					@keydown.enter.prevent="openCurrentQuest"
+					@keydown.space.prevent="openCurrentQuest"
 				>
 					<IonLabel class="flex items-center text-xs font-semibold px-3">
 						<UIcon
@@ -26,10 +26,7 @@
 					</IonLabel>
 				</IonChip>
 			</div>
-			<div
-				v-else-if="dailyQuest"
-				class="px-3 pt-3"
-			>
+			<div v-else-if="dailyQuest">
 				<IonChip
 					id="daily-quest-chip"
 					:class="[
@@ -37,7 +34,13 @@
 						!dailyQuestTapped && !prefersReducedMotion ? 'daily-quest-pulse' : ''
 					]"
 					color="primary"
+					outline
+					role="button"
+					tabindex="0"
+					:aria-label="`Today's Quest: ${truncatedTitle}`"
 					@click="openDailyQuest"
+					@keydown.enter.prevent="openDailyQuest"
+					@keydown.space.prevent="openDailyQuest"
 				>
 					<IonLabel class="flex items-center text-xs font-semibold px-3">
 						<UIcon
@@ -48,17 +51,16 @@
 					</IonLabel>
 				</IonChip>
 			</div>
-			<div class="flex items-center px-4 py-3">
-				<div class="flex items-center min-w-3/5">
-					<UIcon
-						name="mdi:fire"
-						class="size-6 text-warning"
-					/>
-					<h3 class="text-sm font-semibold m-0! tracking-wide opacity-80">Your Journeys</h3>
-				</div>
-				<span class="text-xs opacity-60">resets after 48h of inactivity</span>
+			<div class="flex items-center gap-2">
+				<UIcon
+					name="mdi:fire"
+					class="size-5 shrink-0 m-text-warning"
+					aria-hidden="true"
+				/>
+				<h3 class="m-0! truncate text-sm! font-semibold">Your Journeys</h3>
+				<span class="ml-auto shrink-0 text-2xs text-muted">resets after 48h idle</span>
 			</div>
-			<div class="grid grid-cols-3 gap-2 px-3 pb-3">
+			<div class="grid grid-cols-3 gap-2">
 				<button
 					v-for="row in rows"
 					:key="row.type"
@@ -71,13 +73,13 @@
 					<UIcon
 						:name="row.icon"
 						class="size-6"
-						:class="row.count > 0 ? 'text-primary' : 'text-gray-500'"
+						:class="row.count > 0 ? 'm-text-brand' : 'text-muted'"
 					/>
 					<span class="text-xl font-bold! tabular-nums leading-none">{{ row.count }}</span>
 					<span class="text-xs opacity-80">{{ row.label }}</span>
 					<span
 						v-if="row.expiringSoon"
-						class="text-[10px] font-semibold! text-red-500"
+						class="text-3xs font-semibold! m-text-danger"
 						>Expires Soon</span
 					>
 				</button>
@@ -85,7 +87,7 @@
 			<button
 				v-if="showQuestCta"
 				type="button"
-				class="mx-2! px-3! mb-3! flex items-center justify-center gap-2 py-2! rounded-lg! bg-primary/10! active:bg-primary/20! text-primary! text-sm! font-medium!"
+				class="mt-auto flex min-h-11! items-center justify-center gap-2 rounded-lg! bg-primary/10! px-3! py-2! text-sm! font-medium! m-text-brand! active:bg-primary/20!"
 				@click="onTapQuestCta"
 			>
 				<UIcon
@@ -94,13 +96,11 @@
 				/>
 				<span>Try a Quest to Keep your Streak Alive</span>
 			</button>
-		</IonCard>
+		</MSurface>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { theme } from '~/composables/useSettings';
-
 type JourneyType = 'article' | 'prompt' | 'event';
 
 const ROWS: { type: JourneyType; label: string; icon: string; cta: string }[] = [
@@ -187,10 +187,21 @@ const showQuestCta = computed(() => {
 });
 
 function cellClass(row: { count: number; expiringSoon: boolean }) {
-	if (row.expiringSoon) return 'bg-red-500/10';
+	if (row.expiringSoon) return 'bg-danger-500/10';
 	if (row.count > 0) return 'bg-primary/5';
 	return 'opacity-60';
 }
+
+// the dashboard's identity strip and today band read the streak from here rather than
+// refetching all three journeys; this module already owns that fetch
+const journeyStreak = useState<number>('dashboard-journey-streak', () => 0);
+watch(
+	counts,
+	(next) => {
+		journeyStreak.value = Math.max(0, ...Object.values(next));
+	},
+	{ deep: true }
+);
 
 function onTapQuestCta() {
 	ionRouter.push('/tabs/quests');
