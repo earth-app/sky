@@ -476,7 +476,7 @@ const isOrganizer = computed(
 
 const settingSections = computed<SettingSection[]>(() => [
 	{
-		section: 'Appearence',
+		section: 'Appearance',
 		items: [
 			{
 				kind: 'select',

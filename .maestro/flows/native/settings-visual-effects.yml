@@ -17,7 +17,7 @@ tags:
 - tapOn:
     text: Settings
 - extendedWaitUntil:
-    visible: Appearence
+    visible: Appearance
     timeout: 30000
     label: Settings list rendered from the profile header
 - assertVisible:
@@ -42,8 +42,10 @@ tags:
     text: Reduced
 - waitForAnimationToEnd:
     timeout: 5000
+# a closed ion-select composes its accessible name as "<label>, <value>", so the bare value
+# never full-matches; the open option list above does expose the value on its own
 - assertVisible:
-    text: Reduced
+    text: '.*Reduced.*'
     label: The select is showing the explicit tier it just took
 - assertNotVisible:
     text: Full
