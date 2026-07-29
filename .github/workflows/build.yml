@@ -1,6 +1,13 @@
 name: Build Project
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-ios:
@@ -127,8 +134,15 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     needs: unit
+
+    # 361 specs on one runner took 42m. the runners are 2-core, so `workers` is already at
+    # capacity (raising it starves hydration); more runners is the only lever left
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     permissions:
       contents: read
@@ -154,16 +168,18 @@ jobs:
       - name: Build Test Build
         run: bun run build:e2e
       - name: Run E2E tests with Coverage
-        run: bun run test:e2e:coverage
+        run: bun run test:e2e:coverage --shard=${{ matrix.shard }}/${{ strategy.job-total }}
         env:
           CI: true
           COVERAGE: '1'
           PLAYWRIGHT_PROD: '1'
       - name: Upload Playwright Artifacts (Failure)
-        if: ${{ failure() && github.event_name == 'push' }}
+        # not gated on push: branch pushes no longer start a run, so gating this would leave a
+        # failing pull request with no trace, screenshot or video to diagnose from
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-shard${{ matrix.shard }}
           path: |
             playwright-report/
             playwright-results/
@@ -184,14 +200,19 @@ jobs:
         if: ${{ always() && github.event_name == 'push' }}
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-artifacts-${{ github.run_id }}
+          name: coverage-artifacts-${{ github.run_id }}-shard${{ matrix.shard }}
           path: coverage/
           retention-days: 14
 
   webkit:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     needs: unit
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     permissions:
       contents: read
@@ -217,23 +238,25 @@ jobs:
       - name: Build Test Build
         run: bun run build:e2e
       - name: Run E2E tests (WebKit)
-        run: bun run test:e2e:webkit
+        run: bun run test:e2e:webkit --shard=${{ matrix.shard }}/${{ strategy.job-total }}
         env:
           CI: true
           PLAYWRIGHT_PROD: '1'
       - name: Upload Playwright Artifacts (Failure)
-        if: ${{ failure() && github.event_name == 'push' }}
+        # not gated on push: branch pushes no longer start a run, so gating this would leave a
+        # failing pull request with no trace, screenshot or video to diagnose from
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-webkit
+          name: playwright-report-webkit-shard${{ matrix.shard }}
           path: |
             playwright-report/
             playwright-results/
           retention-days: 7
 
-  compile-ios:
+  native-ios:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     needs: [unit, build-ios]
 
     permissions:
@@ -251,17 +274,27 @@ jobs:
           registries: |
             https://registry.npmjs.org/
             @earth-app:https://npm.pkg.github.com|$GITHUB_TOKEN
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: |
+          bun install --frozen-lockfile
+          bun run postinstall
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      # cap sync hard-fails without webDir, and needs only orders jobs, so build here
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        env:
+          MAESTRO_VERSION: '2.7.0'
       - name: Build Project
         run: bun run generate:ios
       - name: Sync Capacitor iOS Project
         run: bunx cap sync ios
-      # -destination beats -sdk: the App target embeds Watch.app (@capgo/capacitor-watch)
-      # and -sdk iphonesimulator breaks a project with a watch target
       - name: Compile iOS App
         run: |
           xcodebuild \
@@ -292,8 +325,20 @@ jobs:
         with:
           subject-name: sky-compile-ios-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
+      - name: Run Maestro Gate Flows (iOS Simulator)
+        run: bun run maestro:ios
+      - name: Archive Maestro Artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: maestro-ios-${{ github.run_id }}
+          path: |
+            /tmp/sky-maestro/ios/report.xml
+            /tmp/sky-maestro/ios/artifacts
+            /tmp/sky-maestro/mock-server.log
+          retention-days: 7
 
-  compile-android:
+  native-android:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [unit, build-android]
@@ -306,6 +351,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -313,17 +364,23 @@ jobs:
           registries: |
             https://registry.npmjs.org/
             @earth-app:https://npm.pkg.github.com|$GITHUB_TOKEN
-      # 21 because the capacitor plugin modules pin kotlin jvmToolchain(21)
       - name: Set up Java
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: |
+          bun install --frozen-lockfile
+          bun run postinstall
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      # cap sync hard-fails without webDir, and needs only orders jobs, so build here
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        env:
+          MAESTRO_VERSION: '2.7.0'
       - name: Build Project
         run: bun run generate:android
       - name: Sync Capacitor Android Project
@@ -344,102 +401,6 @@ jobs:
         with:
           subject-name: sky-compile-android-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
-
-  maestro-ios:
-    runs-on: macos-latest
-    timeout-minutes: 45
-    # ordering only, NOT artifact reuse: generate:ios bakes the production base urls, so
-    # maestro rebuilds the web bundle with its own dotenv. no point booting a simulator
-    # when the native project cannot compile
-    needs: [unit, compile-ios]
-
-    permissions:
-      contents: read
-      packages: read
-
-    steps:
-      - uses: actions/checkout@v7
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 'latest'
-          registries: |
-            https://registry.npmjs.org/
-            @earth-app:https://npm.pkg.github.com|$GITHUB_TOKEN
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-      - name: Install dependencies
-        run: |
-          bun install --frozen-lockfile
-          bun run postinstall
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - name: Install Maestro
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-        env:
-          MAESTRO_VERSION: '2.7.0'
-      - name: Run Maestro Gate Flows (iOS Simulator)
-        run: bun run maestro:ios
-      - name: Archive Maestro Artifacts
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: maestro-ios-${{ github.run_id }}
-          path: |
-            /tmp/sky-maestro/ios/report.xml
-            /tmp/sky-maestro/ios/artifacts
-            /tmp/sky-maestro/mock-server.log
-          retention-days: 7
-
-  maestro-android:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    # same as maestro-ios: ordering only, the emulator lane rebuilds against 10.0.2.2 mocks
-    needs: [unit, compile-android]
-
-    permissions:
-      contents: read
-      packages: read
-
-    steps:
-      - uses: actions/checkout@v7
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
-            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 'latest'
-          registries: |
-            https://registry.npmjs.org/
-            @earth-app:https://npm.pkg.github.com|$GITHUB_TOKEN
-      # 21 because this lane runs assembleDebug and the capacitor plugin modules pin
-      # kotlin jvmToolchain(21); relying on the runner image shipping one is fragile
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-      - name: Install dependencies
-        run: |
-          bun install --frozen-lockfile
-          bun run postinstall
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - name: Install Maestro
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-        env:
-          MAESTRO_VERSION: '2.7.0'
       - name: Run Maestro Gate Flows (Android Emulator)
         uses: reactivecircus/android-emulator-runner@v2
         with:
