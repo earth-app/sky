@@ -273,26 +273,32 @@ const isMasteryQuestCompleted = computed(() => {
 	return questHistory.value?.get(id)?.completedAt !== undefined;
 });
 
-// non-blocking: a hung/slow native catalog fetch must not keep the page in Suspense (blank)
-if (route.params.id) {
-	const id = route.params.id as string;
-	void (async () => {
-		try {
-			await resolveFetchedQuest(id);
-			if (!quest.value && id.startsWith(MASTERY_PREFIX) && user.value) {
-				await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
-				await navigateTo('/tabs/quests', { replace: true });
+// non-blocking: a hung/slow native catalog fetch must not keep the page in Suspense (blank).
+// watched rather than read once at setup: useRoute() is the GLOBAL current route, so a page
+// created before its own navigation commits reads an empty id and would never fetch at all
+watch(
+	() => route.params.id as string | undefined,
+	(id) => {
+		if (!id) return;
+		void (async () => {
+			try {
+				await resolveFetchedQuest(id);
+				if (!quest.value && id.startsWith(MASTERY_PREFIX) && user.value) {
+					await showErrorToast(new Error('Badge mastery quest not found.'), { duration: 'short' });
+					await navigateTo('/tabs/quests', { replace: true });
+				}
+			} finally {
+				// a resolved catalog quest with no active/history entry gates only on progressChecked.
+				// only flip here when auth is absent: for a logged-in user the history entry (a COMPLETED
+				// quest) is resolved by the auth watch below, and flipping now would open the timeline with
+				// empty progress for a few frames before the history loads (the reported empty-flash).
+				// logged-out / unhydrated browsing has no history to wait for, so reveal immediately.
+				if (quest.value && !user.value?.id) progressChecked.value = true;
 			}
-		} finally {
-			// a resolved catalog quest with no active/history entry gates only on progressChecked.
-			// only flip here when auth is absent: for a logged-in user the history entry (a COMPLETED
-			// quest) is resolved by the auth watch below, and flipping now would open the timeline with
-			// empty progress for a few frames before the history loads (the reported empty-flash).
-			// logged-out / unhydrated browsing has no history to wait for, so reveal immediately.
-			if (quest.value && !user.value?.id) progressChecked.value = true;
-		}
-	})();
-}
+		})();
+	},
+	{ immediate: true }
+);
 
 watch(
 	() => user.value?.id,
