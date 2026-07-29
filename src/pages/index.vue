@@ -154,8 +154,9 @@ onMounted(async () => {
 	if (isOfflineEntryMode()) {
 		const cachedUser = await validateSessionAllowOffline();
 		if (cachedUser) {
-			void preloadHome('/tabs/downloads');
-			await navigateTo('/tabs/downloads');
+			// same retry path as the online branch; a dropped push must still reveal index rather
+			// than hide the splash over a blank shell
+			if (!(await navigateHome())) bootResolved.value = true;
 			await SplashScreen.hide().catch(() => {});
 			return;
 		}
@@ -218,20 +219,27 @@ function preloadHome(destination: string) {
 	]).catch(() => {});
 }
 
+const router = useRouter();
+
 let navigatingHome = false;
-async function navigateHome() {
-	if (navigatingHome) return;
+async function navigateHome(): Promise<boolean> {
+	// another attempt owns the latch; report not-landed rather than claiming this call did it
+	if (navigatingHome) return false;
 	navigatingHome = true;
 	const destination = isOfflineEntryMode() ? '/tabs/downloads' : '/tabs/dashboard';
 	preloadHome(destination);
 	void fetchOnboardingState().catch(() => {}); // best-effort; never block navigation
 	void Preferences.set({ key: 'hasOpened', value: 'true' }).catch(() => {});
-	try {
-		await navigateTo(destination);
-	} catch (err) {
-		console.error('Home navigation failed, releasing latch:', err);
-		navigatingHome = false;
-	}
+
+	// a cancelled or aborted push resolves rather than throwing, so the old catch never ran and
+	// the latch stayed closed forever; retry, then release it so a later resolve can try again
+	const landed = await navigateUntilLanded({
+		navigate: () => navigateTo(destination) as Promise<unknown>,
+		landed: () => router.currentRoute.value.path.startsWith('/tabs'),
+		onError: (err) => console.error('Home navigation failed:', err)
+	});
+	if (!landed) navigatingHome = false;
+	return landed;
 }
 
 // safety net for late hydration (anon -> authed mid-page, or token refresh); fire on
