@@ -1,5 +1,85 @@
 <template>
 	<IonPage>
+		<IonHeader class="m-glass">
+			<IonToolbar class="[--background:transparent]">
+				<div class="flex min-h-11 w-full flex-wrap items-center gap-2 px-4">
+					<h1
+						id="title"
+						class="sr-only"
+					>
+						The Earth App
+					</h1>
+					<NuxtLink
+						:to="profileHref"
+						class="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-inherit! no-underline!"
+						aria-label="Open Your Profile"
+					>
+						<UAvatar
+							:src="avatar128"
+							icon="mdi:account-circle"
+							size="sm"
+							class="shrink-0"
+						/>
+						<h2 class="m-0! truncate text-sm! font-semibold">{{ greeting }}</h2>
+					</NuxtLink>
+					<div
+						class="flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-1"
+						role="img"
+						:aria-label="`Current Streak: ${journeyStreak}`"
+					>
+						<UIcon
+							name="mdi:fire"
+							class="size-4 m-text-warning"
+							aria-hidden="true"
+						/>
+						<span class="text-2xs font-semibold tabular-nums">{{ journeyStreak }}</span>
+					</div>
+					<IonButton
+						fill="clear"
+						size="small"
+						class="shrink-0"
+						aria-label="Replay Welcome Tour"
+						@click="startWelcomeTour"
+					>
+						<UIcon
+							name="mdi:account-arrow-right"
+							class="size-5"
+						/>
+					</IonButton>
+					<IonButton
+						v-if="showReopenOnboarding"
+						fill="clear"
+						size="small"
+						class="shrink-0"
+						aria-label="Reopen Getting Started"
+						@click="onboardingOpen = true"
+					>
+						<UIcon
+							name="mdi:restart"
+							class="size-5"
+						/>
+					</IonButton>
+					<IonButton
+						fill="clear"
+						size="small"
+						class="shrink-0"
+						:aria-label="notificationsLabel"
+						@click="openNotifications"
+					>
+						<UIcon
+							name="mdi:bell-outline"
+							class="size-5"
+						/>
+						<span
+							v-if="unreadCount > 0"
+							class="absolute top-0 right-0 min-w-4 rounded-full bg-danger-700 px-1 text-3xs font-semibold text-white tabular-nums"
+							aria-hidden="true"
+							>{{ unreadBadge }}</span
+						>
+					</IonButton>
+				</div>
+			</IonToolbar>
+		</IonHeader>
 		<IonContent
 			ref="contentRef"
 			:scroll-y="true"
@@ -12,69 +92,62 @@
 				<IonRefresherContent />
 			</IonRefresher>
 			<div class="flex flex-col size-full items-center">
-				<div class="flex flex-col m-8 mt-20 w-full items-center justify-center">
-					<IonImg
-						src="/earth-app.png"
-						alt="The Earth App"
-						class="size-16 sm:size-24 md:size-28"
-					/>
-					<h2
-						id="title"
-						class="text-4xl!"
-					>
-						The Earth App
-					</h2>
-					<ClientOnly>
-						<div class="flex flex-col gap-2 items-center">
-							<h4 class="text-lg! m-0!">
-								Welcome, {{ user?.username ? `@${user.username}!` : '' }}
-							</h4>
-							<div class="flex gap-2">
-								<IonButton
-									color="primary"
-									shape="round"
-									fill="outline"
-									size="small"
-									aria-label="Replay Welcome Tour"
-									title="Replay Welcome Tour"
-									@click="startWelcomeTour"
-								>
-									<UIcon
-										name="mdi:account-arrow-right"
-										class="min-w-4 min-h-4"
-									/>
-								</IonButton>
-								<IonButton
-									color="tertiary"
-									shape="round"
-									fill="outline"
-									size="small"
-									aria-label="Reopen Getting Started"
-									title="Reopen Getting Started"
-									@click="onboardingOpen = true"
-								>
-									<UIcon
-										name="mdi:restart"
-										class="min-w-4 min-h-4"
-									/>
-								</IonButton>
-							</div>
-						</div>
-					</ClientOnly>
-				</div>
 				<ClientOnly>
+					<section class="w-full px-4 pt-4 pb-4">
+						<MSurface class="relative isolate gap-1 overflow-hidden">
+							<div class="pointer-events-none absolute inset-0 -z-10">
+								<MAmbient
+									:seed="ambientSeed"
+									:height="TODAY_AMBIENT_HEIGHT"
+								/>
+								<div
+									class="absolute inset-0 bg-linear-to-b from-(--ui-bg)/70 via-(--ui-bg)/85 to-(--ui-bg)/97"
+								></div>
+							</div>
+							<p class="m-eyebrow">Today</p>
+							<h2 class="m-0! text-lg! font-semibold">{{ todayHeadline }}</h2>
+							<p class="m-0! text-xs text-muted">{{ todaySubline }}</p>
+							<div class="mt-3 grid grid-cols-3 gap-2">
+								<MStat
+									:value="questStat"
+									label="Quest"
+									icon="mdi:compass-rose"
+								/>
+								<MStat
+									:value="natureStat"
+									label="Time Outside"
+									icon="mdi:leaf"
+								/>
+								<MStat
+									:value="journeyStreak"
+									label="Streak"
+									icon="mdi:fire"
+								/>
+							</div>
+							<IonButton
+								class="mt-3 self-start"
+								size="small"
+								color="primary"
+								:aria-label="todayCtaLabel"
+								@click="openTodayCta"
+							>
+								{{ todayCtaLabel }}
+								<UIcon
+									name="mdi:arrow-right"
+									class="ml-1 size-4"
+								/>
+							</IonButton>
+						</MSurface>
+					</section>
 					<div
 						v-if="user && resumeStep && !hasCompleted('welcome')"
-						class="w-full max-w-2xl mx-auto px-4 mb-3"
+						class="w-full px-4 pb-3"
 					>
-						<IonCard
-							:color="theme"
-							class="m-0 px-3 py-2 flex items-center justify-between"
-						>
+						<MSurface class="flex-row items-center justify-between gap-2 p-3">
 							<div class="flex items-center gap-2 min-w-0">
 								<UIcon
 									name="mdi:compass-outline"
-									class="size-5 text-primary shrink-0"
+									class="size-5 m-text-brand shrink-0"
 								/>
 								<span class="text-sm font-medium truncate">
 									Pick up your tour where you left off
@@ -101,54 +174,74 @@
 									/>
 								</IonButton>
 							</div>
-						</IonCard>
+						</MSurface>
 					</div>
 					<OnboardingMGettingStarted v-if="user" />
 
 					<div
 						v-if="motd && motd.motd"
 						id="motd"
-						class="w-full px-4 mb-4"
+						class="w-full px-4 pb-4"
 					>
-						<IonCard
-							:color="motdColor"
-							class="p-2 border-4 border-black/50 light:border-white/50"
-						>
-							<IonCardHeader>
-								<div class="flex items-center">
-									<UIcon
-										v-if="motd.icon"
-										:name="motd.icon"
-										class="size-8 md:size-12 mr-2"
-									/>
-									<IonCardTitle class="text-sm">{{ motd.motd }}</IonCardTitle>
-								</div>
-							</IonCardHeader>
-
-							<div
-								v-if="motd.link"
-								class="flex w-full mt-2"
-							>
-								<IonButton
-									:color="theme"
-									size="small"
-									@click="handleMotdLinkClick(motd.link)"
-								>
-									Learn More
-									<UIcon
-										name="mdi:arrow-right"
-										class="ml-1 size-4"
-									/>
-								</IonButton>
+						<MSurface :class="['gap-2 border', motdTint]">
+							<div class="flex items-center gap-2">
+								<UIcon
+									v-if="motd.icon"
+									:name="motd.icon"
+									class="size-6 shrink-0"
+									aria-hidden="true"
+								/>
+								<p class="m-0! text-sm font-medium">{{ motd.motd }}</p>
 							</div>
-						</IonCard>
+
+							<IonButton
+								v-if="motd.link"
+								class="self-start"
+								size="small"
+								fill="outline"
+								color="primary"
+								@click="handleMotdLinkClick(motd.link)"
+							>
+								Learn More
+								<UIcon
+									name="mdi:arrow-right"
+									class="ml-1 size-4"
+								/>
+							</IonButton>
+						</MSurface>
 					</div>
 
-					<UserMJourneyHero v-if="user" />
-					<TrailMNatureCard v-if="user" />
 					<MExploreStrip v-if="user" />
-					<UserMBadgeShowcase v-if="user" />
-					<WidgetsMSavedWordsBlock v-if="user" />
+
+					<MModuleRail
+						v-if="user"
+						eyebrow="Your Progress"
+						label="Your Progress Modules"
+						class="pb-4"
+					>
+						<UserMJourneyHero />
+						<TrailMNatureCard />
+						<UserMBadgeShowcase />
+						<div
+							v-if="user?.activities && user.activities.length > 0"
+							class="w-full"
+						>
+							<MSurface class="gap-3">
+								<MSectionHeader
+									title="Your Activities"
+									:count="user.activities.length"
+								/>
+								<div class="flex flex-wrap items-center gap-2">
+									<LazyActivityCircle
+										v-for="activity in user.activities"
+										:key="activity.id"
+										:activity="activity"
+									/>
+								</div>
+							</MSurface>
+						</div>
+						<WidgetsMSavedWordsBlock />
+					</MModuleRail>
 
 					<div
 						v-if="user && (onboarding.state.value || onboarding.error.value)"
@@ -158,30 +251,10 @@
 						<OnboardingMPersonaPicker v-model="personaOpen" />
 					</div>
 
-					<div
-						v-if="user?.activities && user.activities?.length > 0"
-						class="w-full max-w-full my-4 px-4"
-					>
-						<h2 class="text-base! mt-0! mb-1! font-bold!">Your Activities</h2>
-						<div
-							ref="activityScroll"
-							class="w-full max-w-full overflow-x-auto overflow-y-hidden min-h-12 cursor-grab active:cursor-grabbing select-none scrollbar-hide"
-							@mousedown="startDrag"
-							@mousemove="onDrag"
-							@mouseup="stopDrag"
-							@mouseleave="stopDrag"
-						>
-							<div class="flex w-max items-center justify-start gap-2 mb-4 pr-4">
-								<LazyActivityCircle
-									v-for="activity in user.activities"
-									:key="activity.id"
-									:activity="activity"
-								/>
-							</div>
-						</div>
-					</div>
-
-					<h2 class="self-start text-base! mt-6! mb-1! ml-4! font-bold!">Your Feed</h2>
+					<MSectionHeader
+						title="Your Feed"
+						class="w-full px-4 pt-2"
+					/>
 
 					<div
 						v-if="feedItems.length === 0 && (isRefreshing || isLoadingMore || !hasInitialized)"
@@ -200,10 +273,10 @@
 					>
 						<template
 							v-for="(item, index) in renderableFeedItems"
-							:key="`${item.type}-${item.isGroup ? 'group' : 'single'}-${index}`"
+							:key="`${item.type}-${isGrouped(item) ? 'group' : 'single'}-${index}`"
 						>
 							<MInfoCardGroup
-								v-if="item.type === 'activity' && item.isGroup && item.data.length > 0"
+								v-if="item.type === 'activity' && isGrouped(item)"
 								title="New Content"
 								description="Explore new interests and activities"
 								icon="material-symbols:apps"
@@ -217,7 +290,7 @@
 								/>
 							</MInfoCardGroup>
 							<div
-								v-else-if="item.type === 'activity' && !item.isGroup && item.data[0]"
+								v-else-if="item.type === 'activity' && item.data[0]"
 								class="w-11/12"
 							>
 								<LazyActivityMCard
@@ -226,7 +299,7 @@
 								/>
 							</div>
 							<MInfoCardGroup
-								v-else-if="item.type === 'prompt' && item.isGroup && item.data.length > 0"
+								v-else-if="item.type === 'prompt' && isGrouped(item)"
 								title="Prompts for Reflection"
 								description="Thought-provoking prompts to inspire your day"
 								icon="material-symbols:lightbulb-circle-outline"
@@ -240,7 +313,7 @@
 								/>
 							</MInfoCardGroup>
 							<div
-								v-else-if="item.type === 'prompt' && !item.isGroup && item.data[0]"
+								v-else-if="item.type === 'prompt' && item.data[0]"
 								class="w-11/12"
 							>
 								<LazyPromptMCard
@@ -249,7 +322,7 @@
 								/>
 							</div>
 							<MInfoCardGroup
-								v-else-if="item.type === 'article' && item.isGroup && item.data.length > 0"
+								v-else-if="item.type === 'article' && isGrouped(item)"
 								title="Latest Articles"
 								description="Stay informed with the newest articles"
 								icon="mdi:newspaper-variant-multiple-outline"
@@ -263,7 +336,7 @@
 								/>
 							</MInfoCardGroup>
 							<div
-								v-else-if="item.type === 'article' && !item.isGroup && item.data[0]"
+								v-else-if="item.type === 'article' && item.data[0]"
 								class="w-11/12"
 							>
 								<LazyArticleMCard
@@ -272,7 +345,7 @@
 								/>
 							</div>
 							<MInfoCardGroup
-								v-else-if="item.type === 'event' && item.isGroup && item.data.length > 0"
+								v-else-if="item.type === 'event' && isGrouped(item)"
 								title="New Events"
 								description="Join events happening around you"
 								icon="mdi:calendar-star"
@@ -286,7 +359,7 @@
 								/>
 							</MInfoCardGroup>
 							<div
-								v-else-if="item.type === 'event' && !item.isGroup && item.data[0]"
+								v-else-if="item.type === 'event' && item.data[0]"
 								class="w-11/12"
 							>
 								<LazyEventMCard
@@ -295,7 +368,7 @@
 								/>
 							</div>
 							<MInfoCardGroup
-								v-else-if="item.type === 'user' && item.isGroup && item.data.length > 0"
+								v-else-if="item.type === 'user' && isGrouped(item)"
 								title="Discover Users"
 								description="Connect with like-minded individuals"
 								icon="mdi:account-group-outline"
@@ -308,13 +381,35 @@
 									:user="user"
 								/>
 							</MInfoCardGroup>
-							<LazyMWidgetSlot
+							<div
+								v-else-if="item.type === 'user' && item.data[0]"
+								class="w-11/12"
+							>
+								<LazyUserMCard
+									:user="item.data[0]"
+									hydrate-on-visible
+								/>
+							</div>
+							<div
 								v-if="widgetForIndex(index)"
-								:kind="widgetForIndex(index)!"
-								topic="daily"
-								hydrate-on-visible
-							/>
+								class="w-11/12"
+							>
+								<LazyMWidgetSlot
+									:kind="widgetForIndex(index)!"
+									topic="daily"
+									hydrate-on-visible
+								/>
+							</div>
 						</template>
+						<MEmptyState
+							v-if="renderableFeedItems.length === 0"
+							icon="mdi:rss"
+							title="Your Feed is Empty"
+							description="Pick a few activities you care about and fresh content will start showing up here."
+							cta-label="Explore Activities"
+							cta-icon="mdi:compass-outline"
+							cta-to="/tabs/discover"
+						/>
 						<FeedMCaughtUp
 							v-if="feedCapReached && renderableFeedItems.length > 0"
 							class="w-11/12"
@@ -363,7 +458,7 @@
 import { Preferences } from '@capacitor/preferences';
 import { Toast } from '@capacitor/toast';
 import { type Event } from 'types/event';
-import { theme } from '~/composables/useSettings';
+import { MIN_GROUP_ITEMS, shouldGroup } from '~/utils/feed';
 
 // run non-critical work after first paint; idle callback when available, microtask-ish fallback otherwise
 function whenIdle(cb: () => void) {
@@ -392,35 +487,108 @@ type FeedItem =
 	| { type: 'prompt'; isGroup: boolean; data: Prompt[] }
 	| { type: 'article'; isGroup: boolean; data: Article[] }
 	| { type: 'event'; isGroup: boolean; data: Event[] }
-	| { type: 'user'; isGroup: true; data: User[] };
+	| { type: 'user'; isGroup: boolean; data: User[] };
 
 type ContentType = FeedItem['type'];
 
-const { user, fetchUser, fetchRecommendedActivities } = useAuth();
+const { user, avatar128, fetchUser, fetchRecommendedActivities } = useAuth();
 const { widgetForIndex } = useFeedWidgets();
 const { motd, fetchMotd } = useMotd();
 const { settings: appSettings, init: initSettings } = useAppSettings();
 const { startTour, startTourIfNew, hasCompleted } = useSiteTour();
-const { fetchNotifications } = useNotifications();
+const { unreadCount, fetchNotifications } = useNotifications();
+const ionRouter = useIonRouter();
 
-const motdColor = computed(() => {
-	if (!motd.value) return 'primary';
-	if (motd.value.type === 'info') return 'secondary';
-	if (motd.value.type === 'warning') return 'warning';
-	if (motd.value.type === 'error') return 'danger';
-	return 'primary';
+const MOTD_TINTS: Record<string, string> = {
+	info: 'border-info/30! bg-info/10',
+	warning: 'border-warning/30! bg-warning/10',
+	error: 'border-error/30! bg-error/10'
+};
+
+const motdTint = computed(
+	() => MOTD_TINTS[motd.value?.type ?? ''] ?? 'border-primary/30! bg-primary/10'
+);
+
+// #region identity strip + today band
+
+const userId = computed(() => user.value?.id);
+// both read shared stores the rail's modules already fetch, so neither adds a request
+const { quest: currentQuest } = useUser(userId);
+const { quest: dailyQuest } = useDailyQuest();
+const { natureMinutes } = useTrails();
+// written by MJourneyHero, which owns the journey fetch
+const journeyStreak = useState<number>('dashboard-journey-streak', () => 0);
+
+const TODAY_AMBIENT_HEIGHT = 190;
+// account data, never a device value: the same account always paints the same scene
+const ambientSeed = computed(() => user.value?.id ?? 'earth');
+
+const greeting = computed(() => (user.value?.username ? `@${user.value.username}` : 'Welcome!'));
+const profileHref = computed(() =>
+	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/tabs/profile/editor'
+);
+const unreadBadge = computed(() => (unreadCount.value > 9 ? '9+' : String(unreadCount.value)));
+const notificationsLabel = computed(() =>
+	unreadCount.value > 0 ? `Notifications, ${unreadCount.value} Unread` : 'Notifications'
+);
+const showReopenOnboarding = computed(() => Boolean(user.value) && !onboarding.isComplete.value);
+
+const questSteps = computed(() => currentQuest.value?.quest?.steps?.length ?? 0);
+const questStat = computed(() => {
+	if (!currentQuest.value || questSteps.value === 0) return '-';
+	return `${Math.min(currentQuest.value.currentStepIndex, questSteps.value)}/${questSteps.value}`;
+});
+const natureStat = computed(() => `${Math.round(natureMinutes.value?.minutes ?? 0)}m`);
+
+const todayHeadline = computed(() => {
+	if (currentQuest.value) return currentQuest.value.quest.title;
+	if (dailyQuest.value) return dailyQuest.value.title;
+	return 'Find Your First Quest';
 });
 
+const todaySubline = computed(() => {
+	if (currentQuest.value) return 'Your quest is waiting where you left it.';
+	if (dailyQuest.value) return "Today's quest is ready when you are.";
+	return 'Pick an activity you already enjoy and the app builds around it.';
+});
+
+const todayCtaLabel = computed(() => {
+	if (currentQuest.value) return 'Continue Quest';
+	if (dailyQuest.value) return "Start Today's Quest";
+	return 'Browse Quests';
+});
+
+function openTodayCta() {
+	if (currentQuest.value) {
+		ionRouter.navigate(`/tabs/quests/${currentQuest.value.questId}`, 'forward', 'push');
+		return;
+	}
+	if (dailyQuest.value) {
+		ionRouter.navigate(`/tabs/quests/${dailyQuest.value.id}`, 'forward', 'push');
+		return;
+	}
+	ionRouter.navigate('/tabs/quests', 'forward', 'push');
+}
+
+function openNotifications() {
+	ionRouter.navigate('/tabs/profile/notifications', 'forward', 'push');
+}
+
+// #endregion
+
 const contentRef = ref<any>(null);
-// IonContent's inner scroll element resolved post-mount; MScrollCue attaches its listener to it
 const scrollContainerEl = ref<HTMLElement | null>(null);
 const textSizePromptRef = ref<{ maybeOpen: () => void } | null>(null);
 const usernamePromptRef = ref<{ maybeOpen: () => void } | null>(null);
 const feedItems = ref<FeedItem[]>([]);
-// data can transiently empty during refetch, outer filter + inner v-if guards belt-and-suspenders
 const renderableFeedItems = computed(() =>
 	feedItems.value.filter((i) => Array.isArray(i.data) && i.data.length > 0)
 );
+
+function isGrouped(item: FeedItem): boolean {
+	return shouldGroup(item.data as any[], item.isGroup);
+}
+
 const isLoadingMore = ref(false);
 const isRefreshing = ref(false);
 const hasInitialized = ref(false);
@@ -785,7 +953,7 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		const data = dedupeData(type, raw).slice(0, isGroup ? count : 1);
 		if (data.length > 0) {
 			recordShownIds(type, data);
-			feedItem = { type, isGroup, data };
+			feedItem = { type, isGroup: shouldGroup(data, isGroup), data };
 		}
 
 		// prerender routes
@@ -799,7 +967,7 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		const data = dedupeData(type, raw).slice(0, isGroup ? count : 1);
 		if (data.length > 0) {
 			recordShownIds(type, data);
-			feedItem = { type, isGroup, data };
+			feedItem = { type, isGroup: shouldGroup(data, isGroup), data };
 		}
 
 		// prerender routes
@@ -813,7 +981,7 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		const data = dedupeData(type, raw).slice(0, isGroup ? count : 1);
 		if (data.length > 0) {
 			recordShownIds(type, data);
-			feedItem = { type, isGroup, data };
+			feedItem = { type, isGroup: shouldGroup(data, isGroup), data };
 		}
 
 		// prerender routes
@@ -827,7 +995,7 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 		const data = dedupeData(type, raw).slice(0, isGroup ? count : 1);
 		if (data.length > 0) {
 			recordShownIds(type, data);
-			feedItem = { type, isGroup, data };
+			feedItem = { type, isGroup: shouldGroup(data, isGroup), data };
 		}
 
 		// prerender routes
@@ -837,12 +1005,12 @@ async function generateFeedItem(): Promise<FeedItem | null> {
 			}
 		}
 	} else if (type === 'user') {
-		// users are always groups since single user cards don't make much sense in a feed context
+		// users always aim for a group; a single card is the fallback when only one survives dedupe
 		const raw = await fetchContent(type, Math.max(2, requestCount), useRecommended);
-		const data = dedupeData(type, raw).slice(0, Math.max(2, count));
+		const data = dedupeData(type, raw).slice(0, Math.max(MIN_GROUP_ITEMS, count));
 		if (data.length > 0) {
 			recordShownIds(type, data);
-			feedItem = { type, isGroup: true, data };
+			feedItem = { type, isGroup: shouldGroup(data), data };
 		}
 
 		// prerender routes
@@ -1090,29 +1258,4 @@ onMounted(async () => {
 		});
 	}
 });
-
-// activity scrolling
-
-const activityScroll = ref<HTMLElement | null>(null);
-let isDragging = false;
-let startX = 0;
-let scrollLeft = 0;
-
-function startDrag(e: MouseEvent) {
-	isDragging = true;
-	startX = e.pageX - (activityScroll.value?.offsetLeft ?? 0);
-	scrollLeft = activityScroll.value?.scrollLeft ?? 0;
-}
-
-function onDrag(e: MouseEvent) {
-	if (!isDragging || !activityScroll.value) return;
-	e.preventDefault();
-	const x = e.pageX - activityScroll.value.offsetLeft;
-	const walk = (x - startX) * 1.2;
-	activityScroll.value.scrollLeft = scrollLeft - walk;
-}
-
-function stopDrag() {
-	isDragging = false;
-}
 </script>
