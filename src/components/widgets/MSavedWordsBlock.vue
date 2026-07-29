@@ -1,87 +1,93 @@
 <template>
-	<IonCard
+	<div
 		v-if="list.length > 0"
-		class="info-card-group w-11/12 max-w-2xl min-h-2/7 mt-4 mx-auto p-4 rounded-xl shadow-md border border-info/20"
+		class="w-full"
 	>
-		<div class="flex items-start gap-2 mb-3">
-			<UIcon
-				name="mdi:book-alphabet"
-				class="size-6 text-info shrink-0 mt-0.5"
-			/>
-			<div class="flex flex-col min-w-0 flex-1">
-				<h2 class="text-base! font-semibold m-0!">Saved Words</h2>
-				<p class="text-xs opacity-70 m-0! mt-0.5">{{ list.length }} saved</p>
-			</div>
-			<IonButton
-				size="small"
-				fill="outline"
-				color="info"
-				aria-label="Word of the Day"
-				@click="openWordOfTheDay"
-			>
-				<UIcon
-					name="mdi:calendar-star"
-					class="size-4 mr-1"
-				/>
-				Word of the Day
-			</IonButton>
-			<IonButton
-				size="small"
-				fill="clear"
-				color="medium"
-				router-link="/tabs/settings/words"
-				aria-label="Open My Words"
-			>
-				<UIcon
-					name="mdi:arrow-right"
-					class="size-5"
-				/>
-			</IonButton>
-		</div>
-
-		<div
-			class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1"
-			role="list"
+		<MSurface
+			class="gap-3 border-info/20 bg-linear-to-br from-info/10 via-primary/5 to-transparent"
 		>
-			<button
-				v-for="word in list.slice(0, 12)"
-				:key="word.word"
-				type="button"
-				class="shrink-0 flex flex-col items-start gap-1 rounded-lg! border-2! border-info/30! bg-info/5! p-3! min-w-45 max-w-60 text-left active:scale-95! transition-transform"
-				@click="open(word)"
-			>
-				<span class="text-sm font-semibold truncate w-full">{{ word.word }}</span>
-				<span class="text-[10px] italic opacity-70">{{ word.partOfSpeech }}</span>
-				<span class="text-xs opacity-90 line-clamp-2">{{ word.definition }}</span>
-			</button>
-		</div>
-
-		<IonModal
-			:is-open="wordModalOpen"
-			@did-dismiss="wordModalOpen = false"
-		>
-			<IonHeader>
-				<IonToolbar>
-					<IonTitle>Word of the Day</IonTitle>
-					<IonButtons slot="end">
-						<IonButton
-							color="danger"
-							aria-label="Close word of the day"
-							@click="wordModalOpen = false"
-						>
-							<UIcon
-								name="mdi:close"
-								class="min-h-6 min-w-6"
-							/>
-						</IonButton>
-					</IonButtons>
-				</IonToolbar>
-			</IonHeader>
-			<div class="h-full overflow-auto p-4">
-				<WidgetsMWordOfTheDay :words="modalWords" />
+			<div class="flex items-center gap-2">
+				<UIcon
+					name="mdi:book-alphabet"
+					class="size-5 shrink-0 m-text-brand"
+					aria-hidden="true"
+				/>
+				<h3 class="m-0! truncate text-sm! font-semibold">Saved Words</h3>
+				<span class="ml-auto shrink-0 text-2xs text-muted">{{ list.length }} saved</span>
 			</div>
-		</IonModal>
-	</IonCard>
+
+			<div class="flex flex-col gap-2">
+				<button
+					v-for="word in list.slice(0, 2)"
+					:key="word.word"
+					type="button"
+					:aria-label="`Open ${word.word}`"
+					class="flex min-h-11! w-full flex-col items-start gap-0.5 rounded-lg! border! border-info/30! bg-info/5! p-3! text-left transition-transform active:scale-95!"
+					@click="open(word)"
+				>
+					<span class="w-full truncate text-sm font-semibold"
+						>{{ word.word }}
+						<span class="text-3xs font-normal italic opacity-70">{{ word.partOfSpeech }}</span>
+					</span>
+					<span class="w-full truncate text-xs opacity-90">{{ word.definition }}</span>
+				</button>
+			</div>
+
+			<div class="mt-auto flex items-center gap-2">
+				<IonButton
+					size="small"
+					fill="outline"
+					color="primary"
+					aria-label="Word of the Day"
+					@click="openWordOfTheDay"
+				>
+					<UIcon
+						name="mdi:calendar-star"
+						class="mr-1 size-4"
+					/>
+					Word of the Day
+				</IonButton>
+				<IonButton
+					size="small"
+					fill="clear"
+					color="medium"
+					router-link="/tabs/settings/words"
+					aria-label="Open My Words"
+				>
+					<UIcon
+						name="mdi:arrow-right"
+						class="size-5"
+					/>
+				</IonButton>
+			</div>
+
+			<IonModal
+				:is-open="wordModalOpen"
+				@did-dismiss="wordModalOpen = false"
+			>
+				<IonHeader>
+					<IonToolbar>
+						<IonTitle>Word of the Day</IonTitle>
+						<IonButtons slot="end">
+							<IonButton
+								color="danger"
+								aria-label="Close word of the day"
+								@click="wordModalOpen = false"
+							>
+								<UIcon
+									name="mdi:close"
+									class="min-h-6 min-w-6"
+								/>
+							</IonButton>
+						</IonButtons>
+					</IonToolbar>
+				</IonHeader>
+				<div class="h-full overflow-auto p-4">
+					<WidgetsMWordOfTheDay :words="modalWords" />
+				</div>
+			</IonModal>
+		</MSurface>
+	</div>
 </template>
 
 <script setup lang="ts">

@@ -1,11 +1,11 @@
 <template>
-	<IonCard class="m-0 p-4 rounded-xl bg-linear-to-br from-warning/10 via-primary/5 to-transparent">
+	<MSurface class="bg-linear-to-br from-warning/10 via-primary/5 to-transparent">
 		<div class="flex items-center gap-2 mb-2">
 			<UIcon
 				name="mdi:feather"
 				class="size-5 text-warning"
 			/>
-			<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Quick Reflection</h3>
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Quick Reflection</h3>
 		</div>
 		<p class="text-base font-medium mb-3">{{ prompt }}</p>
 		<template v-if="!saved">
@@ -15,12 +15,13 @@
 				:maxlength="MAX"
 				placeholder="A short thought is enough..."
 				auto-grow
+				aria-label="Your Reflection"
 				class="border rounded p-2"
 			/>
 			<div class="flex justify-between items-center mt-2">
 				<span
 					class="text-xs"
-					:class="charCount > MAX - 20 ? 'text-warning' : 'text-gray-500'"
+					:class="charCount > MAX - 20 ? 'text-warning' : 'text-muted'"
 				>
 					{{ charCount }} / {{ MAX }}
 				</span>
@@ -48,16 +49,16 @@
 			</div>
 			<p
 				v-if="questHint"
-				class="text-xs text-primary mt-2"
+				class="text-xs m-text-brand mt-2"
 			>
 				{{ questHint }}
 			</p>
 		</template>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonCard, IonTextarea } from '@ionic/vue';
+import { IonButton, IonTextarea } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
 
 const props = withDefaults(defineProps<{ prompt?: string; questHint?: string }>(), {

@@ -1,16 +1,12 @@
 <template>
-	<IonCard
-		class="m-0 p-4 rounded-xl bg-linear-to-br from-secondary/10 via-primary/5 to-transparent"
-	>
+	<MSurface class="bg-linear-to-br from-secondary/10 via-primary/5 to-transparent">
 		<div class="flex items-center justify-between mb-3">
 			<div class="flex items-center gap-2">
 				<UIcon
 					name="mdi:flash"
 					class="size-5 text-secondary"
 				/>
-				<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-					Rapid Flash Match
-				</h3>
+				<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Rapid Flash Match</h3>
 			</div>
 			<IonChip
 				v-if="started"
@@ -35,7 +31,7 @@
 			/>
 			<div class="flex flex-col gap-1">
 				<p class="text-sm font-semibold m-0!">{{ ctaTitle }}</p>
-				<p class="text-xs text-gray-500 m-0!">{{ ctaSubtitle }}</p>
+				<p class="text-xs text-muted m-0!">{{ ctaSubtitle }}</p>
 			</div>
 			<IonButton
 				color="secondary"
@@ -61,6 +57,7 @@
 				:fill="cellFill(matchedTerms, selectedTerm, i)"
 				:disabled="matchedTerms.has(i)"
 				:class="{ 'animate-shake': shakeTerm === i }"
+				:aria-label="`Card ${i + 1}: ${item.term}`"
 				size="small"
 				expand="block"
 				@click="pick('term', i)"
@@ -73,6 +70,7 @@
 				:fill="cellFill(matchedDefs, selectedDef, i)"
 				:disabled="matchedDefs.has(i)"
 				:class="{ 'animate-shake': shakeDef === i }"
+				:aria-label="`Match ${i + 1}: ${item.term}`"
 				size="small"
 				expand="block"
 				@click="pick('def', i)"
@@ -90,7 +88,7 @@
 			<p class="text-sm font-semibold">All 4 Matched in {{ formattedTime }}</p>
 			<p
 				v-if="questHint"
-				class="text-xs text-primary mt-2"
+				class="text-xs m-text-brand mt-2"
 			>
 				{{ questHint }}
 			</p>
@@ -108,11 +106,11 @@
 				Play Again
 			</IonButton>
 		</div>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonCard, IonChip } from '@ionic/vue';
+import { IonButton, IonChip } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
 
 type Pair = { term: string; def: string };

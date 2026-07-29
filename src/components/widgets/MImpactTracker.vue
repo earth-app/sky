@@ -1,13 +1,11 @@
 <template>
-	<IonCard class="m-0 p-4 rounded-xl bg-linear-to-br from-success/10 via-primary/5 to-transparent">
+	<MSurface class="bg-linear-to-br from-success/10 via-primary/5 to-transparent">
 		<div class="flex items-center gap-2 mb-2">
 			<UIcon
 				name="mdi:earth"
 				class="size-5 text-success"
 			/>
-			<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-				Today's Impact Goal
-			</h3>
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Today's Impact Goal</h3>
 		</div>
 		<p class="text-base font-medium mb-4">{{ goal }}</p>
 		<button
@@ -16,7 +14,7 @@
 			:class="
 				done
 					? 'border-success/60 bg-success/10'
-					: 'border-gray-300 hover:border-success/50 hover:bg-success/5'
+					: 'border-default hover:border-success/50 hover:bg-success/5'
 			"
 			:disabled="done"
 			@click="check"
@@ -24,7 +22,7 @@
 			<UIcon
 				:name="done ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'"
 				class="size-8"
-				:class="done ? 'text-success' : 'text-gray-500'"
+				:class="done ? 'text-success' : 'text-muted'"
 			/>
 			<div class="flex-1 text-left">
 				<p class="text-sm font-semibold">
@@ -32,7 +30,7 @@
 				</p>
 				<p
 					v-if="done"
-					class="text-xs text-gray-500"
+					class="text-xs text-muted"
 				>
 					Streak: {{ streak }} consecutive day{{ streak === 1 ? '' : 's' }}
 				</p>
@@ -45,15 +43,14 @@
 		</button>
 		<p
 			v-if="done && questHint"
-			class="text-xs text-primary mt-3"
+			class="text-xs m-text-brand mt-3"
 		>
 			{{ questHint }}
 		</p>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
-import { IonCard } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
 
 const props = withDefaults(defineProps<{ goal?: string; questHint?: string }>(), {

@@ -1,11 +1,16 @@
 <template>
-	<div
+	<MSurface
 		v-if="user"
-		class="flex flex-col p-4 bg-gray-900 light:bg-gray-100 rounded-lg shadow-md border-2 border-gray-700 light:border-gray-300"
+		:elevation="1"
 	>
 		<div
-			class="flex flex-wrap items-center hover:cursor-pointer"
+			class="flex min-h-11 flex-wrap items-center hover:cursor-pointer"
+			role="button"
+			tabindex="0"
+			:aria-label="`View ${handle}'s Profile`"
 			@click="navigateToProfile"
+			@keydown.enter.prevent="navigateToProfile"
+			@keydown.space.prevent="navigateToProfile"
 		>
 			<UChip
 				:color="chipColor"
@@ -19,8 +24,12 @@
 				/>
 			</UChip>
 
-			<span class="text-sm font-medium mr-2">{{ handle }}</span>
-			<span class="text-sm text-gray-500 light:text-gray-400 mr-2">@{{ user.username }}</span>
+			<span
+				v-if="hasFullName"
+				class="text-sm font-medium mr-2"
+				>{{ fullName }}</span
+			>
+			<span class="text-sm text-muted mr-2">@{{ user.username }}</span>
 
 			<div class="flex flex-wrap gap-2 my-2">
 				<IonChip
@@ -79,9 +88,13 @@
 				v-for="(activity, i) in user.activities"
 				:key="activity.id"
 				:router-link="`/tabs/activities/${activity.id}`"
-				:label="activity.name"
 				:color="i < 2 ? 'warning' : 'primary'"
-				class="flex items-center justify-center px-2 hover:cursor-pointer transition-all duration-500"
+				role="link"
+				tabindex="0"
+				:aria-label="`Open the ${activity.name} Activity`"
+				class="flex items-center justify-center px-2 min-h-11 hover:cursor-pointer transition-all duration-500"
+				@keydown.enter.prevent="activateSelf"
+				@keydown.space.prevent="activateSelf"
 			>
 				<UIcon
 					:name="activity.fields['icon'] || 'mdi:earth'"
@@ -90,7 +103,7 @@
 				<span class="text-sm font-semibold">{{ activity.name }}</span>
 			</IonChip>
 		</div>
-	</div>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
@@ -105,9 +118,12 @@ const props = defineProps<{
 
 const { user: currentUser } = useAuth();
 const { avatar128, fetchAvatar, user: userState, chipColor, fetchUser } = useUser(props.user.id);
-const { handle } = useDisplayName(props.user);
 
 const user = computed(() => userState.value || props.user);
+
+// read off the resolved user, not the prop snapshot, so the name always belongs to the username
+// rendered beside it; `handle` falls back to @username, so it can only carry the aria label
+const { handle, fullName, hasFullName } = useDisplayName(() => user.value);
 
 onMounted(() => {
 	fetchUser();
@@ -118,5 +134,10 @@ function navigateToProfile() {
 	if (user.value) {
 		router.push(`/tabs/profile/${user.value.id}`);
 	}
+}
+
+// ion-chip has no keyboard activation of its own; a synthetic click drives its routerLink
+function activateSelf(event: KeyboardEvent) {
+	(event.currentTarget as HTMLElement | null)?.click();
 }
 </script>

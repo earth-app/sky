@@ -1,15 +1,13 @@
 <template>
-	<IonCard
-		class="m-0 p-4 rounded-xl bg-linear-to-br from-primary/10 via-secondary/5 to-transparent"
-	>
+	<MSurface class="bg-linear-to-br from-primary/10 via-secondary/5 to-transparent">
 		<div class="flex items-center gap-2 mb-1">
 			<UIcon
 				name="mdi:account-multiple-plus"
-				class="size-6 text-primary"
+				class="size-6 m-text-brand"
 			/>
 			<h3 class="text-lg font-semibold m-0!">Invite Friends</h3>
 		</div>
-		<p class="text-sm text-gray-500 mb-4">
+		<p class="text-sm text-muted mb-4">
 			Share your link; when a friend joins, you both move up the Recruiter ranks.
 		</p>
 
@@ -42,20 +40,20 @@
 		</div>
 
 		<div class="grid grid-cols-2 gap-3 mb-4">
-			<div class="flex flex-col items-center p-3 rounded-lg bg-black/5 light:bg-white/5">
-				<span class="text-2xl font-bold text-primary">{{ clicks }}</span>
-				<span class="text-xs text-gray-500">Link Clicks</span>
+			<div class="flex flex-col items-center p-3 rounded-lg bg-elevated">
+				<span class="text-2xl font-bold m-text-brand">{{ clicks }}</span>
+				<span class="text-xs text-muted">Link Clicks</span>
 			</div>
-			<div class="flex flex-col items-center p-3 rounded-lg bg-black/5 light:bg-white/5">
+			<div class="flex flex-col items-center p-3 rounded-lg bg-elevated">
 				<span class="text-2xl font-bold text-success">{{ conversions }}</span>
-				<span class="text-xs text-gray-500">Friends Joined</span>
+				<span class="text-xs text-muted">Friends Joined</span>
 			</div>
 		</div>
 
 		<div class="flex flex-col gap-1">
 			<div class="flex items-center justify-between text-sm">
 				<span class="font-medium">{{ tierLabel }}</span>
-				<span class="text-gray-500">
+				<span class="text-muted">
 					<template v-if="nextTier">{{ conversions }} / {{ nextTier }}</template>
 					<template v-else>Max tier reached</template>
 				</span>
@@ -64,20 +62,20 @@
 				:model-value="tierProgress"
 				color="primary"
 				size="sm"
+				:aria-label="`${tierLabel} Progress: ${tierProgress}%`"
 			/>
 			<p
 				v-if="nextTier"
-				class="text-xs text-gray-500"
+				class="text-xs text-muted"
 			>
 				{{ nextTier - conversions }} more to reach the next Recruiter tier.
 			</p>
 		</div>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { IonCard } from '@ionic/vue';
 
 // recruiter tiers, friends-joined thresholds
 const TIERS = [1, 5, 25] as const;

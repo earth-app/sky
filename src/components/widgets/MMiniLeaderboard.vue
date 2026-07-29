@@ -1,31 +1,28 @@
 <template>
-	<IonCard class="m-0 p-4 rounded-xl bg-linear-to-br from-warning/10 via-primary/5 to-transparent">
+	<MSurface class="bg-linear-to-br from-warning/10 via-primary/5 to-transparent">
 		<div class="flex items-center gap-2 mb-3">
 			<UIcon
 				:name="headerIcon"
 				class="size-5 text-warning"
 			/>
-			<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">
 				{{ headerLabel }}
 			</h3>
 		</div>
-		<div
+		<MSkeleton
 			v-if="loading"
-			class="text-xs text-gray-500 py-4 text-center"
-		>
-			Loading leaderboard...
-		</div>
-		<div
+			variant="row"
+			:count="3"
+			:label="`Loading ${headerLabel}`"
+		/>
+		<MEmptyState
 			v-else-if="rows.length === 0"
-			class="text-xs text-gray-500 py-6 text-center flex flex-col items-center gap-2"
-		>
-			<UIcon
-				name="mdi:medal-outline"
-				class="size-8 text-gray-400"
-			/>
-			<p>{{ emptyLabel }}</p>
-			<p class="text-[10px]">Be the first to climb the board.</p>
-		</div>
+			icon="mdi:medal-outline"
+			:title="emptyLabel"
+			description="Be the first to climb the board."
+			variant="neutral"
+			dense
+		/>
 		<ul
 			v-else
 			class="flex flex-col gap-2"
@@ -33,46 +30,55 @@
 			<li
 				v-for="row in rows"
 				:key="row.id"
-				class="flex items-center gap-3 p-2 rounded-lg transition-colors cursor-pointer"
-				:class="row.isSelf ? 'bg-primary/10 ring-1 ring-primary/40' : 'hover:bg-primary/5'"
-				@click="navigate(row.id)"
+				class="min-w-0"
 			>
-				<span
-					class="font-mono font-bold text-sm w-6 text-center"
-					:class="rankColor(row.rank)"
+				<button
+					type="button"
+					:aria-label="`View ${row.label}, Rank ${row.rank}`"
+					class="flex w-full! min-h-11! items-center gap-3 p-2! rounded-lg! text-left! transition-colors cursor-pointer"
+					:class="row.isSelf ? 'bg-primary/10! ring-1 ring-primary/40' : 'hover:bg-primary/5!'"
+					@click="navigate(row.id)"
 				>
-					#{{ row.rank }}
-				</span>
-				<UAvatar
-					:src="row.avatarSrc"
-					:alt="row.username"
-					size="sm"
-				/>
-				<div class="flex-1 min-w-0">
-					<p class="text-sm font-semibold truncate">
-						{{ row.fullName }}
-					</p>
-					<p class="text-xs text-gray-500 truncate">@{{ row.username }}</p>
-				</div>
-				<IonChip
-					color="warning"
-					class="px-2 py-1 text-xs font-semibold"
-				>
-					<UIcon
-						:name="valueIcon"
-						class="size-4 mr-1"
+					<span
+						class="font-mono font-bold text-sm! w-6 text-center"
+						:class="rankColor(row.rank)"
+					>
+						#{{ row.rank }}
+					</span>
+					<UAvatar
+						:src="row.avatarSrc"
+						:alt="row.username"
+						size="sm"
 					/>
-					{{ row.value }}
-				</IonChip>
+					<div class="flex-1 min-w-0">
+						<p
+							v-if="row.fullName"
+							class="text-sm font-semibold truncate m-0!"
+						>
+							{{ row.fullName }}
+						</p>
+						<p class="text-xs text-muted truncate m-0!">@{{ row.username }}</p>
+					</div>
+					<IonChip
+						color="warning"
+						class="px-2 py-1 text-xs font-semibold"
+					>
+						<UIcon
+							:name="valueIcon"
+							class="size-4 mr-1"
+						/>
+						{{ row.value }}
+					</IonChip>
+				</button>
 			</li>
 		</ul>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
-import { IonCard, IonChip, useIonRouter } from '@ionic/vue';
+import { IonChip, useIonRouter } from '@ionic/vue';
 import type { LeaderboardMetric, LeaderboardScope } from 'types/user';
-import { comma } from 'utils';
+import { comma, realFullName } from 'utils';
 import { useAppHaptics } from '~/composables/useHaptics';
 
 const props = withDefaults(
@@ -135,11 +141,15 @@ const rows = computed(() => {
 	return source.slice(0, 3).map((entry, i) => {
 		const url = entry.user.account?.avatar_url;
 		const avatarSrc = avatarStore.safeUrl(url, 'avatar128');
+		const username = entry.user.username ?? '';
+		// placeholder full names are not names; falling back to the username here would print it twice
+		const fullName = realFullName(entry.user.full_name) ?? '';
 		return {
 			id: entry.id,
 			rank: entry.rank ?? i + 1,
-			username: entry.user.username ?? '',
-			fullName: entry.user.full_name ?? entry.user.username ?? '',
+			username,
+			fullName,
+			label: fullName || `@${username}`,
 			value: isPoints.value ? comma(entry.value) : entry.value,
 			avatarSrc,
 			isSelf: currentUser.value?.id === entry.id
@@ -161,9 +171,9 @@ watch(
 
 function rankColor(rank: number): string {
 	if (rank === 1) return 'text-warning';
-	if (rank === 2) return 'text-gray-500';
+	if (rank === 2) return 'text-muted';
 	if (rank === 3) return 'text-secondary';
-	return 'text-gray-500';
+	return 'text-muted';
 }
 
 function navigate(id: string) {

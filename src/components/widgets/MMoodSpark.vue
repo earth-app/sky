@@ -1,96 +1,80 @@
 <template>
-	<IonCard
-		class="m-0! p-2 rounded-xl! border-2 border-gray-700 light:border-gray-300 overflow-hidden"
-	>
-		<IonCardHeader class="flex items-center pb-4">
-			<div class="flex items-center gap-2">
-				<IonIcon
-					:icon="pulseOutline"
-					class="text-base text-primary"
-				/>
-				<IonCardSubtitle class="uppercase tracking-wide text-xs">Mood Spark</IonCardSubtitle>
-			</div>
-			<IonCardTitle class="text-base! text-center font-medium! my-2!">{{ question }}</IonCardTitle>
-		</IonCardHeader>
-		<IonCardContent class="pt-2 pb-3">
-			<div
-				v-if="!showResults"
-				class="grid grid-cols-3 gap-2"
-			>
-				<button
-					v-for="emoji in EMOJIS"
-					:key="emoji"
-					type="button"
-					:disabled="loading"
-					:aria-label="`Vote ${MOOD_LABELS[emoji]}`"
-					class="flex flex-col items-center gap-1 py-2! rounded-lg! border-2! border-gray-700! light:border-gray-300! bg-accented/5! active:scale-95! transition-transform disabled:opacity-50"
-					@click="onVote(emoji)"
-				>
-					<span class="text-3xl">{{ emoji }}</span>
-					<span class="text-[10px] uppercase tracking-wide text-medium">{{
-						MOOD_LABELS[emoji]
-					}}</span>
-				</button>
-			</div>
-
-			<div
-				v-else
-				class="flex flex-col gap-2"
-			>
-				<div
-					v-for="emoji in EMOJIS"
-					:key="`bar-${emoji}`"
-					class="flex items-center gap-2"
-				>
-					<span class="text-lg shrink-0 w-7 text-center">{{ emoji }}</span>
-					<IonProgressBar
-						:value="percentages[emoji] / 100"
-						:color="myVote === emoji ? 'primary' : 'medium'"
-						class="flex-1 min-w-0"
-					/>
-					<span
-						class="text-xs tabular-nums w-10 text-right whitespace-nowrap shrink-0"
-						:class="myVote === emoji ? 'font-semibold text-primary' : 'text-medium'"
-						>{{ percentages[emoji] }}%</span
-					>
-				</div>
-				<p class="text-xs font-medium text-primary mt-1">
-					{{ votedThisSession ? 'Thanks for Sharing Today' : "You've Already Shared Today" }}
-				</p>
-				<p
-					v-if="snapshot && snapshot.total > 0"
-					class="text-xs text-medium"
-				>
-					{{ snapshot.total }} {{ snapshot.total === 1 ? 'voice' : 'voices' }} today
-				</p>
-			</div>
-
-			<UAlert
-				v-if="errorMessage"
-				color="error"
-				variant="subtle"
-				icon="mdi:alert-circle"
-				:title="errorMessage"
-				:close="{ color: 'error', variant: 'link' }"
-				class="mt-2! text-xs!"
-				@update:open="errorMessage = null"
+	<MSurface class="overflow-hidden bg-linear-to-br from-primary/10 via-secondary/5 to-transparent">
+		<div class="flex items-center gap-2 mb-2">
+			<UIcon
+				name="mdi:pulse"
+				class="size-5 m-text-brand"
 			/>
-		</IonCardContent>
-	</IonCard>
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Mood Spark</h3>
+		</div>
+		<p class="text-base font-medium mb-3">{{ question }}</p>
+		<div
+			v-if="!showResults"
+			class="grid grid-cols-3 gap-2"
+		>
+			<button
+				v-for="emoji in EMOJIS"
+				:key="emoji"
+				type="button"
+				:disabled="loading"
+				:aria-label="`Vote ${MOOD_LABELS[emoji]}`"
+				class="flex flex-col items-center gap-1 py-2! rounded-lg! border-2! border-default! bg-accented/5! active:scale-95! transition-transform disabled:opacity-50"
+				@click="onVote(emoji)"
+			>
+				<span class="text-3xl">{{ emoji }}</span>
+				<span class="text-3xs uppercase tracking-wide text-medium">{{ MOOD_LABELS[emoji] }}</span>
+			</button>
+		</div>
+
+		<div
+			v-else
+			class="flex flex-col gap-2"
+		>
+			<div
+				v-for="emoji in EMOJIS"
+				:key="`bar-${emoji}`"
+				class="flex items-center gap-2"
+			>
+				<span class="text-lg shrink-0 w-7 text-center">{{ emoji }}</span>
+				<IonProgressBar
+					:value="percentages[emoji] / 100"
+					:color="myVote === emoji ? 'primary' : 'medium'"
+					:aria-label="`${MOOD_LABELS[emoji]}: ${percentages[emoji]}%`"
+					class="flex-1 min-w-0"
+				/>
+				<span
+					class="text-xs tabular-nums w-10 text-right whitespace-nowrap shrink-0"
+					:class="myVote === emoji ? 'font-semibold m-text-brand' : 'text-medium'"
+					>{{ percentages[emoji] }}%</span
+				>
+			</div>
+			<p class="text-xs font-medium m-text-brand mt-1">
+				{{ votedThisSession ? 'Thanks for Sharing Today' : "You've Already Shared Today" }}
+			</p>
+			<p
+				v-if="snapshot && snapshot.total > 0"
+				class="text-xs text-medium"
+			>
+				{{ snapshot.total }} {{ snapshot.total === 1 ? 'voice' : 'voices' }} today
+			</p>
+		</div>
+
+		<UAlert
+			v-if="errorMessage"
+			color="error"
+			variant="subtle"
+			icon="mdi:alert-circle"
+			:title="errorMessage"
+			:close="{ color: 'error', variant: 'link' }"
+			class="mt-2! text-xs!"
+			@update:open="errorMessage = null"
+		/>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
 import { Preferences } from '@capacitor/preferences';
-import {
-	IonCard,
-	IonCardContent,
-	IonCardHeader,
-	IonCardSubtitle,
-	IonCardTitle,
-	IonIcon,
-	IonProgressBar
-} from '@ionic/vue';
-import { pulseOutline } from 'ionicons/icons';
+import { IonProgressBar } from '@ionic/vue';
 import { showErrorToast, showInfoToast } from '~/composables/useNotify';
 import {
 	computeMoodPercentages,

@@ -1,13 +1,11 @@
 <template>
-	<IonCard
-		class="m-0 p-4 rounded-xl bg-linear-to-br from-primary/10 via-secondary/5 to-transparent"
-	>
+	<MSurface class="bg-linear-to-br from-primary/10 via-secondary/5 to-transparent">
 		<div class="flex items-center gap-2 mb-2">
 			<UIcon
 				name="mdi:lightbulb-on-outline"
-				class="size-5 text-primary"
+				class="size-5 m-text-brand"
 			/>
-			<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Quick Trivia</h3>
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Quick Trivia</h3>
 		</div>
 		<p class="text-base font-medium mb-3">{{ q.question }}</p>
 		<div class="flex flex-col gap-2">
@@ -28,7 +26,7 @@
 		<p
 			v-if="answered"
 			class="text-xs mt-3"
-			:class="isCorrect ? 'text-success' : 'text-gray-500'"
+			:class="isCorrect ? 'text-success' : 'text-muted'"
 		>
 			<template v-if="isCorrect">Nice. {{ q.explanation }}</template>
 			<template v-else
@@ -37,7 +35,7 @@
 			>
 		</p>
 		<div class="flex justify-between items-center mt-3">
-			<span class="text-xs text-gray-500">{{ index + 1 }} / {{ questions.length }}</span>
+			<span class="text-xs text-muted">{{ index + 1 }} / {{ questions.length }}</span>
 			<IonButton
 				v-if="answered"
 				size="small"
@@ -51,11 +49,11 @@
 				Next
 			</IonButton>
 		</div>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonCard } from '@ionic/vue';
+import { IonButton } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
 
 interface QuizQuestion {

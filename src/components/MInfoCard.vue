@@ -4,7 +4,7 @@
 		:router-link="inBrowser || link?.startsWith('http') ? undefined : link"
 		:router-animation="slide"
 		data-testid="info-card-slide"
-		class="my-2 pt-2 shadow-md shadow-black/30 light:shadow-black/10"
+		class="m-card-ion my-2 pt-2"
 		@click="
 			async () => {
 				selection();
@@ -19,16 +19,68 @@
 			}
 		"
 	>
-		<IonImg
+		<div
+			v-if="banner"
+			class="mx-2 mb-2 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2"
+			:class="[bannerTint, banner.link ? 'cursor-pointer min-h-11' : '']"
+			:role="banner.link ? 'button' : 'note'"
+			:tabindex="banner.link ? 0 : undefined"
+			:aria-label="banner.link ? banner.text : undefined"
+			@click.stop="onBannerActivate"
+			@keydown.enter.prevent="onBannerActivate"
+			@keydown.space.prevent="onBannerActivate"
+		>
+			<UIcon
+				v-if="banner.icon"
+				:name="banner.icon"
+				class="size-4 shrink-0"
+				aria-hidden="true"
+			/>
+			<span class="min-w-0 flex-1 text-xs font-semibold">{{ banner.text }}</span>
+			<IonButton
+				v-for="(action, index) in banner.actions ?? []"
+				:key="`banner-action-${index}`"
+				:color="action.color || banner.color || 'primary'"
+				size="small"
+				fill="clear"
+				:aria-label="action.text"
+				@click.stop="
+					() => {
+						selection();
+						if (action.onClick) action.onClick();
+					}
+				"
+			>
+				<UIcon
+					v-if="action.icon"
+					:name="action.icon"
+					class="mr-1 size-4"
+				/>
+				{{ action.text }}
+			</IonButton>
+		</div>
+
+		<div
 			v-if="showCardImage && !imageFailed"
-			:src="image"
-			alt="Card Image"
-			class="mb-2"
-			@ionError="imageFailed = true"
-		/>
+			class="relative mb-2 aspect-video w-full overflow-hidden rounded-lg"
+		>
+			<MSkeleton
+				v-if="!imageLoaded"
+				height="100%"
+				width="100%"
+				class="absolute inset-0"
+			/>
+			<IonImg
+				:src="image"
+				:alt="imageAlt"
+				class="size-full object-cover"
+				@ionImgDidLoad="imageLoaded = true"
+				@ionError="imageFailed = true"
+			/>
+		</div>
 		<IonCardHeader class="px-2">
 			<IonCardTitle>
-				<div class="flex items-center mb-2 text-gray-300 light:text-gray-700">
+				<div class="flex items-center mb-2 text-toned">
 					<UChip
 						v-if="avatar?.chip"
 						inset
@@ -244,7 +296,7 @@
 					:type="object.type || undefined"
 					class="w-full min-h-64 object-cover rounded-lg mb-2"
 				>
-					<p class="text-center text-gray-500">
+					<p class="text-center text-muted">
 						Unable to display content. <br />
 						<a
 							:href="object.url"
@@ -267,7 +319,11 @@
 					:key="index"
 					:outline="badge.outline"
 					:color="badge.color"
+					:role="badge.link ? 'link' : undefined"
+					:tabindex="badge.link ? 0 : undefined"
+					:aria-label="badge.link ? `Open ${badge.text}` : undefined"
 					class="flex items-center py-1 px-3 font-semibold"
+					:class="badge.link ? 'min-h-11' : ''"
 					@click="
 						(e: Event) => {
 							selection();
@@ -277,6 +333,8 @@
 							}
 						}
 					"
+					@keydown.enter.prevent="activateBadge"
+					@keydown.space.prevent="activateBadge"
 				>
 					<UIcon
 						v-if="badge.icon"
@@ -330,13 +388,13 @@
 
 			<span
 				v-if="footer"
-				class="text-sm block mt-4 font-sans text-gray-300 light:text-gray-400 font-normal mb-2"
+				class="text-sm block mt-4 font-sans text-toned font-normal mb-2"
 				>{{ footer }}</span
 			>
 
 			<span
 				v-if="secondaryFooter"
-				class="text-xs block font-sans text-gray-500 light:text-gray-400 mb-2"
+				class="text-xs block font-sans text-muted mb-2"
 				>{{ secondaryFooter }}</span
 			>
 
@@ -365,7 +423,6 @@ type NuxtSize = '3xs' | '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl'
 
 const props = defineProps<{
 	inBrowser?: boolean;
-	variant?: Variant;
 	badges?: {
 		text: string;
 		color?: Color;
@@ -384,7 +441,6 @@ const props = defineProps<{
 	content?: string;
 	link?: string;
 	icon?: string;
-	iconSize?: string;
 	avatar?: {
 		src?: string;
 		link?: string;
@@ -403,7 +459,6 @@ const props = defineProps<{
 		};
 	};
 	image?: string;
-	imageLink?: string;
 	youtubeId?: string;
 	video?: string;
 	object?: {
@@ -411,13 +466,7 @@ const props = defineProps<{
 		type?: string;
 	};
 	footer?: string;
-	footerTooltip?: string;
 	secondaryFooter?: string;
-	additionalLinks?: {
-		text: string;
-		link: string;
-		external?: boolean;
-	}[];
 	buttons?: {
 		text: string;
 		icon?: string;
@@ -472,14 +521,42 @@ const appSettings = useAppSettingsState();
 const { selection } = useAppHaptics();
 const showCardImage = computed(() => Boolean(props.image && appSettings.value.cardThumbnails));
 
+// warning/error text needs the -700 step to clear AA on a tinted fill; the rest read fine
+const BANNER_TINT: Record<NuxtColor, string> = {
+	primary: 'bg-primary/10 border-primary/25 m-text-brand',
+	secondary: 'bg-secondary/10 border-secondary/25 text-secondary',
+	success: 'bg-success/10 border-success/25 text-success',
+	warning: 'bg-warning/10 border-warning/25 m-text-warning',
+	error: 'bg-error/10 border-error/25 m-text-danger',
+	info: 'bg-info/10 border-info/25 text-info'
+};
+
+const bannerTint = computed(() => BANNER_TINT[props.banner?.color ?? 'primary']);
+
+function onBannerActivate() {
+	if (!props.banner?.link) return;
+	selection();
+	goTo(props.banner.link);
+}
+
+// ion-chip has no keyboard activation of its own; a synthetic click reuses its own handler
+function activateBadge(event: KeyboardEvent) {
+	(event.currentTarget as HTMLElement | null)?.click();
+}
+
 // hide on error rather than letting Ionic render the broken-image placeholder
 const imageFailed = ref(false);
+const imageLoaded = ref(false);
 watch(
 	() => props.image,
 	() => {
 		imageFailed.value = false;
+		imageLoaded.value = false;
 	}
 );
+
+// the aspect box reserves the space, so the alt only has to name the content
+const imageAlt = computed(() => (props.title ? `${props.title} thumbnail` : 'Card thumbnail'));
 
 const isNativeWebView = computed(() => {
 	if (!import.meta.client) return false;

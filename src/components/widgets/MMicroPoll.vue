@@ -1,13 +1,11 @@
 <template>
-	<IonCard
-		class="m-0 p-4 rounded-xl bg-linear-to-br from-primary/10 via-secondary/5 to-transparent"
-	>
+	<MSurface class="bg-linear-to-br from-primary/10 via-secondary/5 to-transparent">
 		<div class="flex items-center gap-2 mb-2">
 			<UIcon
 				name="mdi:poll"
-				class="size-5 text-primary"
+				class="size-5 m-text-brand"
 			/>
-			<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Quick Poll</h3>
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Quick Poll</h3>
 		</div>
 		<p class="text-base font-medium mb-3">{{ question }}</p>
 		<div class="flex flex-col gap-2">
@@ -32,8 +30,8 @@
 				:key="`m-bar-${i}`"
 				class="flex flex-col gap-1"
 			>
-				<div class="flex justify-between text-xs text-gray-500">
-					<span :class="{ 'text-primary font-semibold': voted === i }">{{ option }}</span>
+				<div class="flex justify-between text-xs text-muted">
+					<span :class="{ 'm-text-brand font-semibold': voted === i }">{{ option }}</span>
 					<span>{{ percentages[i] ?? 0 }}%</span>
 				</div>
 				<IonProgressBar
@@ -43,13 +41,13 @@
 			</div>
 			<p
 				v-if="aggregate && aggregate.total > 0"
-				class="text-xs text-gray-500"
+				class="text-xs text-muted"
 			>
 				{{ aggregate.total }} {{ aggregate.total === 1 ? 'vote' : 'votes' }} so far
 			</p>
 			<p
 				v-if="questHint"
-				class="text-xs text-primary mt-2"
+				class="text-xs m-text-brand mt-2"
 			>
 				{{ questHint }}
 			</p>
@@ -60,13 +58,13 @@
 		>
 			<UIcon
 				name="mdi:account-arrow-right"
-				class="size-4 text-primary shrink-0"
+				class="size-4 m-text-brand shrink-0"
 			/>
 			<span>
 				Sign in to make your vote count and see what others picked.
 				<a
 					href="/login"
-					class="text-primary font-semibold underline"
+					class="m-text-brand font-semibold underline"
 					@click.prevent="goToLogin"
 					>Sign in</a
 				>
@@ -79,11 +77,11 @@
 		>
 			{{ errorMessage }}
 		</p>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonCard, IonProgressBar } from '@ionic/vue';
+import { IonButton, IonProgressBar } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
 import { isPollVoteFresh } from '~/utils/poll';
 

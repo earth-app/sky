@@ -1,5 +1,5 @@
 <template>
-	<div class="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-default p-4">
+	<MSurface>
 		<template v-if="expedition">
 			<div class="flex flex-wrap items-center justify-between gap-2">
 				<h3 class="text-base! font-semibold m-0! min-w-0 truncate">{{ expedition.title }}</h3>
@@ -39,7 +39,7 @@
 						>
 							<div class="flex items-center gap-2">
 								<span
-									class="size-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+									class="size-6 rounded-full flex items-center justify-center text-2xs font-bold text-white shrink-0"
 									:style="{ backgroundColor: color(c.uid) }"
 									>{{ initial(c.username) }}</span
 								>
@@ -71,9 +71,7 @@
 							/>
 						</li>
 					</ul>
-					<p class="text-[11px] opacity-50 mt-3">
-						The circle versus the challenge, never each other.
-					</p>
+					<p class="text-2xs opacity-50 mt-3">The circle versus the challenge, never each other.</p>
 				</div>
 			</div>
 		</template>
@@ -82,7 +80,7 @@
 			<div class="flex items-center gap-2">
 				<UIcon
 					name="mdi:tent"
-					class="size-6 text-primary"
+					class="size-6 m-text-brand"
 				/>
 				<h3 class="text-base! font-semibold m-0!">Start an Expedition</h3>
 			</div>
@@ -168,16 +166,14 @@
 			</div>
 		</template>
 
-		<div
+		<MEmptyState
 			v-else
-			class="flex flex-col items-center text-center py-8 opacity-70"
-		>
-			<UIcon
-				name="mdi:tent"
-				class="size-10 mb-2"
-			/>
-			<p class="text-sm">No Expedition Yet.</p>
-		</div>
+			icon="mdi:tent"
+			title="No Expedition Yet."
+			description="When someone in your circle starts a shared goal, it shows up here."
+			variant="neutral"
+			dense
+		/>
 
 		<IonModal
 			:is-open="showInviteModal"
@@ -222,7 +218,7 @@
 				</div>
 			</IonContent>
 		</IonModal>
-	</div>
+	</MSurface>
 </template>
 
 <script setup lang="ts">

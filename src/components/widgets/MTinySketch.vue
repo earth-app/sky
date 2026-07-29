@@ -1,11 +1,11 @@
 <template>
-	<IonCard class="m-0 p-4 rounded-xl bg-linear-to-br from-info/10 via-secondary/5 to-transparent">
+	<MSurface class="bg-linear-to-br from-info/10 via-secondary/5 to-transparent">
 		<div class="flex items-center gap-2 mb-2">
 			<UIcon
 				name="mdi:draw"
 				class="size-5 text-info"
 			/>
-			<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Tiny Sketch</h3>
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Tiny Sketch</h3>
 		</div>
 		<p class="text-base font-medium mb-3">{{ prompt }}</p>
 
@@ -25,7 +25,7 @@
 					v-if="lastImage"
 					:src="lastImage"
 					alt="Saved sketch"
-					class="w-full rounded-lg border border-neutral-700 bg-white"
+					class="w-full rounded-lg border border-default bg-white"
 				/>
 				<div class="flex items-center gap-2 text-success mt-3">
 					<UIcon
@@ -36,7 +36,7 @@
 				</div>
 				<p
 					v-if="questHint"
-					class="text-xs text-primary mt-2"
+					class="text-xs m-text-brand mt-2"
 				>
 					{{ questHint }}
 				</p>
@@ -55,11 +55,11 @@
 				</div>
 			</div>
 		</template>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonCard } from '@ionic/vue';
+import { IonButton } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
 
 const props = withDefaults(

@@ -1,15 +1,15 @@
 <template>
-	<IonCard class="m-0 p-4 rounded-xl bg-linear-to-br from-info/10 via-primary/5 to-transparent">
+	<MSurface class="bg-linear-to-br from-info/10 via-primary/5 to-transparent">
 		<div class="flex items-center gap-2 mb-2">
 			<UIcon
 				name="mdi:book-alphabet"
 				class="size-5 text-info"
 			/>
-			<h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Word of the Day</h3>
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted">Word of the Day</h3>
 		</div>
 		<div class="mb-3">
 			<p class="text-2xl font-bold tracking-tight wrap-break-word">{{ entry.word }}</p>
-			<p class="text-xs italic text-gray-500">{{ entry.partOfSpeech }}</p>
+			<p class="text-xs italic text-muted">{{ entry.partOfSpeech }}</p>
 		</div>
 		<p class="text-sm mb-4">{{ entry.definition }}</p>
 		<div
@@ -41,15 +41,20 @@
 				/>
 				{{ saved ? 'Saved' : 'Save Word' }}
 			</IonButton>
-			<IonText
+			<IonButton
 				color="primary"
-				class="flex items-center text-xs mt-2"
+				fill="clear"
+				size="small"
 				router-link="/tabs/settings/words"
-				>View Saved
+				aria-label="View Saved Words"
+				class="self-start"
+			>
+				View Saved
 				<UIcon
 					name="mdi:arrow-right"
-					class="ml-0.5 size-4"
-			/></IonText>
+					class="ml-1 size-4"
+				/>
+			</IonButton>
 		</div>
 		<div
 			v-else
@@ -77,15 +82,15 @@
 		</div>
 		<p
 			v-if="acted && questHint"
-			class="text-xs text-primary mt-2"
+			class="text-xs m-text-brand mt-2"
 		>
 			{{ questHint }}
 		</p>
-	</IonCard>
+	</MSurface>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonCard } from '@ionic/vue';
+import { IonButton } from '@ionic/vue';
 import { useAppHaptics } from '~/composables/useHaptics';
 import { showInfoToast } from '~/composables/useNotify';
 

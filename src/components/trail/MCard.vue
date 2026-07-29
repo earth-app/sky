@@ -4,15 +4,15 @@
 		:data-trail-id="trail.id"
 		class="rounded-xl"
 	>
-		<div
-			class="flex flex-col h-full p-4 rounded-xl border bg-default active:border-primary/50 transition-colors"
-			:class="trail.premium ? 'border-warning/90' : 'border-neutral-200 dark:border-neutral-800'"
+		<MSurface
+			class="h-full transition-colors active:border-primary/50"
+			:class="trail.premium ? 'border-warning/90' : ''"
 		>
 			<div class="flex items-start gap-3">
 				<div class="size-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
 					<UIcon
 						:name="trail.icon || 'mdi:map-marker-path'"
-						class="size-6 text-primary"
+						class="size-6 m-text-brand"
 					/>
 				</div>
 				<div class="min-w-0 flex-1">
@@ -107,7 +107,7 @@
 					</IonButton>
 				</div>
 			</div>
-		</div>
+		</MSurface>
 	</component>
 </template>
 
