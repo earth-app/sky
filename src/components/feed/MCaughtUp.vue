@@ -1,10 +1,20 @@
 <template>
 	<div class="w-full max-w-2xl mx-auto px-4 my-6">
 		<IonCard
+			id="feed-caught-up"
 			:color="theme"
 			:class="['m-0 overflow-hidden', prefersReducedMotion ? '' : 'caught-up-appear']"
 		>
-			<div class="flex flex-col items-center text-center gap-3 px-5 py-6">
+			<MAmbient
+				:seed="ambientSeed"
+				:height="AMBIENT_BAND"
+				class="absolute inset-x-0 top-0 opacity-30"
+			/>
+			<div
+				class="pointer-events-none absolute inset-x-0 top-0"
+				:style="{ height: `${AMBIENT_BAND}px`, backgroundImage: ambientFade }"
+			/>
+			<div class="relative flex flex-col items-center text-center gap-3 px-5 py-6">
 				<div :class="['caught-up-badge', prefersReducedMotion ? '' : 'caught-up-badge-float']">
 					<UIcon
 						name="mdi:leaf-circle-outline"
@@ -35,17 +45,17 @@
 						Browse Trails
 					</IonButton>
 					<IonButton
-						v-if="dailyQuest"
+						v-if="questCta"
 						expand="block"
 						fill="outline"
 						color="primary"
-						@click="openDailyQuest"
+						@click="openQuest"
 					>
 						<UIcon
-							name="ion:flash-outline"
+							:name="questCta.daily ? 'ion:flash-outline' : 'mdi:compass-rose'"
 							class="size-5 mr-2"
 						/>
-						Today's Quest
+						{{ questCta.label }}
 					</IonButton>
 				</div>
 
@@ -63,6 +73,7 @@
 
 <script setup lang="ts">
 import { theme } from '~/composables/useSettings';
+import { caughtUpQuestCta } from '~/utils/feed';
 
 const props = withDefaults(
 	defineProps<{
@@ -77,9 +88,28 @@ const ionRouter = useIonRouter();
 const { selection, impactLight } = useAppHaptics();
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
+// the ambient band and its fade share one height, so the scene dissolves instead of cutting off
+const AMBIENT_BAND = 280;
+
+const { user: currentUser } = useAuth();
+// account data, never a device value; the same account always closes the feed on the same sky
+const ambientSeed = computed(() => currentUser.value?.id || 'sky');
+const userId = computed(() => currentUser.value?.id);
+
+// the card carries an ionic color, so the fade has to land on that color and not on the page
+const ambientFade = computed(
+	() => `linear-gradient(180deg, transparent 0%, var(--ion-color-${theme.value}) 100%)`
+);
+
 const { quest: dailyQuest, markTapped: markDailyQuestTapped } = useDailyQuest();
+// the same store MJourneyHero reads and already fetched on this page; read-only, so no extra request
+const { quest: currentQuest } = useUser(userId);
 // nature minutes is shared store state; the dashboard card already hydrated it, so read-only here
 const { natureMinutes } = useNatureMinutes();
+
+const questCta = computed(() =>
+	caughtUpQuestCta(currentQuest.value?.questId, dailyQuest.value?.id)
+);
 
 // calm, non-transactional exit copy; nudge toward the 120 min/week nature thesis
 const headline = computed(() =>
@@ -102,11 +132,13 @@ function goOutside() {
 	ionRouter.push('/tabs/trails');
 }
 
-function openDailyQuest() {
-	if (!dailyQuest.value) return;
+function openQuest() {
+	const cta = questCta.value;
+	if (!cta) return;
+
 	void selection();
-	markDailyQuestTapped();
-	ionRouter.navigate(`/tabs/quests/${dailyQuest.value.id}`, 'forward', 'push');
+	if (cta.daily) markDailyQuestTapped();
+	ionRouter.navigate(`/tabs/quests/${cta.questId}`, 'forward', 'push');
 }
 
 function onKeepBrowsing() {
