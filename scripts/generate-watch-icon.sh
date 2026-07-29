@@ -25,7 +25,7 @@ FALLBACK_SOURCE="$RESOURCES_DIR/icon.png"
 # wash as the iOS light variant so the two icons look like the same product.
 WATCH_BACKGROUND="${WATCH_ICON_BACKGROUND:-#174f96}"
 
-if ! command -v magick >/dev/null 2>&1; then
+if ! command -v magick > /dev/null 2>&1; then
 	echo "error: ImageMagick 7 (\`magick\`) is required - install with \`brew install imagemagick\`" >&2
 	exit 1
 fi
@@ -47,7 +47,7 @@ magick "$WATCH_SOURCE" \
 	-background "$WATCH_BACKGROUND" -alpha remove -alpha off \
 	"$DEST_DIR/AppIcon.png"
 
-cat >"$DEST_DIR/Contents.json" <<'JSON'
+cat > "$DEST_DIR/Contents.json" << 'JSON'
 {
 	"images": [
 		{

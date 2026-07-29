@@ -33,8 +33,8 @@ pick_simulator() {
 	fi
 
 	# runtimes are listed oldest first, so the last iphone is on the newest one available
-	udid="$(xcrun simctl list devices available | grep -E '^[[:space:]]+iPhone' |
-		grep -Eo '\([0-9A-Fa-f-]{36}\)' | tr -d '()' | tail -1 || true)"
+	udid="$(xcrun simctl list devices available | grep -E '^[[:space:]]+iPhone' \
+		| grep -Eo '\([0-9A-Fa-f-]{36}\)' | tr -d '()' | tail -1 || true)"
 	[ -n "$udid" ] || die "no available iphone simulator; create one in Xcode > Devices"
 	printf '%s' "$udid"
 }
@@ -44,7 +44,7 @@ boot_simulator() {
 	log "booting simulator $udid"
 	xcrun simctl bootstatus "$udid" -b
 	# the window server makes wkwebview rendering (and screenshots) behave
-	open -a Simulator --args -CurrentDeviceUDID "$udid" >/dev/null 2>&1 || true
+	open -a Simulator --args -CurrentDeviceUDID "$udid" > /dev/null 2>&1 || true
 }
 
 # #endregion

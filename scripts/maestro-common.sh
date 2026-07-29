@@ -53,12 +53,12 @@ finish() { COMPLETED=1; }
 
 cleanup() {
 	local rc=$?
-	if [ -n "$MOCK_PID" ] && kill -0 "$MOCK_PID" 2>/dev/null; then
-		kill "$MOCK_PID" 2>/dev/null || true
-		wait "$MOCK_PID" 2>/dev/null || true
+	if [ -n "$MOCK_PID" ] && kill -0 "$MOCK_PID" 2> /dev/null; then
+		kill "$MOCK_PID" 2> /dev/null || true
+		wait "$MOCK_PID" 2> /dev/null || true
 		# an orphaned mock holds the ports and breaks the next run, so make sure
-		if kill -0 "$MOCK_PID" 2>/dev/null; then
-			kill -9 "$MOCK_PID" 2>/dev/null || true
+		if kill -0 "$MOCK_PID" 2> /dev/null; then
+			kill -9 "$MOCK_PID" 2> /dev/null || true
 		fi
 	fi
 	if [ "$COMPLETED" != '1' ] && [ "$rc" -eq 0 ]; then
@@ -73,13 +73,13 @@ trap 'on_err "$?" "$BASH_COMMAND"' ERR
 trap cleanup EXIT INT TERM
 
 require_cmd() {
-	command -v "$1" >/dev/null 2>&1 || die "$1 is required but not on PATH${2:+ ($2)}"
+	command -v "$1" > /dev/null 2>&1 || die "$1 is required but not on PATH${2:+ ($2)}"
 }
 
 # #region maestro cli
 
 resolve_maestro() {
-	if command -v maestro >/dev/null 2>&1; then
+	if command -v maestro > /dev/null 2>&1; then
 		MAESTRO="$(command -v maestro)"
 	elif [ -x "$HOME/.maestro/bin/maestro" ]; then
 		MAESTRO="$HOME/.maestro/bin/maestro"
@@ -87,7 +87,7 @@ resolve_maestro() {
 		die "maestro cli not found; install it with: curl -Ls https://get.maestro.mobile.dev | bash"
 	fi
 	require_cmd java 'maestro needs a jdk 17 or newer'
-	log "maestro $("$MAESTRO" --version 2>/dev/null | tail -1) at $MAESTRO"
+	log "maestro $("$MAESTRO" --version 2> /dev/null | tail -1) at $MAESTRO"
 }
 
 # #endregion
@@ -159,7 +159,7 @@ start_mocks() {
 	MOCK_LOG="$WORK_DIR/mock-server.log"
 	log "starting the mock backends (mantle $mantle, cloud $cloud)"
 	MOCK_MANTLE_PORT="$mantle" MOCK_CLOUD_PORT="$cloud" \
-		bun tests/e2e/utils/mock-server.ts >"$MOCK_LOG" 2>&1 &
+		bun tests/e2e/utils/mock-server.ts > "$MOCK_LOG" 2>&1 &
 	MOCK_PID=$!
 	wait_for_port "$mantle"
 	wait_for_port "$cloud"
@@ -180,8 +180,8 @@ build_web() {
 assert_bundle_host() {
 	local expected="$1" entry="$ROOT/.output/public/200.html"
 	[ -f "$entry" ] || die "no .output/public/200.html after the build"
-	grep -q "$expected" "$entry" ||
-		die "the bundle was not built for $expected; delete .output and re-run"
+	grep -q "$expected" "$entry" \
+		|| die "the bundle was not built for $expected; delete .output and re-run"
 	log "bundle points at $expected"
 }
 

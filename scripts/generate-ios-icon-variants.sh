@@ -23,7 +23,7 @@ DARK_SOURCE="$RESOURCES_DIR/icon-dark.png"
 TINTED_SOURCE="$RESOURCES_DIR/icon-tinted.png"
 LIGHT_BACKGROUND="${IOS_ICON_LIGHT_BACKGROUND:-#ffffff}"
 
-if ! command -v magick >/dev/null 2>&1; then
+if ! command -v magick > /dev/null 2>&1; then
 	echo "error: ImageMagick 7 (\`magick\`) is required - install with \`brew install imagemagick\`" >&2
 	exit 1
 fi
@@ -63,7 +63,7 @@ magick "$TINTED_SOURCE" \
 # The legacy single-image catalog entry is no longer referenced.
 rm -f "$DEST_DIR/AppIcon-512@2x.png"
 
-cat >"$DEST_DIR/Contents.json" <<'JSON'
+cat > "$DEST_DIR/Contents.json" << 'JSON'
 {
 	"images": [
 		{

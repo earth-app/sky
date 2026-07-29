@@ -124,6 +124,7 @@
 		"lint-staged": "^17.2.0",
 		"prettier": "^3.9.6",
 		"prettier-plugin-organize-imports": "^4.3.0",
+		"prettier-plugin-sh": "^0.19.0",
 		"prettier-plugin-tailwindcss": "^0.8.1",
 		"tailwindcss": "4.3.3",
 		"v8-to-istanbul": "^9.3.0",
@@ -132,6 +133,6 @@
 		"yaml": "2.9.0"
 	},
 	"lint-staged": {
-		"*.{ts,vue,css,md,json,xml,plist,storyboard,yml}": "prettier --write"
+		"*.{ts,vue,css,md,json,xml,plist,storyboard,yml,sh}": "prettier --write"
 	}
 }

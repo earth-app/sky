@@ -59,7 +59,7 @@ boot_emulator() {
 	log "booting emulator $avd"
 	mkdir -p "$WORK_DIR"
 	nohup "$EMULATOR" -avd "$avd" -no-snapshot-save -no-boot-anim -netdelay none -netspeed full \
-		>"$WORK_DIR/emulator.log" 2>&1 &
+		> "$WORK_DIR/emulator.log" 2>&1 &
 	STARTED_EMULATOR=1
 
 	SERIAL=''
@@ -73,7 +73,7 @@ boot_emulator() {
 
 	tries=0
 	while [ "$tries" -lt 150 ]; do
-		if [ "$("$ADB" -s "$SERIAL" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = '1' ]; then
+		if [ "$("$ADB" -s "$SERIAL" shell getprop sys.boot_completed 2> /dev/null | tr -d '\r')" = '1' ]; then
 			return 0
 		fi
 		tries=$((tries + 1))
