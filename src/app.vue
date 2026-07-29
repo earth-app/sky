@@ -2,13 +2,13 @@
 	<IonApp>
 		<div
 			v-if="isOffline || pendingMutationCount > 0"
-			class="fixed top-12 left-1/2 -translate-x-1/2 z-1000 pointer-events-none"
+			class="fixed top-[calc(var(--m-safe-top)+0.5rem)] left-1/2 -translate-x-1/2 z-(--m-z-banner) pointer-events-none"
 			role="status"
 			aria-live="polite"
 		>
 			<div
 				v-if="isOffline"
-				class="flex items-center gap-2 px-4 py-2 rounded-full bg-red-600 text-white shadow-lg shadow-black/40"
+				class="flex items-center gap-2 px-4 py-2 rounded-full bg-danger-700 text-white shadow-lg"
 			>
 				<UIcon
 					name="material-symbols:cloud-off-outline"
@@ -24,7 +24,7 @@
 			</div>
 			<div
 				v-else
-				class="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500 text-white shadow-lg shadow-black/40"
+				class="flex items-center gap-2 px-4 py-2 rounded-full bg-warning-700 text-white shadow-lg"
 			>
 				<UIcon
 					name="mdi:cloud-sync-outline"
@@ -41,6 +41,7 @@
 
 		<ClientOnly>
 			<MBadgeUnlockRibbon />
+			<MToast />
 			<MSiteTour
 				:steps="welcomeTour"
 				name="Welcome Tour"
