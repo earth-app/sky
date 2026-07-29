@@ -64,38 +64,27 @@
 				<IonSpinner name="crescent" />
 			</div>
 
-			<div
+			<MEmptyState
 				v-else-if="rows.length === 0 && friends.length === 0 && circle.length === 0"
 				id="challenge-empty-state"
-				class="flex flex-col items-center gap-3 px-6 py-16 text-center"
-			>
-				<UIcon
-					name="mdi:account-multiple-outline"
-					class="size-12 text-gray-400"
-				/>
-				<p class="text-sm text-gray-500">Add friends to challenge them to your quests.</p>
-				<IonButton
-					fill="outline"
-					color="primary"
-					@click="findFriends"
-				>
-					Find Friends
-				</IonButton>
-			</div>
+				icon="mdi:account-multiple-outline"
+				title="No Friends Yet"
+				description="Add friends to challenge them to your quests."
+				cta-label="Find Friends"
+				cta-color="primary"
+				cta-fill="outline"
+				variant="neutral"
+				@cta="findFriends"
+			/>
 
-			<div
+			<MEmptyState
 				v-else-if="rows.length === 0"
 				id="challenge-no-results"
-				class="flex flex-col items-center gap-3 px-6 py-16 text-center"
-			>
-				<UIcon
-					name="mdi:account-multiple-outline"
-					class="size-12 text-gray-400"
-				/>
-				<p class="text-sm text-gray-500">
-					No friends found matching your search. Try refreshing the list.
-				</p>
-			</div>
+				icon="mdi:account-multiple-outline"
+				title="No Friends Found"
+				description="No friends match your search. Try refreshing the list."
+				variant="neutral"
+			/>
 
 			<div
 				class="flex flex-col items-center w-full"
@@ -123,8 +112,13 @@
 							size="md"
 						/>
 						<IonLabel class="ml-2">
-							<h2 class="font-semibold!">{{ displayName(row.user) }}</h2>
-							<p class="text-xs! text-gray-500!">@{{ row.user.username }}</p>
+							<h2
+								v-if="fullNameOf(row.user)"
+								class="text-base! font-semibold!"
+							>
+								{{ fullNameOf(row.user) }}
+							</h2>
+							<p class="text-xs! text-muted!">@{{ row.user.username }}</p>
 						</IonLabel>
 						<div
 							slot="end"
@@ -166,7 +160,7 @@
 					</IonItem>
 				</LazyIonList>
 
-				<span class="text-sm text-gray-500 mt-2"> Showing {{ rows.length }} friends </span>
+				<span class="text-sm text-muted mt-2"> Showing {{ rows.length }} friends </span>
 			</div>
 		</IonContent>
 	</IonModal>
@@ -188,7 +182,8 @@ import {
 	useIonRouter
 } from '@ionic/vue';
 import type { User } from 'types/user';
-import { getUserDisplayName } from 'utils';
+import { getUserDisplayName, realFullName } from 'utils';
+import { theme } from '~/composables/useSettings';
 import { sortFriendsForChallenge } from '~/utils/challengeFriends';
 
 const props = defineProps<{
@@ -260,8 +255,9 @@ function avatarSrc(user: User): string {
 	return avatarStore.safeUrl(user.account?.avatar_url, 'avatar128');
 }
 
-function displayName(user: User): string {
-	return getUserDisplayName(user);
+// the row already prints @username underneath, so the heading only earns its line with a real name
+function fullNameOf(user: User): string | undefined {
+	return realFullName(user.full_name);
 }
 
 async function onSelect(row: { user: User }) {

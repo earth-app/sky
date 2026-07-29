@@ -42,9 +42,7 @@
 			>
 				Profile
 			</h2>
-			<IonList
-				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
-			>
+			<IonList class="w-full max-w-md p-2! rounded-xl border-2 border-default">
 				<IonItem id="visibility">
 					<IonSelect
 						label="Visibility"
@@ -168,12 +166,10 @@
 			</IonList>
 
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Email Verification</h2>
-			<IonList
-				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
-			>
+			<IonList class="w-full max-w-md p-2! rounded-xl border-2 border-default">
 				<IonItem>
 					<IonLabel>
-						<h3 class="font-semibold">Status</h3>
+						<h3 class="text-base font-semibold">Status</h3>
 						<p>{{ emailVerificationStatus }}</p>
 					</IonLabel>
 					<IonButton
@@ -190,7 +186,7 @@
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Field Privacy</h2>
 			<IonList
 				id="privacy"
-				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
+				class="w-full max-w-md p-2! rounded-xl border-2 border-default"
 			>
 				<IonItem
 					v-for="item in fieldPrivacyItems"
@@ -220,7 +216,7 @@
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Activities</h2>
 			<IonList
 				id="activities"
-				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
+				class="w-full max-w-md p-2! rounded-xl border-2 border-default"
 			>
 				<IonItem
 					button
@@ -229,7 +225,7 @@
 					<IonLabel>Select Activities</IonLabel>
 					<div
 						slot="end"
-						class="text-sm text-gray-500"
+						class="text-sm text-muted"
 					>
 						{{ selectedActivitiesText }}
 					</div>
@@ -239,7 +235,7 @@
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Rewards</h2>
 			<IonList
 				id="cosmetics"
-				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
+				class="w-full max-w-md p-2! rounded-xl border-2 border-default"
 			>
 				<IonItem lines="none">
 					<div class="flex items-center justify-between w-full gap-2">
@@ -334,7 +330,7 @@
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">OAuth Providers</h2>
 			<IonList
 				id="oauth"
-				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
+				class="w-full max-w-md p-2! rounded-xl border-2 border-default"
 			>
 				<IonItem
 					v-for="provider in oauthProviders"
@@ -379,7 +375,7 @@
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Notifications</h2>
 			<IonList
 				id="email-subscriptions"
-				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
+				class="w-full max-w-md p-2! rounded-xl border-2 border-default"
 			>
 				<IonItem>
 					<IonToggle
@@ -397,7 +393,7 @@
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Security</h2>
 			<IonList
 				id="password-change"
-				class="w-full max-w-md p-2! rounded-xl border-2 border-black/40 light:border-gray-300"
+				class="w-full max-w-md p-2! rounded-xl border-2 border-default"
 			>
 				<IonItem lines="none">
 					<IonButton
@@ -574,7 +570,7 @@
 						:animated="selectedCosmeticForPurchase.animated"
 						:with-self="hasOwnAvatar"
 					/>
-					<p class="text-sm text-gray-500">
+					<p class="text-sm text-muted">
 						{{ formatPoints(selectedCosmeticForPurchase.price) }} points
 					</p>
 					<div class="flex gap-2">
@@ -666,10 +662,15 @@
 							</div>
 						</IonCheckbox>
 					</IonItem>
-					<IonItem v-if="!activitiesLoading && filteredActivities.length === 0">
-						<IonLabel>No activities found.</IonLabel>
-					</IonItem>
 				</IonList>
+				<MEmptyState
+					v-if="!activitiesLoading && filteredActivities.length === 0"
+					icon="mdi:magnify-close"
+					title="No Activities Found"
+					description="Try a different search term."
+					variant="neutral"
+					dense
+				/>
 			</IonContent>
 		</IonModal>
 

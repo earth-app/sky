@@ -64,7 +64,7 @@
 					v-if="quest?.quest"
 					class="flex flex-col items-center gap-6"
 				>
-					<h2>Current Quest</h2>
+					<h2 class="text-lg">Current Quest</h2>
 					<UserQuestMThumbnail
 						:quest="quest.quest"
 						:progress="quest.progress"
@@ -74,7 +74,7 @@
 
 				<div class="flex flex-col items-center gap-6 mb-8">
 					<div class="flex flex-col items-center">
-						<h2 class="mb-0!">All Quests</h2>
+						<h2 class="text-lg mb-0!">All Quests</h2>
 						<span class="text-base opacity-90">{{ shownQuests.length }} shown</span>
 					</div>
 					<template v-if="isRefreshing && shownQuests.length === 0">

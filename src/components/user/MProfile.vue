@@ -1,47 +1,58 @@
 <template>
-	<div class="flex flex-col size-full">
-		<div class="flex gap-8 justify-center justify-items-center items-center px-4 mt-6">
-			<div class="flex flex-col items-center justify-evenly self-start py-4">
-				<UAvatar
-					id="avatar"
-					:src="avatar"
-					class="size-24 my-2 shadow-lg rounded-full shadow-black/70"
-				/>
-				<UserMFriendsButtons :user="user" />
-				<UserMFriendsCount :user="user" />
-
-				<UserMChallengeFriendButton
-					v-if="canChallenge"
-					:friend-id="user.id"
-					:friend-name="displayName"
-					fill="solid"
-					class="my-2"
-				/>
-
-				<IonButton
-					v-if="isCurrentUser"
-					color="secondary"
-					shape="round"
-					router-link="/tabs/profile/editor"
-					size="small"
-					class="my-2"
-					>Edit Profile</IonButton
-				>
-			</div>
-			<div class="flex items-center px-2">
-				<div class="flex flex-col">
-					<h2 class="text-lg! my-0!">{{ displayName }}</h2>
-					<h3 class="text-sm! my-0! text-gray-600 light:text-gray-400">{{ user.username }}</h3>
-					<UserMTypeBadge
-						:user="user"
-						editor
-						class="mt-4"
+	<div class="flex flex-col min-h-full min-w-full">
+		<div class="relative overflow-hidden">
+			<MAmbient
+				:seed="props.user.id"
+				:height="AMBIENT_BAND"
+				class="absolute inset-x-0 top-0 opacity-45"
+			/>
+			<div
+				class="pointer-events-none absolute inset-x-0 top-0 bg-linear-to-b from-transparent to-(--ion-background-color)"
+				:style="{ height: `${AMBIENT_BAND}px` }"
+			/>
+			<div class="relative flex gap-8 justify-center justify-items-center items-center px-4 mt-6">
+				<div class="flex flex-col items-center justify-evenly self-start py-4">
+					<UAvatar
+						id="avatar"
+						:src="avatar"
+						class="size-24 my-2 shadow-lg rounded-full shadow-black/70"
 					/>
-					<div
-						id="user-journeys"
-						class="m-2"
+					<UserMFriendsButtons :user="user" />
+					<UserMFriendsCount :user="user" />
+
+					<UserMChallengeFriendButton
+						v-if="canChallenge"
+						:friend-id="user.id"
+						:friend-name="displayName"
+						fill="solid"
+						class="my-2"
+					/>
+
+					<IonButton
+						v-if="isCurrentUser"
+						color="secondary"
+						shape="round"
+						router-link="/tabs/profile/editor"
+						size="small"
+						class="my-2"
+						>Edit Profile</IonButton
 					>
-						<UserJourneyMList :user="user" />
+				</div>
+				<div class="flex items-center px-2">
+					<div class="flex flex-col">
+						<h2 class="text-lg! my-0!">{{ displayName }}</h2>
+						<h3 class="text-sm! my-0! text-muted">{{ user.username }}</h3>
+						<UserMTypeBadge
+							:user="user"
+							editor
+							class="mt-4"
+						/>
+						<div
+							id="user-journeys"
+							class="m-2"
+						>
+							<UserJourneyMList :user="user" />
+						</div>
 					</div>
 				</div>
 			</div>
@@ -104,10 +115,11 @@
 					<UIcon name="mdi:badge-account-horizontal-outline" />
 					<span>View Badges Collected</span>
 					<span v-if="badgesLoaded">({{ grantedBadges.length }} / {{ badges.length }})</span>
-					<span
+					<MSkeleton
 						v-else
-						class="inline-block! h-3! w-10! animate-pulse! rounded-full! bg-current/30!"
-					></span>
+						variant="pill"
+						class="inline-block!"
+					/>
 				</span>
 			</IonButton>
 			<MContentDrawer
@@ -136,10 +148,11 @@
 					<UIcon name="mdi:star-circle-outline" />
 					<span>View Points</span>
 					<span v-if="pointsLoaded">({{ comma(points) }})</span>
-					<span
+					<MSkeleton
 						v-else
-						class="inline-block! h-3! w-10! animate-pulse! rounded-full! bg-current/30!"
-					></span>
+						variant="pill"
+						class="inline-block!"
+					/>
 				</span>
 			</IonButton>
 			<MContentDrawer
@@ -150,7 +163,7 @@
 			>
 				<template #default>
 					<div class="flex flex-col w-full px-4">
-						<h2 class="self-center">{{ comma(points) }} Points</h2>
+						<h2 class="self-center text-lg">{{ comma(points) }} Points</h2>
 						<UTable
 							:data="pointsHistory ? [...pointsHistory].reverse() : []"
 							:loading="!pointsLoaded"
@@ -163,8 +176,7 @@
 											? DateTime.fromMillis(row.original.timestamp).toRelative({
 													locale: i18n.locale.value
 												})
-											: 'sometime',
-									size: 110
+											: 'sometime'
 								},
 								{
 									accessorKey: 'difference',
@@ -177,24 +189,24 @@
 											{
 												color: diff > 0 ? 'success' : 'danger',
 												class:
-													'min-w-0! w-12! h-6! m-0! px-0! text-xs! flex flex-wrap justify-center items-center'
+													'min-w-12! h-6! m-0! px-0! text-xs! flex flex-wrap justify-center items-center'
 											},
 											() => `${sign}${diff}`
 										);
-									},
-									size: 80
+									}
 								},
 								{
 									accessorKey: 'reason',
-									header: 'Reason',
-									size: 999
+									header: 'Reason'
 								}
 							]"
 							:ui="{
-								tr: 'flex items-center gap-4 py-0',
-								td: 'text-xs! py-1.5! flex items-center first:w-22 first:shrink-0 nth-2:w-12 nth-2:shrink-0 last:flex-1 last:truncate',
-								th: 'text-xs! font-semibold first:w-22 first:shrink-0 nth-2:w-12 nth-2:shrink-0 last:flex-1',
+								base: 'w-full table-fixed',
+								tr: 'py-0',
+								td: 'text-xs! py-1.5! px-2! align-middle whitespace-normal wrap-break-word first:w-24 nth-2:w-16 last:w-auto',
+								th: 'text-xs! py-2! px-2! font-semibold text-left whitespace-normal first:w-24 nth-2:w-16 last:w-auto',
 								thead: 'border-b border-white/10',
+								separator: 'hidden',
 								tbody: 'divide-y divide-white/5'
 							}"
 						/>
@@ -284,7 +296,7 @@
 			>
 				<h2 class="text-lg! my-0! mb-2">Events Calendar</h2>
 
-				<IonCard class="mt-8 w-full min-w-0 border-2! border-gray-300! light:border-gray-600!">
+				<IonCard class="mt-8 w-full min-w-0 border-2! border-default!">
 					<div class="flex flex-col items-center mt-4 w-full">
 						<UCalendar
 							v-model="selectedDate"
@@ -355,6 +367,9 @@ import { BADGES_DRAWER_CLOSE } from '~/utils/injection';
 const props = defineProps<{
 	user: User;
 }>();
+
+// the ambient band and its fade share one height, so the scene dissolves instead of cutting off
+const AMBIENT_BAND = 240;
 
 const {
 	avatar,

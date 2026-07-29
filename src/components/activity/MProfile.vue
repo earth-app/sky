@@ -92,7 +92,7 @@
 						class="size-5"
 					/>
 				</span>
-				<h3 class="flex-1 min-w-0 text-md leading-relaxed font-normal! m-0!">
+				<h3 class="flex-1 min-w-0 text-base leading-relaxed font-normal! m-0!">
 					{{ activity.description }}
 				</h3>
 				<UIcon
@@ -139,16 +139,16 @@
 			id="activity-cards"
 			class="flex flex-col justify-center gap-4 px-4 w-full"
 		>
-			<!-- Skeleton Loading Cards -->
-			<InfoCardSkeleton
+			<MSkeleton
 				v-if="cards.length === 0 && !offlineMode"
-				v-for="n in 6"
-				:key="`skeleton-${n}`"
+				variant="card"
+				:count="6"
+				label="Loading Reference Cards"
 			/>
 
 			<p
 				v-if="cards.length === 0 && offlineMode"
-				class="text-center text-gray-500 text-sm mt-2"
+				class="text-center text-muted text-sm mt-2"
 			>
 				Reference cards are unavailable for this download.
 			</p>
@@ -169,7 +169,6 @@
 						:content="card.content"
 						:link="card.link"
 						:image="card.image"
-						:image-link="card.imageLink"
 						:object="{ url: card.object, type: card.objectType }"
 						:youtube-id="card.youtubeId"
 						:video="card.video"

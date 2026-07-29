@@ -62,6 +62,10 @@ export default defineNuxtConfig({
 	compatibilityDate: '2025-12-09',
 	nitro: {
 		preset: 'static',
+		// every lane (test / e2e / maestro-ios / maestro-android) used to build into the same
+		// .output, so two concurrent builds clobbered each other and a running static server
+		// silently started serving the other lane's baked base urls
+		...(process.env.NITRO_OUTPUT_DIR ? { output: { dir: process.env.NITRO_OUTPUT_DIR } } : {}),
 		routeRules: {
 			'/**': {
 				cors: true,
@@ -140,6 +144,9 @@ export default defineNuxtConfig({
 	},
 	ionic: {
 		css: {
+			// basic is off so main.css can re-import normalize/structure/typography into
+			// @layer ionic; unlayered `h1-h6{font-size}` is what forced ~250 `!` classes
+			basic: false,
 			utilities: true
 		},
 		config: {

@@ -62,9 +62,9 @@
 				<div class="flex items-center gap-2">
 					<UIcon
 						name="mdi:map-marker-radius-outline"
-						class="size-5 text-primary"
+						class="size-5 m-text-brand"
 					/>
-					<h3 class="font-semibold m-0!">From Outside</h3>
+					<h3 class="text-base font-semibold m-0!">From Outside</h3>
 					<UBadge
 						v-if="promptTrailmarks.length"
 						color="primary"
@@ -119,6 +119,13 @@
 					@deleted="removeResponse(response.id)"
 				/>
 			</div>
+			<MEmptyState
+				v-if="!isLoading && responses.length === 0"
+				icon="mdi:comment-text-outline"
+				title="No Responses Yet"
+				description="Be the first to answer this prompt."
+				variant="neutral"
+			/>
 			<IonInfiniteScroll
 				v-if="hasMore"
 				@ionInfinite="onInfinite"
@@ -128,14 +135,14 @@
 			</IonInfiniteScroll>
 			<p
 				v-if="isLoading"
-				class="text-gray-500 my-4"
+				class="text-muted my-4"
 			>
 				Loading more responses...
 			</p>
 		</div>
 		<p
 			v-else
-			class="text-gray-500 text-sm text-center my-4"
+			class="text-muted text-sm text-center my-4"
 		>
 			Prompt responses are unavailable offline.
 		</p>

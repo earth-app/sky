@@ -22,11 +22,9 @@
 						:ui="{ base: 'size-4 lg:size-6' }"
 						:title="capitalizeFully(notification.type)"
 					>
-						<div
-							class="p-4 bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-200 light:border-gray-400 rounded-lg w-full max-w-3xl"
-						>
+						<div class="p-4 bg-elevated border-2 border-default rounded-lg w-full max-w-3xl">
 							<p
-								class="text-gray-800 dark:text-gray-200 text-sm md:text-md lg:text-lg mb-4"
+								class="text-gray-800 dark:text-gray-200 text-sm md:text-base lg:text-lg mb-4"
 								v-html="message"
 							></p>
 
@@ -35,11 +33,16 @@
 								v-if="mobileLink"
 								:router-link="mobileLink"
 								color="primary"
-								class="px-2"
+								role="link"
+								tabindex="0"
+								aria-label="Open the Linked Page"
+								class="px-2 min-h-11"
+								@keydown.enter.prevent="activateSelf"
+								@keydown.space.prevent="activateSelf"
 								>Open Link</IonChip
 							>
 
-							<p class="text-gray-600 dark:text-gray-400 text-xs mt-2">
+							<p class="text-muted text-xs mt-2">
 								From: {{ notification.source }} | Type: {{ capitalizeFully(notification.type) }} |
 								ID:
 								{{ notification.id }}
@@ -59,7 +62,7 @@
 				v-else-if="user && notification === null"
 				class="flex flex-col items-center justify-center h-screen"
 			>
-				<p class="text-gray-600">Notification doesn't exist. Maybe look at the URL again?</p>
+				<p class="text-muted">Notification doesn't exist. Maybe look at the URL again?</p>
 			</div>
 			<Loading v-else-if="user === undefined" />
 			<!-- Only show "Please log in" when user is explicitly null (not loading) -->
@@ -67,7 +70,7 @@
 				v-else-if="user === null"
 				class="flex flex-col w-full h-full items-center justify-center"
 			>
-				<p class="text-center text-gray-600">Please log in to view your notifications.</p>
+				<p class="text-center text-muted">Please log in to view your notifications.</p>
 			</div>
 		</IonContent>
 	</IonPage>
@@ -83,6 +86,11 @@ const { setTitleSuffix } = useTitleSuffix();
 
 const { notification, fetch } = useNotification(route.params.id as string);
 const { notifyError, selection } = useAppHaptics();
+
+// ion-chip has no keyboard activation of its own; a synthetic click drives its routerLink
+function activateSelf(event: KeyboardEvent) {
+	(event.currentTarget as HTMLElement | null)?.click();
+}
 
 // Fetch notification data on mount
 onMounted(() => {
