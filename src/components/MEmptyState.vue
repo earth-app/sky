@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="flex flex-col items-center justify-center text-center px-8 py-12 gap-3 max-w-md mx-auto"
+		class="flex flex-col items-center justify-center text-center px-8 gap-3 max-w-md mx-auto w-full"
 		:class="dense ? 'py-6' : 'py-12'"
 		role="status"
 	>
@@ -87,7 +87,7 @@ const illustrationBg = computed(() => {
 		case 'warning':
 			return 'bg-warning/10';
 		case 'neutral':
-			return 'bg-gray-200 dark:bg-gray-700';
+			return 'bg-elevated';
 		case 'primary':
 		default:
 			return 'bg-primary/10';
@@ -101,10 +101,10 @@ const illustrationFg = computed(() => {
 		case 'warning':
 			return 'text-warning';
 		case 'neutral':
-			return 'text-gray-600 dark:text-gray-300';
+			return 'text-muted';
 		case 'primary':
 		default:
-			return 'text-primary';
+			return 'm-text-brand';
 	}
 });
 
@@ -124,12 +124,22 @@ function onCtaClick() {
 		transform: translateY(-4px);
 	}
 }
+/* 2 passes = 4.8s, under the WCAG 2.2 SC 2.2.2 five-second ceiling for auto-starting motion */
 .animate-bounce-slow {
-	animation: bounce-slow 2.4s ease-in-out infinite;
+	animation: bounce-slow 2.4s ease-in-out 2;
 }
 
 :global(html.animations-disabled) .animate-bounce-slow,
 :global(html.animations-disabled) .m-skeleton::after {
 	animation: none !important;
+}
+
+/* the global killswitch only crushes the duration, which leaves an infinite animation
+   reported as still running; the os query needs the same `none` the app class gets */
+@media (prefers-reduced-motion: reduce) {
+	.animate-bounce-slow,
+	.m-skeleton::after {
+		animation: none !important;
+	}
 }
 </style>
