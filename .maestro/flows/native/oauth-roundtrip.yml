@@ -1,0 +1,67 @@
+appId: com.earthapp.sky
+name: OAuth Callback Session Survives A Cold Relaunch
+tags:
+  - gate
+env:
+  SESSION_TOKEN: mock-session-token-abc123
+---
+- runFlow:
+    file: ../_shared/launch-clean.yml
+
+# this is the exact handoff behind the App Store 2.1(a) rejection: crust redirects the
+# provider back into the app over the custom scheme, and app.vue has to persist the token
+# into BOTH localStorage and Preferences before anything reads it
+- openLink:
+    link: com.earthapp.sky://oauth/complete?session_token=${SESSION_TOKEN}&provider=google&context=login
+    label: Provider callback carrying a session token
+# iOS asks `Open in "The Earth App"?` for every externally opened custom-scheme url, and the
+# alert covers the whole accessibility tree until it is answered. Android never prompts
+- runFlow:
+    when:
+      visible:
+        text: Open
+    commands:
+      - tapOn:
+          text: Open
+      - waitForAnimationToEnd:
+          timeout: 5000
+
+- extendedWaitUntil:
+    visible: How does this Look?
+    timeout: 40000
+    label: Token accepted, current user hydrated, dashboard mounted
+- tapOn:
+    text: Skip for Now
+- waitForAnimationToEnd:
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        text: Close tour
+    commands:
+      - tapOn:
+          text: Close tour
+      - waitForAnimationToEnd:
+          timeout: 5000
+- extendedWaitUntil:
+    visible: Open Your Profile
+    timeout: 20000
+
+# the regression: an OAuth-only session used to evaporate on the next cold launch because
+# nothing durable held it, dropping the user back on /login with a default avatar
+- stopApp:
+    appId: com.earthapp.sky
+- launchApp:
+    appId: com.earthapp.sky
+    clearState: false
+    label: Cold relaunch with no fresh callback
+
+- extendedWaitUntil:
+    visible: Open Your Profile
+    timeout: 40000
+    label: OAuth session restored from durable storage
+- assertNotVisible:
+    text: Username or Email
+    label: Never bounced back to the login form
+- assertVisible:
+    text: Time Outside

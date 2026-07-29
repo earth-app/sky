@@ -1,0 +1,85 @@
+appId: com.earthapp.sky
+name: Location Permission Deny Then Grant
+tags:
+  - gate
+---
+- runFlow:
+    file: ../_shared/sign-in.yml
+
+# `location` is the one permission whose values differ by platform: simctl privacy takes the
+# CLLocation vocabulary (never / inuse / always), Android's appops takes allow / deny. maestro
+# does not interpolate env vars into permission values, so the split has to be explicit
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setPermissions:
+          appId: com.earthapp.sky
+          permissions:
+            location: never
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - setPermissions:
+          appId: com.earthapp.sky
+          permissions:
+            location: deny
+
+- scrollUntilVisible:
+    element:
+      text: Trailmarks
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    text: Trailmarks
+- waitForAnimationToEnd:
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        text: Close tour
+    commands:
+      - tapOn:
+          text: Close tour
+      - waitForAnimationToEnd:
+          timeout: 5000
+
+- extendedWaitUntil:
+    visible: Location Needed
+    timeout: 30000
+    label: Denied location surfaces the recovery alert, not a spinner forever
+- assertVisible:
+    text: Re-check Location
+
+# recheckLocation() re-reads the native permission, so a grant made outside the app has to
+# recover in place; that promise is only testable against a real permission store
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setPermissions:
+          appId: com.earthapp.sky
+          permissions:
+            location: inuse
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - setPermissions:
+          appId: com.earthapp.sky
+          permissions:
+            location: allow
+- setLocation:
+    latitude: 40.7580
+    longitude: -73.9855
+    label: Drop the device somewhere with a deterministic fix
+- tapOn:
+    text: Re-check Location
+
+- extendedWaitUntil:
+    visible: Be the First to Leave One.
+    timeout: 40000
+    label: Granted location resolved a fix and the nearby query ran
+- assertNotVisible:
+    text: Location Needed

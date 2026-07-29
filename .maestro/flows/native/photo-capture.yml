@@ -1,0 +1,69 @@
+appId: com.earthapp.sky
+name: Photo Library Pick Into The Event Thumbnail
+tags:
+  - eval
+---
+# the iOS simulator ships a stock photo library, an android emulator's is empty, so only
+# android needs seeding. maestro resolves addMedia only inside the workspace, so .maestro/media
+# symlinks an already-committed image rather than adding a binary; iOS simctl addMedia cannot
+# follow that symlink, which is the other reason this stays android-only
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - addMedia:
+          - ../../media/cloud.png
+
+- runFlow:
+    file: ../_shared/sign-in.yml
+
+- setPermissions:
+    appId: com.earthapp.sky
+    permissions:
+      photos: allow
+      medialibrary: allow
+
+- tapOn:
+    text: Create Content
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: New Event
+- extendedWaitUntil:
+    visible: Create Event
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      text: Choose Thumbnail
+    direction: DOWN
+    timeout: 20000
+
+- tapOn:
+    text: Choose Thumbnail
+    label: Camera.chooseFromGallery hands off to the OS picker
+- waitForAnimationToEnd:
+    timeout: 15000
+- takeScreenshot:
+    path: maestro-shots/photo-picker
+
+- extendedWaitUntil:
+    visible: Photo Library
+    timeout: 20000
+    label: OS picker presented, not an in-webview file input
+
+# picker cells carry no stable accessible name, so the top-left thumbnail is addressed by
+# position; the picker is limit-based rather than single-select, so it needs an explicit Done
+- tapOn:
+    point: 12%,16%
+    label: Select the first thumbnail
+- tapOn:
+    text: Done
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- extendedWaitUntil:
+    visible: Thumbnail preview
+    timeout: 40000
+    label: Picked bytes crossed the bridge and rendered as a blob preview
+- takeScreenshot:
+    path: maestro-shots/photo-thumbnail

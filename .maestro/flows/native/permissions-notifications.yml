@@ -1,0 +1,63 @@
+appId: com.earthapp.sky
+name: Denied Notifications Must Not Stall The Boot Chain
+tags:
+  - gate
+---
+- runFlow:
+    file: ../_shared/sign-in.yml
+
+# initPushNotifications() runs inside app.vue's onMounted after the auth await; a denied
+# registration there once dropped tokens silently, and a throw would hang the splash
+- setPermissions:
+    appId: com.earthapp.sky
+    permissions:
+      notifications: deny
+    label: Revoke push before a cold launch
+
+- stopApp:
+    appId: com.earthapp.sky
+- launchApp:
+    appId: com.earthapp.sky
+    clearState: false
+    label: Cold launch with push registration guaranteed to fail
+
+- extendedWaitUntil:
+    visible: Open Your Profile
+    timeout: 40000
+    label: Splash cleared and the dashboard rendered despite the denial
+- assertNotVisible:
+    text: Find your Novelty, Try New Things, Discover the World
+    label: Session survived, so no bounce back to the anonymous index
+
+- tapOn:
+    text: Notifications
+- waitForAnimationToEnd:
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        text: Close tour
+    commands:
+      - tapOn:
+          text: Close tour
+      - waitForAnimationToEnd:
+          timeout: 5000
+- extendedWaitUntil:
+    visible: You're all caught up
+    timeout: 30000
+    label: In-app inbox works with OS notifications denied
+
+- setPermissions:
+    appId: com.earthapp.sky
+    permissions:
+      notifications: allow
+- stopApp:
+    appId: com.earthapp.sky
+- launchApp:
+    appId: com.earthapp.sky
+    clearState: false
+    label: Cold launch with push granted
+- extendedWaitUntil:
+    visible: Open Your Profile
+    timeout: 40000
+    label: Granted path boots identically

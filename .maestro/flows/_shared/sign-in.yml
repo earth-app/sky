@@ -1,0 +1,71 @@
+appId: com.earthapp.sky
+name: Sign In With A Password
+tags:
+  - gate
+env:
+  SKY_USER: testuser
+  SKY_PASSWORD: MaestroPass_1
+---
+- runFlow:
+    file: launch-clean.yml
+
+- tapOn:
+    text: Login
+    label: Open the login page
+- extendedWaitUntil:
+    visible: Username or Email
+    timeout: 20000
+
+# the IonInput placeholders are the only accessible names these two fields carry. the iOS
+# keyboard covers the lower half of the form and hideKeyboard is unsupported in a WKWebView,
+# so the page heading doubles as a non-interactive blur target between fields
+- tapOn:
+    text: cooldude78 or you@example.com
+- inputText: ${SKY_USER}
+- tapOn:
+    text: Login
+    above:
+      text: Username or Email
+    label: Blur the field so the keyboard drops
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- tapOn:
+    text: SuperSecretPassword_
+- inputText: ${SKY_PASSWORD}
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- tapOn:
+    text: Login
+    below:
+      text: Password
+    label: Submit the credentials form
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# a clean container chains the text-size sheet on the dashboard, which only opens for an
+# authenticated user, so it doubles as the "login landed" assertion
+- extendedWaitUntil:
+    visible: How does this Look?
+    timeout: 40000
+    label: Authenticated and on the dashboard
+- tapOn:
+    text: Skip for Now
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# closing the text-size sheet hands off to the welcome tour
+- extendedWaitUntil:
+    visible: Welcome to The Earth App
+    timeout: 20000
+    label: Welcome tour auto-started
+- tapOn:
+    text: Close tour
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- extendedWaitUntil:
+    visible: Open Your Profile
+    timeout: 20000
+    label: Dashboard identity strip is interactive

@@ -1,0 +1,64 @@
+appId: com.earthapp.sky
+name: Native Share Sheet From The Invite Card
+tags:
+  - eval
+---
+- runFlow:
+    file: ../_shared/sign-in.yml
+
+- tapOn:
+    text: Profile
+- extendedWaitUntil:
+    visible: Edit Profile
+    timeout: 20000
+- scrollUntilVisible:
+    element:
+      text: Invite Friends
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    text: Copy Link
+
+# Share.vue renders an icon-only IonButton with no accessible name, so it has to be pinned by
+# geometry: the only node right of Copy Link inside the invite card's button row. it is 71x61,
+# so the `square` trait does not apply
+- tapOn:
+    rightOf:
+      text: Copy Link
+    below:
+      text: Invite Friends
+    above:
+      text: Link Clicks
+    label: Open the OS share sheet
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - extendedWaitUntil:
+          visible: Copy
+          timeout: 20000
+          label: UIActivityViewController presented
+      - assertVisible:
+          text: app.earth-app.com
+          label: The invite URL itself crossed the bridge into the sheet
+      - takeScreenshot:
+          path: maestro-shots/share-sheet-ios
+      - tapOn:
+          text: dismiss popup
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - takeScreenshot:
+          path: maestro-shots/share-sheet-android
+      - back
+
+- waitForAnimationToEnd:
+    timeout: 5000
+- extendedWaitUntil:
+    visible: Copy Link
+    timeout: 30000
+    label: Returned to the invite card with the webview intact

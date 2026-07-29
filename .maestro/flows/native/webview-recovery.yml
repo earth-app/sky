@@ -1,0 +1,51 @@
+appId: com.earthapp.sky
+name: Webview Repaints After Native Churn
+tags:
+  - eval
+---
+- runFlow:
+    file: ../_shared/sign-in.yml
+
+- takeScreenshot:
+    path: maestro-shots/webview-portrait-1
+
+# rotation resizes the WKWebView/Chromium surface out from under a laid-out Ionic page,
+# which is the cheapest reproducible way to make a webview repaint on device
+- setOrientation: LANDSCAPE_LEFT
+- waitForAnimationToEnd:
+    timeout: 10000
+- extendedWaitUntil:
+    visible: Time Outside
+    timeout: 30000
+    label: Dashboard survived the landscape resize
+- takeScreenshot:
+    path: maestro-shots/webview-landscape
+
+- setOrientation: PORTRAIT
+- waitForAnimationToEnd:
+    timeout: 10000
+- extendedWaitUntil:
+    visible: Time Outside
+    timeout: 30000
+    label: Dashboard survived the return to portrait
+- takeScreenshot:
+    path: maestro-shots/webview-portrait-2
+
+# repeated teardown/relaunch is the closest reachable proxy for the content-process death
+# the native recovery hooks in AppDelegate/MainActivity exist to catch; a blank shell here
+# is the shipped symptom (an app that needs a manual restart)
+- repeat:
+    times: 3
+    commands:
+      - stopApp:
+          appId: com.earthapp.sky
+      - launchApp:
+          appId: com.earthapp.sky
+          clearState: false
+      - extendedWaitUntil:
+          visible: Open Your Profile
+          timeout: 40000
+          label: Relaunch painted real content
+
+- takeScreenshot:
+    path: maestro-shots/webview-after-relaunch

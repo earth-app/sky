@@ -1,0 +1,45 @@
+appId: com.earthapp.sky
+name: Cold Relaunch Restores Session And Preferences
+tags:
+  - gate
+---
+- runFlow:
+    file: ../_shared/sign-in.yml
+
+- stopApp:
+    appId: com.earthapp.sky
+- launchApp:
+    appId: com.earthapp.sky
+    clearState: false
+    label: Second cold launch on the same container
+
+# the splash has to clear on every launch, not only the first: index.vue's hide() sits
+# behind waitForUserResolution, so a slow token read is enough to hang it forever
+- extendedWaitUntil:
+    visible: Open Your Profile
+    timeout: 40000
+    label: Splash cleared on the second launch and the session was restored
+- assertVisible:
+    text: Time Outside
+- assertNotVisible:
+    text: Username or Email
+    label: No login bounce
+
+# an unfinished welcome tour legitimately re-offers itself here, so clear it before
+# reaching for anything underneath
+- runFlow:
+    when:
+      visible:
+        text: Close tour
+    commands:
+      - tapOn:
+          text: Close tour
+      - waitForAnimationToEnd:
+          timeout: 5000
+
+- tapOn:
+    text: Profile
+- extendedWaitUntil:
+    visible: Edit Profile
+    timeout: 20000
+    label: Restored session is a real authenticated identity, not a cached shell

@@ -1,0 +1,71 @@
+appId: com.earthapp.sky
+name: Camera Plugin Bridge With Media Access Revoked
+tags:
+  - gate
+---
+- runFlow:
+    file: ../_shared/sign-in.yml
+
+# camera plus both photo-library service names; each platform ignores the keys it does not own
+- setPermissions:
+    appId: com.earthapp.sky
+    permissions:
+      camera: deny
+      photos: deny
+      medialibrary: deny
+    label: Revoke every @capacitor/camera-backed permission
+
+- tapOn:
+    text: Create Content
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn:
+    text: New Event
+- extendedWaitUntil:
+    visible: Create Event
+    timeout: 20000
+
+- scrollUntilVisible:
+    element:
+      text: Choose Thumbnail
+    direction: DOWN
+    timeout: 20000
+- assertNotVisible:
+    text: Thumbnail preview
+    label: No image before the picker runs
+
+- tapOn:
+    text: Choose Thumbnail
+    label: Hand off to the native picker with media access revoked
+
+# the plugin refuses at the bridge and raises its own UIAlertController rather than opening
+# a picker; that native alert is the whole point of a revoked-permission path
+- extendedWaitUntil:
+    visible: .*Access to the photos has been prohibited.*
+    timeout: 30000
+    label: Plugin surfaced the OS denial instead of failing silently
+- tapOn:
+    text: OK
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# a refused pick must leave the form usable and unpopulated, never a half-torn-down
+# webview or a Choose Thumbnail button stuck in its loading state
+- extendedWaitUntil:
+    visible: Choose Thumbnail
+    timeout: 30000
+    label: Form survived the refused round trip
+- assertNotVisible:
+    text: Thumbnail preview
+- assertVisible:
+    text: Create Event
+
+- setPermissions:
+    appId: com.earthapp.sky
+    permissions:
+      camera: allow
+      photos: allow
+      medialibrary: allow
+- assertVisible:
+    text: Choose Thumbnail
+    label: Control still live after re-granting

@@ -1,0 +1,56 @@
+appId: com.earthapp.sky
+name: Custom Scheme Deep Links
+tags:
+  - gate
+---
+- runFlow:
+    file: ../_shared/launch-clean.yml
+
+# com.earthapp.sky://invite/<code> is resolved by useDeepLinkRouting into /signup?ref=<code>
+# and the code is persisted to Preferences on the way through
+- openLink:
+    link: com.earthapp.sky://invite/MAESTRO123
+    label: Referral invite link
+# iOS asks `Open in "The Earth App"?` for every externally opened custom-scheme url, and the
+# alert covers the whole accessibility tree until it is answered. Android never prompts
+- runFlow:
+    when:
+      visible:
+        text: Open
+    commands:
+      - tapOn:
+          text: Open
+      - waitForAnimationToEnd:
+          timeout: 5000
+- extendedWaitUntil:
+    visible: Email (optional)
+    timeout: 30000
+    label: Routed into the signup form, not out to a browser
+- assertVisible:
+    text: Sign Up
+- assertVisible:
+    text: Username
+
+# every custom-scheme URL is treated as an oauth callback; with no session_token the
+# resolver has to fall back to the form that started the flow
+- openLink:
+    link: com.earthapp.sky://oauth/complete?provider=google&context=login
+    label: OAuth callback carrying no session token
+- runFlow:
+    when:
+      visible:
+        text: Open
+    commands:
+      - tapOn:
+          text: Open
+      - waitForAnimationToEnd:
+          timeout: 5000
+- extendedWaitUntil:
+    visible: Username or Email
+    timeout: 30000
+    label: Bounced to the login form instead of a half-authenticated shell
+- assertVisible:
+    text: Forgot your Password?
+- assertNotVisible:
+    text: Open Your Profile
+    label: No token means no dashboard

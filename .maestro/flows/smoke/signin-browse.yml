@@ -1,0 +1,62 @@
+appId: com.earthapp.sky
+name: Sign In And Browse Every Tab
+tags:
+  - gate
+---
+- runFlow:
+    file: ../_shared/sign-in.yml
+
+- assertVisible:
+    text: Time Outside
+    label: Dashboard Today card rendered
+
+# discover first: the dashboard explore strip also carries a "Quests" accessible name,
+# so leaving the dashboard makes the tab-bar button the only match
+- tapOn:
+    text: Discover
+# ionic host elements do not forward aria-label into the accessibility tree, so the
+# searchbar's accessible name is its placeholder, not its aria-label
+- extendedWaitUntil:
+    visible: Explore...
+    timeout: 20000
+    label: Discover tab rendered
+
+- tapOn:
+    text: Quests
+- extendedWaitUntil:
+    visible: Challenge a Friend
+    timeout: 20000
+    label: Quests tab rendered
+
+- tapOn:
+    text: Profile
+- extendedWaitUntil:
+    visible: Edit Profile
+    timeout: 20000
+    label: Profile tab rendered
+
+- tapOn:
+    text: Dashboard
+- extendedWaitUntil:
+    visible: Time Outside
+    timeout: 20000
+    label: Back on the dashboard with tab state intact
+
+# the create FAB is its own native-adjacent surface: an IonFabList that only exists
+# once the FAB is activated
+- tapOn:
+    text: Create Content
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible:
+    text: New Prompt
+- assertVisible:
+    text: New Article
+- assertVisible:
+    text: New Event
+- tapOn:
+    text: New Prompt
+- extendedWaitUntil:
+    visible: Create Prompt
+    timeout: 20000
+    label: Create flow reachable from the FAB
