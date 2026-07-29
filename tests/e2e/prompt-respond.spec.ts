@@ -183,6 +183,13 @@ test.describe('Journey: prompt create -> respond -> edit -> delete', () => {
 			body: '',
 			once: false
 		});
+		const editedCard = page.locator('ion-card').filter({ hasText: editedText });
+		await editedCard.locator('[data-testid="report-button"]').click();
+		const deleteSheet = page.locator('ion-action-sheet');
+		await expect(deleteSheet).toBeVisible({ timeout: 8000 });
+
+		// emptied only once the kebab is open: the edit's own refetch would otherwise unmount the
+		// card mid-click, which webkit hit as an endless detach/retry on the report button
 		await mockApi.set({
 			backend: 'mantle',
 			method: 'GET',
@@ -191,11 +198,6 @@ test.describe('Journey: prompt create -> respond -> edit -> delete', () => {
 			body: paginate([]),
 			once: false
 		});
-
-		const editedCard = page.locator('ion-card').filter({ hasText: editedText });
-		await editedCard.locator('[data-testid="report-button"]').click();
-		const deleteSheet = page.locator('ion-action-sheet');
-		await expect(deleteSheet).toBeVisible({ timeout: 8000 });
 		const deleteSeen = page.waitForRequest(
 			(r) => r.method() === 'DELETE' && RESPONSE_ITEM.test(urlPath(r.url())),
 			{ timeout: 12_000 }
