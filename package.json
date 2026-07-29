@@ -100,7 +100,8 @@
 	"overrides": {
 		"@ionic/core": "8.8.13",
 		"@ionic/vue": "8.8.13",
-		"@ionic/vue-router": "8.8.13"
+		"@ionic/vue-router": "8.8.13",
+		"sharp": "^0.35.3"
 	},
 	"patchedDependencies": {
 		"@capacitor-community/apple-sign-in@7.1.0": "patches/@capacitor-community%2Fapple-sign-in@7.1.0.patch",
