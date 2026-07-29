@@ -57,3 +57,6 @@ android/local.properties
 
 resources/ios/**/*
 resources/android/**/*
+.e2e-serve
+.output-test
+.output-e2e

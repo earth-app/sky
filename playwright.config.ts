@@ -63,8 +63,10 @@ export default defineConfig<ConfigOptions>({
 	reporter: reporters,
 	outputDir: 'playwright-results',
 	webServer: {
+		// the e2e lane builds into its own .output-e2e so a concurrent native/maestro build
+		// into .output cannot swap the bundle out from under a running static server
 		command: prodServer
-			? 'test -d dist || bun run build:test && bun run serve:test'
+			? 'test -d "${NITRO_OUTPUT_DIR:-.output-e2e}/public" || bun run build:e2e && bun run serve:test'
 			: 'bun run dev:test',
 		url: BASE_URL,
 		reuseExistingServer: !isCI,
