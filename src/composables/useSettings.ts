@@ -1,4 +1,9 @@
 import { Preferences } from '@capacitor/preferences';
+import {
+	applyVisualTierClass,
+	initVisualTier,
+	noteVisualSettings
+} from '~/composables/useVisualTier';
 
 const cache = reactive(new Map<string, unknown>());
 
@@ -14,9 +19,11 @@ const FONT_VALUES = [
 	'segoe-ui'
 ] as const;
 const UNIT_VALUES = ['imperial', 'metric'] as const;
+const VISUAL_EFFECTS_VALUES = ['auto', 'full', 'reduced', 'off'] as const;
 type ThemeSetting = (typeof THEME_VALUES)[number];
 type FontSetting = (typeof FONT_VALUES)[number];
 type UnitSetting = (typeof UNIT_VALUES)[number];
+type VisualEffectsSetting = (typeof VISUAL_EFFECTS_VALUES)[number];
 
 export type AppSettings = {
 	theme: ThemeSetting;
@@ -32,6 +39,9 @@ export type AppSettings = {
 	offlineMode: boolean;
 	units: UnitSetting;
 	discoverAutoLoad: boolean;
+	visualEffects: VisualEffectsSetting;
+	ambientScenes: boolean;
+	translucency: boolean;
 };
 
 export type AppSettingKey = keyof AppSettings;
@@ -49,7 +59,10 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
 	preloadContent: true,
 	offlineMode: false,
 	units: 'imperial',
-	discoverAutoLoad: true
+	discoverAutoLoad: true,
+	visualEffects: 'auto',
+	ambientScenes: true,
+	translucency: true
 };
 
 function parseStoredValue(raw: string | null): unknown | null {
@@ -88,6 +101,12 @@ function coerceSetting<K extends AppSettingKey>(key: K, value: unknown): AppSett
 
 	if (key === 'units') {
 		return (UNIT_VALUES.includes(value as UnitSetting) ? value : fallback) as AppSettings[K];
+	}
+
+	if (key === 'visualEffects') {
+		return (
+			VISUAL_EFFECTS_VALUES.includes(value as VisualEffectsSetting) ? value : fallback
+		) as AppSettings[K];
 	}
 
 	return (typeof value === 'boolean' ? value : fallback) as AppSettings[K];
@@ -140,6 +159,19 @@ export function applyAppSettingsToDocument(settings: AppSettings) {
 	root.classList.remove('light', 'dark');
 	root.classList.add(appliedTheme);
 	root.classList.toggle('animations-disabled', !settings.animations);
+	root.classList.toggle('ambient-disabled', !settings.ambientScenes);
+	root.classList.toggle('glass-disabled', !settings.translucency);
+
+	// glass-full / glass-reduced / glass-off; all translucency is css keyed off the class, so the
+	// render path stays free of js
+	noteVisualSettings({
+		visualEffects: settings.visualEffects,
+		dataSaverMode: settings.dataSaverMode,
+		animations: settings.animations,
+		ambientScenes: settings.ambientScenes,
+		translucency: settings.translucency
+	});
+	applyVisualTierClass();
 
 	root.style.setProperty('--app-ui-scale', coerceScale(settings.scale));
 	root.style.setProperty('--app-font-family', appFontFamily);
@@ -260,6 +292,9 @@ export function useAppSettings() {
 		settings.value = nextSettings;
 		initialized.value = true;
 		applyAppSettingsToDocument(settings.value);
+
+		// measure the device once per app version; the glass class is rewritten when it resolves
+		if (import.meta.client) void initVisualTier();
 
 		return settings.value;
 	};

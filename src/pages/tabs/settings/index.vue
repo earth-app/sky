@@ -38,7 +38,7 @@
 					>
 						{{ setting.section }}
 					</h2>
-					<IonList class="w-full rounded-xl border-2 border-black/40 light:border-gray-300">
+					<IonList class="w-full rounded-xl border-2 border-default">
 						<IonItem
 							v-for="item in setting.items"
 							:key="`${setting.section}-${item.title}`"
@@ -249,6 +249,25 @@ type SettingSection = {
 };
 
 const { settings: appSettings, init: initSettings, setValue, resetToDefaults } = useAppSettings();
+
+// #region visual effects
+const { label: visualTierLabel, recheckDevice } = useVisualTier();
+const rechecking = ref(false);
+
+// the auto option shows what the probe actually picked, so the label is never a guess
+const measuredTierLabel = computed(() => visualTierLabel.value);
+
+async function recheckVisualTier() {
+	if (rechecking.value) return;
+	rechecking.value = true;
+	try {
+		await recheckDevice();
+		await showInfoToast(`Visual effects re-measured: ${visualTierLabel.value}.`);
+	} finally {
+		rechecking.value = false;
+	}
+}
+// #endregion
 const { selection, impactLight, impactMedium, notifySuccess, notifyWarning, notifyError } =
 	useAppHaptics();
 const { user: authUser, fetchUser } = useAuth();
@@ -526,6 +545,44 @@ const settingSections = computed<SettingSection[]>(() => [
 				description:
 					'Toggle UI animations and transitions for a more dynamic or instant experience',
 				placeholder: 'Enable animations and transitions'
+			},
+			{
+				kind: 'select',
+				key: 'visualEffects',
+				title: 'Visual Effects',
+				description:
+					'Automatic measures this device and picks a level it can render smoothly. Raise it for more depth and translucency, lower it to save battery',
+				placeholder: 'Select Visual Effects',
+				options: [
+					{ label: `Automatic (${measuredTierLabel.value})`, value: 'auto' },
+					{ label: 'Full', value: 'full' },
+					{ label: 'Reduced', value: 'reduced' },
+					{ label: 'Off', value: 'off' }
+				]
+			},
+			{
+				kind: 'toggle',
+				key: 'ambientScenes',
+				title: 'Ambient Scenes',
+				description:
+					'Draw the generated sky behind the dashboard, your profile header, trail reveals and the end of your feed',
+				placeholder: 'Enable ambient scenes'
+			},
+			{
+				kind: 'toggle',
+				key: 'translucency',
+				title: 'Translucency',
+				description:
+					'Frost the tab bar and page headers so content shows through. Turn it off for solid bars, whatever this device can render',
+				placeholder: 'Enable translucency'
+			},
+			{
+				kind: 'action',
+				title: 'Re-check This Device',
+				description:
+					'Measure this device again. Useful if effects feel slow, or after the device has cooled down',
+				placeholder: rechecking.value ? 'Working...' : 'Re-check',
+				action: recheckVisualTier
 			}
 		]
 	},

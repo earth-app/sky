@@ -43,6 +43,34 @@ async function readTheme(page: Page): Promise<{ light: boolean; dark: boolean }>
 	});
 }
 
+// route without reloading the document; gotoHydrated always warms a tab route from '/', and
+// native-mock wipes the mocked Preferences store on every fresh document
+async function pushInApp(page: Page, path: string): Promise<void> {
+	await page.evaluate((p) => {
+		(window as any).useNuxtApp?.().$router?.push(p);
+	}, path);
+	await expect
+		.poll(() => page.evaluate(() => location.pathname), { timeout: 8000 })
+		.toBe(path.split('?')[0]);
+	await expect(page.locator('ion-content:visible').first()).toBeVisible({ timeout: 12_000 });
+}
+
+// the visual-switch tokens applyAppSettingsToDocument + applyVisualTierClass write on <html>
+async function readVisualClasses(page: Page): Promise<{
+	ambientDisabled: boolean;
+	glassDisabled: boolean;
+	glassOff: boolean;
+}> {
+	return page.evaluate(() => {
+		const c = document.documentElement.classList;
+		return {
+			ambientDisabled: c.contains('ambient-disabled'),
+			glassDisabled: c.contains('glass-disabled'),
+			glassOff: c.contains('glass-off')
+		};
+	});
+}
+
 // the raw JSON-encoded value the app persisted under a Preferences key (useSettings JSON.stringifies)
 async function readPref(page: Page, key: string): Promise<string | null> {
 	return page.evaluate((k) => (window as any).__prefs?.[k] ?? null, key);
@@ -324,5 +352,62 @@ test.describe('Settings persistence across a cold relaunch (native ios)', () => 
 			samples.some((s) => s.light === true),
 			`theme flashed light during boot: ${JSON.stringify(samples)}`
 		).toBe(false);
+	});
+
+	test('Ambient Scenes and Translucency reach <html> as classes, drop the canvas, and survive a relaunch', async ({
+		context,
+		page,
+		asUser,
+		gotoHydrated
+	}) => {
+		skipIfIntegration('native mock visual toggles');
+		await asUser();
+
+		// both default on, so the ambient canvas is mounted before anything is turned off
+		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
+		await expect(page.locator('.m-ambient canvas').first()).toBeAttached({ timeout: 15_000 });
+
+		await gotoTab(page, gotoHydrated, '/tabs/settings');
+		await expect(page.locator('#settings')).toBeVisible({ timeout: 12_000 });
+		await setToggle(page, /Ambient Scenes/i, false);
+		await setToggle(page, /Translucency/i, false);
+
+		expect(await readPref(page, 'app.setting.ambientScenes')).toBe('false');
+		expect(await readPref(page, 'app.setting.translucency')).toBe('false');
+		expect(await readVisualClasses(page)).toMatchObject({
+			ambientDisabled: true,
+			glassDisabled: true,
+			glassOff: true
+		});
+
+		// in-SPA, so the setting stays live: a full navigation wipes the mocked native store
+		await pushInApp(page, '/tabs/dashboard');
+		await expect(page.locator('.m-ambient').first()).toBeAttached({ timeout: 15_000 });
+		// the canvas is gone from the surfaces that carry a scene; the host box stays for layout
+		await expect(page.locator('.m-ambient canvas')).toHaveCount(0);
+
+		// turning ambient scenes back on re-mounts the canvas, no relaunch needed
+		await pushInApp(page, '/tabs/settings');
+		await setToggle(page, /Ambient Scenes/i, true);
+		expect(await readVisualClasses(page)).toMatchObject({
+			ambientDisabled: false,
+			glassDisabled: true,
+			glassOff: true
+		});
+		await pushInApp(page, '/tabs/dashboard');
+		await expect(page.locator('.m-ambient canvas').first()).toBeAttached({ timeout: 15_000 });
+
+		// COLD RELAUNCH with translucency still off: the class comes purely from Preferences
+		const durable = await readDurablePrefs(page);
+		await seedDurablePrefs(context, durable);
+		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
+
+		await expect
+			.poll(() => readVisualClasses(page).then((c) => c.glassDisabled && c.glassOff), {
+				timeout: 12_000
+			})
+			.toBe(true);
+		expect(await readPref(page, 'app.setting.translucency')).toBe('false');
+		expect(await readPref(page, 'app.setting.ambientScenes')).toBe('true');
 	});
 });
