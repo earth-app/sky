@@ -23,6 +23,16 @@ tags:
           appId: com.earthapp.sky
           permissions:
             location: allow
+      # android force-stops a process whose runtime permissions change, so everything after this
+      # would otherwise run against the launcher. clearState stays off to keep the session
+      - launchApp:
+          appId: com.earthapp.sky
+          clearState: false
+          label: Relaunch after the permission change killed the app
+      - extendedWaitUntil:
+          visible: Open Your Profile
+          timeout: 40000
+          label: Back on the dashboard with the session intact
 - setLocation:
     latitude: 40.7580
     longitude: -73.9855

@@ -22,6 +22,20 @@ tags:
     permissions:
       photos: allow
       medialibrary: allow
+# android force-stops a process whose runtime permissions change, so relaunch before touching
+# the app again. clearState stays off to keep the session
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.earthapp.sky
+          clearState: false
+          label: Relaunch after the permission change killed the app
+      - extendedWaitUntil:
+          visible: Open Your Profile
+          timeout: 40000
+          label: Back on the dashboard with the session intact
 
 - tapOn:
     text: Create Content

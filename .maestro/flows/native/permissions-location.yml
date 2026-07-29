@@ -25,6 +25,16 @@ tags:
           appId: com.earthapp.sky
           permissions:
             location: deny
+      # android force-stops a process whose runtime permissions change, so without this the
+      # flow carries on against the launcher. clearState stays off to keep the session
+      - launchApp:
+          appId: com.earthapp.sky
+          clearState: false
+          label: Relaunch after the permission change killed the app
+      - extendedWaitUntil:
+          visible: Open Your Profile
+          timeout: 40000
+          label: Back on the dashboard with the session intact
 
 - scrollUntilVisible:
     element:
@@ -52,8 +62,14 @@ tags:
 - assertVisible:
     text: Re-check Location
 
-# recheckLocation() re-reads the native permission, so a grant made outside the app has to
-# recover in place; that promise is only testable against a real permission store
+# recheckLocation() re-reads the native permission. on iOS the grant lands while the app is
+# running, so recovery has to happen in place; android force-stops the process on any runtime
+# permission change, so there the same guarantee is only observable across a relaunch. both
+# paths end on the identical assertions below
+- setLocation:
+    latitude: 40.7580
+    longitude: -73.9855
+    label: Drop the device somewhere with a deterministic fix
 - runFlow:
     when:
       platform: iOS
@@ -62,6 +78,8 @@ tags:
           appId: com.earthapp.sky
           permissions:
             location: inuse
+      - tapOn:
+          text: Re-check Location
 - runFlow:
     when:
       platform: Android
@@ -70,12 +88,31 @@ tags:
           appId: com.earthapp.sky
           permissions:
             location: allow
-- setLocation:
-    latitude: 40.7580
-    longitude: -73.9855
-    label: Drop the device somewhere with a deterministic fix
-- tapOn:
-    text: Re-check Location
+      - launchApp:
+          appId: com.earthapp.sky
+          clearState: false
+          label: Relaunch after the permission change killed the app
+      - extendedWaitUntil:
+          visible: Open Your Profile
+          timeout: 40000
+      - scrollUntilVisible:
+          element:
+            text: Trailmarks
+          direction: DOWN
+          timeout: 20000
+      - tapOn:
+          text: Trailmarks
+      - waitForAnimationToEnd:
+          timeout: 5000
+- runFlow:
+    when:
+      visible:
+        text: Close tour
+    commands:
+      - tapOn:
+          text: Close tour
+      - waitForAnimationToEnd:
+          timeout: 5000
 
 - extendedWaitUntil:
     visible: Be the First to Leave One.

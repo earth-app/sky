@@ -14,6 +14,20 @@ tags:
       photos: deny
       medialibrary: deny
     label: Revoke every @capacitor/camera-backed permission
+# android force-stops a process whose runtime permissions change, so relaunch before touching
+# the app again. clearState stays off to keep the session
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.earthapp.sky
+          clearState: false
+          label: Relaunch after the permission change killed the app
+      - extendedWaitUntil:
+          visible: Open Your Profile
+          timeout: 40000
+          label: Back on the dashboard with the session intact
 
 - tapOn:
     text: Create Content
@@ -66,6 +80,34 @@ tags:
       camera: allow
       photos: allow
       medialibrary: allow
+# ios re-grants in place, so the open form is still there. android force-stops the process on a
+# permission change and takes the modal with it, so walk back to the same control rather than
+# dropping the assertion; both platforms end on the identical check below
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.earthapp.sky
+          clearState: false
+          label: Relaunch after the permission change killed the app
+      - extendedWaitUntil:
+          visible: Open Your Profile
+          timeout: 40000
+      - tapOn:
+          text: Create Content
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - tapOn:
+          text: New Event
+      - extendedWaitUntil:
+          visible: Create Event
+          timeout: 20000
+      - scrollUntilVisible:
+          element:
+            text: Choose Thumbnail
+          direction: DOWN
+          timeout: 20000
 - assertVisible:
     text: Choose Thumbnail
     label: Control still live after re-granting
