@@ -27,6 +27,10 @@ const OS_OWNED = new Map<string, string>([
 	['dismiss popup', 'backdrop dismiss element of the iOS 26 share sheet'],
 	['OK', 'confirm button on the @capacitor/camera iOS denial alert'],
 	['Photo Library', 'title of the iOS PHPicker sheet'],
+	[
+		'search text',
+		'aria-label ion-searchbar hardcodes on its native input; it inherits only lang and dir from the host, so neither our aria-label nor the placeholder is reachable'
+	],
 	['Open', 'confirm button on the iOS `Open in "The Earth App"?` scheme prompt'],
 	[
 		'.*Access to the photos has been prohibited.*',
@@ -39,8 +43,14 @@ const OS_OWNED = new Map<string, string>([
  * template, or the flow matches it as a regex. Each entry names the source fragment it comes
  * from plus the string the app actually renders, and the test below proves the three agree -
  * so renaming the label in src still fails here, exactly like a plain literal would.
+ *
+ * `alsoMatches` carries forms the platform a11y bridge decorates onto the rendered string, so
+ * `src` cannot produce them literally and only the selector has to cover them.
  */
-const DERIVED = new Map<string, { file: string; source: string; sample: string }>([
+const DERIVED = new Map<
+	string,
+	{ file: string; source: string; sample: string; alsoMatches?: string[] }
+>([
 	[
 		'Step 1',
 		{
@@ -79,6 +89,64 @@ const DERIVED = new Map<string, { file: string; source: string; sample: string }
 			file: 'src/pages/tabs/settings/index.vue',
 			source: 'Automatic (${measuredTierLabel.value})',
 			sample: 'Automatic (Reduced - Light Blur)'
+		}
+	],
+	// a closed ion-select composes its accessible name from the label and the value, so no single
+	// src fragment renders it; the open option list still exposes the value on its own
+	[
+		'.*Reduced.*',
+		{
+			file: 'src/pages/tabs/settings/index.vue',
+			source: 'Reduced',
+			sample: 'Reduced',
+			alsoMatches: ['Visual Effects, Reduced']
+		}
+	],
+	// a bare `?` makes the preceding character optional and leaves the rendered one unconsumed, so
+	// any literal question mark in a selector has to be escaped
+	[
+		'Forgot your Password\\?',
+		{
+			file: 'src/components/user/MLoginForm.vue',
+			source: 'Forgot your Password?',
+			sample: 'Forgot your Password?'
+		}
+	],
+	[
+		'How does this Look\\?',
+		{
+			file: 'src/components/onboarding/MTextSizePrompt.vue',
+			source: 'How does this Look?',
+			sample: 'How does this Look?'
+		}
+	],
+	// android folds UFormField's required marker into the label's own text node; ios keeps it a
+	// separate element, so a required label needs the optional asterisk to match on both
+	[
+		'Username or Email\\*?',
+		{
+			file: 'src/components/user/MLoginForm.vue',
+			source: 'Username or Email',
+			sample: 'Username or Email',
+			alsoMatches: ['Username or Email*']
+		}
+	],
+	[
+		'Password\\*?',
+		{
+			file: 'src/components/user/MLoginForm.vue',
+			source: 'Password',
+			sample: 'Password',
+			alsoMatches: ['Password*']
+		}
+	],
+	[
+		'Username\\*?',
+		{
+			file: 'src/components/user/MSignupForm.vue',
+			source: 'Username',
+			sample: 'Username',
+			alsoMatches: ['Username*']
 		}
 	]
 ]);
@@ -163,7 +231,7 @@ describe('maestro selector contract', () => {
 	});
 
 	it('backs every derived selector with the src fragment that renders it', () => {
-		for (const [selector, { file, source, sample }] of DERIVED) {
+		for (const [selector, { file, source, sample, alsoMatches }] of DERIVED) {
 			expect(filesContaining(source), `${selector}: source fragment renamed or moved`).toContain(
 				file
 			);
@@ -171,9 +239,12 @@ describe('maestro selector contract', () => {
 				templatePattern(source).test(sample),
 				`${selector}: ${file} cannot render "${sample}"`
 			).toBe(true);
-			expect(selectorPattern(selector).test(sample), `${selector} never matches "${sample}"`).toBe(
-				true
-			);
+			for (const rendered of [sample, ...(alsoMatches ?? [])]) {
+				expect(
+					selectorPattern(selector).test(rendered),
+					`${selector} never matches "${rendered}"`
+				).toBe(true);
+			}
 		}
 	});
 
@@ -181,6 +252,16 @@ describe('maestro selector contract', () => {
 		for (const selector of DERIVED.keys()) {
 			expect(uniqueText, `${selector} is declared derived but no flow uses it`).toContain(selector);
 		}
+	});
+
+	it('would notice a required label that drops the android asterisk', () => {
+		// the whole reason the required selectors carry `\*?`: maestro matches literally or on a
+		// FULL regex, never a substring, so the bare label silently misses android's own text node
+		expect(selectorPattern('Username or Email').test('Username or Email*')).toBe(false);
+		expect(selectorPattern('Username or Email\\*?').test('Username or Email*')).toBe(true);
+		expect(selectorPattern('Username or Email\\*?').test('Username or Email')).toBe(true);
+		// and it must not widen into a different field
+		expect(selectorPattern('Username\\*?').test('Username or Email*')).toBe(false);
 	});
 
 	it('would notice a renamed label', () => {
