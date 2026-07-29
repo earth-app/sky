@@ -73,7 +73,9 @@ export async function gotoQuestDetail(
 	questId: string
 ): Promise<void> {
 	await gotoHydrated(`/tabs/quests/${questId}`);
-	await expect(page.locator('#quest-button')).toBeVisible({ timeout: 12_000 });
+	// 30s matches tab-reentry's documented WAIT: a cold route chunk plus hydration on a prod
+	// SPA build routinely exceeds 12s under parallel load, which read as flake rather than slow
+	await expect(page.locator('#quest-button')).toBeVisible({ timeout: 30_000 });
 }
 
 /**
