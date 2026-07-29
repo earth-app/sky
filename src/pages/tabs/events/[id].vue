@@ -39,10 +39,11 @@
 						icon="mdi:calendar-multiple"
 						show-dots
 					>
-						<InfoCardSkeleton
+						<MSkeleton
 							v-if="!relatedLoaded"
 							v-for="n in 3"
 							:key="n"
+							variant="card"
 						/>
 						<LazyEventMCard
 							v-else
@@ -63,21 +64,26 @@
 			</div>
 			<div
 				v-else-if="unavailableOffline"
-				class="h-screen flex flex-col"
+				class="h-screen flex flex-col items-center justify-center px-6 pb-16"
 			>
-				<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
-					<h2 class="text-xl font-semibold">Event unavailable offline</h2>
-					<p class="text-gray-500 text-sm">Connect once to browse this event while online.</p>
-				</div>
+				<MInlineError
+					title="Event Unavailable Offline"
+					description="Connect once to browse this event while online."
+					icon="mdi:wifi-off"
+					severity="warning"
+					@retry="reload"
+				/>
 			</div>
 			<div
 				v-else-if="notFound"
-				class="h-screen flex flex-col"
+				class="h-screen flex flex-col items-center justify-center px-6 pb-16"
 			>
-				<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
-					<h2 class="text-xl font-semibold">Event Not Found</h2>
-					<p class="text-gray-500 text-sm">This event doesn't exist or was removed.</p>
-				</div>
+				<MInlineError
+					title="Event Not Found"
+					description="This event doesn't exist or was removed."
+					icon="mdi:calendar-remove-outline"
+					@retry="reload"
+				/>
 			</div>
 			<div
 				v-else
@@ -113,18 +119,22 @@ const eventExpiresAt = computed(() => {
 
 const { event, fetch, fetchSimilar } = useEvent(route.params.id as string, makeMServerRequest);
 const eventStore = useEventStore();
-onMounted(async () => {
+
+async function reload() {
 	if (isOffline.value) {
 		unavailableOffline.value = true;
 		return;
 	}
 
+	unavailableOffline.value = false;
 	try {
 		await eventStore.fetchEvent(route.params.id as string, true);
 	} finally {
 		fetchAttempted.value = true;
 	}
-});
+}
+
+onMounted(() => void reload());
 
 watch(isOffline, (offline) => {
 	if (offline) {

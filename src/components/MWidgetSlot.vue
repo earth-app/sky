@@ -9,7 +9,6 @@
 				v-if="resolved"
 				v-bind="extraProps"
 				:topic="effectiveTopic"
-				class="w-full"
 			/>
 		</div>
 	</ClientOnly>

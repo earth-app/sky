@@ -31,7 +31,7 @@
 				<h1 class="text-2xl! m-0!">{{ title }}</h1>
 				<p
 					v-if="description"
-					class="text-gray-400 light:text-gray-700 text-sm mt-1 font-sans"
+					class="text-muted text-sm mt-1 font-sans"
 				>
 					{{ description }}
 				</p>
@@ -44,7 +44,7 @@
 			<div
 				ref="carouselContainer"
 				data-testid="info-card-track"
-				class="flex flex-row items-stretch flex-nowrap transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing *:shrink-0 *:h-full *:px-2 *:w-(--slide-width) w-full"
+				class="flex flex-row items-stretch flex-nowrap transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing *:mx-0 *:shrink-0 *:h-full *:px-2 *:w-(--slide-width) w-full"
 				:style="{
 					transform: `translateX(${-currentSlide * slideWidth + dragOffset}px)`,
 					transition: isDragging ? 'none' : undefined,
@@ -94,7 +94,7 @@
 
 				<div
 					v-if="indicatorOverflow && totalSlides > 1"
-					class="flex items-center justify-center px-3 text-xs text-gray-500 dark:text-gray-400 tabular-nums"
+					class="flex items-center justify-center px-3 text-xs text-muted tabular-nums"
 					:aria-label="`Slide ${currentSlide + 1} of ${totalSlides}`"
 				>
 					{{ currentSlide + 1 }} / {{ totalSlides }}

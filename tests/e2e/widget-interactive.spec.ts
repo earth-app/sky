@@ -51,6 +51,36 @@ test.describe('Interactive feed widgets', () => {
 		await asUser({ username: 'widgetuser' });
 	});
 
+	// THE REGRESSION: MWidgetSlot sizes the widget, and its wrapper paint-contains it. a widget root
+	// forced to w-full plus any margin of its own reached past that box, so the card and its answer
+	// options were cut off on the right edge
+	test('the MicroQuiz card and its options stay inside the widget slot', async ({
+		page,
+		gotoHydrated
+	}) => {
+		skipIfIntegration('testBuild harness renders one widget by kind');
+		await gotoHydrated(harnessUrl('MicroQuiz'));
+		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
+		await expect(page.getByText(/quick trivia/i)).toBeVisible({ timeout: 12_000 });
+
+		const outside = await page.getByTestId('widget-slot').evaluate((slot) => {
+			// the paint-contained box: anything past its edges is clipped, not just off-centre
+			const clip = slot.firstElementChild!.getBoundingClientRect();
+			const card = slot.querySelector('.m-card')!;
+			const parts: Element[] = [card, ...Array.from(card.querySelectorAll('ion-button'))];
+			return parts
+				.map((el) => ({ el, r: el.getBoundingClientRect() }))
+				.filter(({ r }) => r.left < clip.left - 1 || r.right > clip.right + 1)
+				.map(
+					({ el, r }) =>
+						`${el.tagName.toLowerCase()} ${Math.round(r.left)}..${Math.round(r.right)} ` +
+						`outside ${Math.round(clip.left)}..${Math.round(clip.right)}`
+				);
+		});
+
+		expect(outside, 'the widget card or an option reaches past the slot that clips it').toEqual([]);
+	});
+
 	test('MicroQuiz reveals feedback after answering and advances with Next', async ({
 		page,
 		gotoHydrated
