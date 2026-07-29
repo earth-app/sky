@@ -1,5 +1,6 @@
 .nuxt/
 .config/
+.husky/
 bun.lock
 node_modules/
 package.json
