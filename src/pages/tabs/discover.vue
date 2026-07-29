@@ -1,20 +1,22 @@
 <template>
 	<IonPage>
-		<IonHeader class="bg-black/10 dark:bg-gray-900/20">
-			<div class="flex items-center w-full">
+		<IonHeader>
+			<IonToolbar class="mt-2">
 				<IonSearchbar
 					id="discover-search"
 					v-model="search"
 					placeholder="Explore..."
 					:color="theme"
-					class="flex-1 max-w-2xl mt-12 border-b-2 border-black/15 dark:border-white/30"
+					aria-label="Search People, Activities, Articles, Prompts and Events"
+					class="mx-auto max-w-2xl"
 				/>
-				<MTourButton
-					id="discover-help"
-					tour-id="discover-index"
-					class="mt-12 mr-2"
-				/>
-			</div>
+				<IonButtons slot="end">
+					<MTourButton
+						id="discover-help"
+						tour-id="discover-index"
+					/>
+				</IonButtons>
+			</IonToolbar>
 		</IonHeader>
 		<IonContent
 			ref="contentRef"
@@ -26,44 +28,28 @@
 			>
 				<IonRefresherContent />
 			</IonRefresher>
-			<div class="flex flex-col items-center my-8 px-4">
+			<div class="flex flex-col items-center mt-4 mb-8 px-4">
 				<IonSegment
 					v-if="showSegmentSelector"
 					id="discover-segments"
 					v-model="selectedSegment"
 					@ion-change="onSegmentChange"
 					color="primary"
-					class="flex items-center py-1 w-full max-w-2xl mb-4 *:flex *:items-center *:min-w-12! *:max-w-1/6 *:text-secondary"
+					aria-label="Filter Results by Type"
+					class="mb-4 w-full max-w-2xl"
 				>
-					<IonSegmentButton value="user">
+					<IonSegmentButton
+						v-for="option in SEGMENT_OPTIONS"
+						:key="option.value"
+						:value="option.value"
+						:aria-label="option.label"
+						layout="icon-top"
+					>
 						<UIcon
-							name="mdi:account"
+							:name="option.icon"
 							class="size-5"
 						/>
-					</IonSegmentButton>
-					<IonSegmentButton value="activity">
-						<UIcon
-							name="mdi:run"
-							class="size-5"
-						/>
-					</IonSegmentButton>
-					<IonSegmentButton value="article">
-						<UIcon
-							name="mdi:file-document"
-							class="size-5"
-						/>
-					</IonSegmentButton>
-					<IonSegmentButton value="prompt">
-						<UIcon
-							name="mdi:lightbulb-on"
-							class="size-5"
-						/>
-					</IonSegmentButton>
-					<IonSegmentButton value="event">
-						<UIcon
-							name="mdi:calendar-star"
-							class="size-5"
-						/>
+						<IonLabel class="text-2xs!">{{ option.label }}</IonLabel>
 					</IonSegmentButton>
 				</IonSegment>
 
@@ -93,6 +79,20 @@
 							width="100%"
 						/>
 					</div>
+					<MEmptyState
+						v-if="displayedResults.length === 0 && !isLoading"
+						icon="mdi:magnify-close"
+						:title="isSearchMode ? 'No Results Found' : 'Nothing to Discover Yet'"
+						:description="
+							isSearchMode
+								? `Nothing matched '${activeSearch}' and there is no more content to load for this tab. Try a different term.`
+								: 'There is no more content to load right now. Pull down to refresh, or check back once new content is published.'
+						"
+						:cta-label="isSearchMode ? 'Clear Search' : undefined"
+						cta-fill="outline"
+						variant="neutral"
+						@cta="search = ''"
+					/>
 					<template
 						v-for="(result, index) in displayedResults"
 						:key="`${result.data_type}-${result.id}`"
@@ -122,7 +122,6 @@
 								v-else-if="result.data_type === 'user'"
 								:user="result"
 								hydrate-on-visible
-								class="text-center text-sm opacity-70 py-6"
 							/>
 						</div>
 						<!-- interleave a rotation widget mid-stream; uses crust's deterministic per-day picker -->
@@ -137,34 +136,31 @@
 
 					<div class="flex justify-center py-4">
 						<IonButton
-							color="medium"
-							fill="clear"
-							:disabled="isLoading || !canLoadMore"
-							:class="[
-								'flex items-center justify-center',
-								isLoading || canLoadMore ? 'size-10 p-0.5' : 'min-h-10 px-3'
-							]"
+							v-if="isLoading || canLoadMore"
+							color="primary"
+							fill="outline"
+							:disabled="isLoading"
+							:aria-label="isLoading ? 'Loading More Results' : 'Load More Results'"
 							@click="loadMore"
 						>
-							<div class="flex size-full items-center justify-center">
-								<IonSpinner
-									v-if="isLoading"
-									name="crescent"
-									class="min-w-6 min-h-6"
-								/>
-								<UIcon
-									v-else-if="canLoadMore"
-									name="mdi:plus-circle-outline"
-									class="min-w-6 min-h-6"
-								/>
-								<span
-									v-else
-									class="text-sm font-medium"
-								>
-									No More Content
-								</span>
-							</div>
+							<IonSpinner
+								v-if="isLoading"
+								name="crescent"
+								class="mr-2 min-h-5 min-w-5"
+							/>
+							<UIcon
+								v-else
+								name="mdi:plus-circle-outline"
+								class="mr-2 size-5"
+							/>
+							{{ isLoading ? 'Loading' : 'Load More' }}
 						</IonButton>
+						<p
+							v-else-if="displayedResults.length > 0"
+							class="m-0! text-2xs text-muted"
+						>
+							That is everything for now; no more content to load.
+						</p>
 					</div>
 				</div>
 			</div>
@@ -220,6 +216,14 @@ const SEGMENT_LABELS: Record<SegmentType, string> = {
 	prompt: 'prompts',
 	event: 'events'
 };
+
+const SEGMENT_OPTIONS: { value: SegmentType; icon: string; label: string }[] = [
+	{ value: 'user', icon: 'mdi:account', label: 'Users' },
+	{ value: 'activity', icon: 'mdi:run', label: 'Activities' },
+	{ value: 'article', icon: 'mdi:file-document', label: 'Articles' },
+	{ value: 'prompt', icon: 'mdi:lightbulb-on', label: 'Prompts' },
+	{ value: 'event', icon: 'mdi:calendar-star', label: 'Events' }
+];
 
 const route = useRoute();
 const router = useRouter();
