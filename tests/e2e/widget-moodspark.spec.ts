@@ -108,7 +108,7 @@ test.describe('MoodSpark widget', () => {
 		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
 
 		// hasVoted short-circuits the grid; only the bar chart renders, so no vote button exists
-		await expect(page.locator('[data-testid="widget-slot"] ion-card')).toBeVisible({
+		await expect(page.locator('[data-testid="widget-slot"] .m-card')).toBeVisible({
 			timeout: 12_000
 		});
 		await expect(page.getByRole('button', { name: 'Vote Love' })).toHaveCount(0);
@@ -139,7 +139,7 @@ test.describe('MoodSpark widget', () => {
 		await gotoHydrated(harnessUrl(topic));
 		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
 
-		await expect(page.locator('[data-testid="widget-slot"] ion-card')).toBeVisible({
+		await expect(page.locator('[data-testid="widget-slot"] .m-card')).toBeVisible({
 			timeout: 12_000
 		});
 		await expect(page.getByText("You've Already Shared Today")).toBeVisible({ timeout: 8000 });
@@ -228,7 +228,7 @@ test.describe('MoodSpark widget', () => {
 		await page.reload({ waitUntil: 'domcontentloaded' });
 		await expect(page.getByTestId('harness-ready')).toHaveText('ready', { timeout: 12_000 });
 
-		await expect(page.locator('[data-testid="widget-slot"] ion-card')).toBeVisible({
+		await expect(page.locator('[data-testid="widget-slot"] .m-card')).toBeVisible({
 			timeout: 12_000
 		});
 		await expect(page.getByRole('button', { name: 'Vote Love' })).toHaveCount(0, { timeout: 8000 });

@@ -4,13 +4,13 @@ import { seedSingleStepQuest } from './utils/quest-helpers';
 
 test.describe('Dashboard tab', () => {
 	test('renders the title, greeting, and feed sections', async ({ page, gotoHydrated, asUser }) => {
-		skipIfIntegration('asserts mock @dashuser greeting');
+		skipIfIntegration('asserts the mock @dashuser identity strip');
 		await asUser({ username: 'dashuser' });
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 
 		await expect(page.locator('#title')).toHaveText(/the earth app/i);
 		// greeting lives in ClientOnly, so it resolves shortly after hydration
-		await expect(page.getByText(/welcome,\s*@dashuser!/i)).toBeVisible({ timeout: 12_000 });
+		await expect(page.getByText(/@dashuser/i)).toBeVisible({ timeout: 12_000 });
 		await expect(page.getByRole('heading', { name: /your feed/i })).toBeVisible({
 			timeout: 12_000
 		});

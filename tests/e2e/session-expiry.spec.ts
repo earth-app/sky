@@ -82,7 +82,7 @@ test.describe('Session expiry + mid-session 401 handling (native ios)', () => {
 		skipIfIntegration('native mock session + forced current-user 401');
 		const user = await asUser();
 		const username = user.username as string;
-		const heading = new RegExp(`Welcome, @${username}!`);
+		const heading = new RegExp(`@${username}`);
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		// a fully hydrated session renders the authed welcome heading
@@ -132,7 +132,7 @@ test.describe('Session expiry + mid-session 401 handling (native ios)', () => {
 		skipIfIntegration('native repair CapacitorHttp 401');
 		const user = await asUser();
 		const username = user.username as string;
-		const heading = new RegExp(`Welcome, @${username}!`);
+		const heading = new RegExp(`@${username}`);
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await expect(page.getByRole('heading', { name: heading })).toBeVisible({ timeout: 15_000 });

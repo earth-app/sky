@@ -59,8 +59,8 @@ test.describe('Auth cold launch + current-user repair (native ios)', () => {
 
 		await gotoHydrated('/tabs/dashboard');
 
-		// a hydrated user renders `Welcome, @username!`; a null user leaves it as bare `Welcome,`
-		await expect(page.getByRole('heading', { name: /Welcome, @coldstart!/ })).toBeVisible({
+		// a hydrated user renders `@username` in the identity strip; a null user leaves a bare `Welcome!`
+		await expect(page.getByRole('heading', { name: /@coldstart/ })).toBeVisible({
 			timeout: 15_000
 		});
 	});
@@ -102,7 +102,7 @@ test.describe('Auth cold launch + current-user repair (native ios)', () => {
 		await gotoHydrated('/tabs/dashboard');
 
 		// repair recovered the user, so the username still renders despite the first null response
-		await expect(page.getByRole('heading', { name: /Welcome, @healme!/ })).toBeVisible({
+		await expect(page.getByRole('heading', { name: /@healme/ })).toBeVisible({
 			timeout: 15_000
 		});
 		// at least the malformed first hit + one repair retry
@@ -143,7 +143,7 @@ test.describe('Auth cold launch + current-user repair (native ios)', () => {
 			})
 			.toBeFalsy();
 		// and the authed welcome heading never renders for this user
-		await expect(page.getByRole('heading', { name: /Welcome, @goner!/ })).toHaveCount(0);
+		await expect(page.getByRole('heading', { name: /@goner/ })).toHaveCount(0);
 	});
 
 	test('cold launch with no stored token bounces a protected route to Login', async ({ page }) => {

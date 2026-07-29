@@ -49,6 +49,13 @@ function board(page: Page) {
 	return page.locator('#leaderboard-hero table');
 }
 
+// zero rows renders MEmptyState (role="status") in place of the table, not UTable's "No data" row
+function emptyState(page: Page) {
+	return page
+		.locator('#leaderboard-hero [role="status"]')
+		.filter({ hasText: /nobody ranked yet/i });
+}
+
 // ionic segments/chips ignore a coordinate click through their indicator overlay, so dispatch
 // the click on the matching host element directly (same approach the discover specs use)
 async function switchScope(page: Page, label: 'Global' | 'Friends' | 'Circle') {
@@ -277,12 +284,16 @@ test.describe('Leaderboard streak + journey hero journey', () => {
 		await expect(page.locator('#leaderboard-hero')).toBeVisible({ timeout: 12_000 });
 
 		await switchScope(page, 'Friends');
-		// UTable has no loading slot, so an empty scoped result resolves to the "No data"
-		// empty row rather than hanging on a spinner; and there are no rows/challenge buttons.
-		// the "No data" row appearing is the settle gate for the empty board.
-		await expect(board(page).getByText('No data')).toBeVisible({ timeout: 12_000 });
+		// an empty scoped result replaces the whole UTable with MEmptyState rather than hanging
+		// on a spinner; that empty state appearing is the settle gate for the empty board
+		const empty = emptyState(page);
+		await expect(empty).toBeVisible({ timeout: 12_000 });
+		await expect(empty.getByRole('heading', { name: /nobody ranked yet/i })).toBeVisible();
+		await expect(empty.getByText(/no articles have been recorded/i)).toBeVisible();
+		// no table at all, so no rows and no challenge buttons can leak through
+		await expect(board(page)).toHaveCount(0);
 		await expect(challengeButtons(page)).toHaveCount(0);
-		await expect(board(page).getByText(/@author/i)).toHaveCount(0);
+		await expect(page.locator('#leaderboard-hero').getByText(/@author/i)).toHaveCount(0);
 	});
 
 	test('journey hero renders the streak count immediately, with no flash of zeros', async ({

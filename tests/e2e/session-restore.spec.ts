@@ -125,7 +125,7 @@ test.describe('Returning-user session restore (native ios)', () => {
 		const errors = trackPageErrors(page);
 		await serveAvatarBytes(mockApi);
 		const user = await asUser(makeReturningUser(testId, 'returning'));
-		const heading = new RegExp(`Welcome, @${user.username}!`);
+		const heading = new RegExp(`@${user.username}`);
 
 		// logged-in session: the dashboard renders the authed welcome heading
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
@@ -184,7 +184,7 @@ test.describe('Returning-user session restore (native ios)', () => {
 		skipIfIntegration('native mock session + one-shot current-user 200 empty');
 		await serveAvatarBytes(mockApi);
 		const user = await asUser(makeReturningUser(testId, 'healed'));
-		const heading = new RegExp(`Welcome, @${user.username}!`);
+		const heading = new RegExp(`@${user.username}`);
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await expect(page.getByRole('heading', { name: heading })).toBeVisible({ timeout: 15_000 });
@@ -239,7 +239,7 @@ test.describe('Returning-user session restore (native ios)', () => {
 	}) => {
 		skipIfIntegration('native mock session + persistent current-user 401');
 		const user = await asUser(makeReturningUser(testId, 'expired'));
-		const heading = new RegExp(`Welcome, @${user.username}!`);
+		const heading = new RegExp(`@${user.username}`);
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await expect(page.getByRole('heading', { name: heading })).toBeVisible({ timeout: 15_000 });
@@ -295,7 +295,7 @@ test.describe('Returning-user session restore (native ios)', () => {
 		skipIfIntegration('native mock session + offline cached-user boot');
 		await serveAvatarBytes(mockApi);
 		const user = await asUser(makeReturningUser(testId, 'cachedme'));
-		const heading = new RegExp(`Welcome, @${user.username}!`);
+		const heading = new RegExp(`@${user.username}`);
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await expect(page.getByRole('heading', { name: heading })).toBeVisible({ timeout: 15_000 });
@@ -336,7 +336,7 @@ test.describe('Returning-user session restore (native ios)', () => {
 		const errors = trackPageErrors(page);
 		// default makeUser is email_verified so the prompt-response email gate does not short-circuit
 		const user = await asUser(makeReturningUser(testId, 'reauth'));
-		const heading = new RegExp(`Welcome, @${user.username}!`);
+		const heading = new RegExp(`@${user.username}`);
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await expect(page.getByRole('heading', { name: heading })).toBeVisible({ timeout: 15_000 });

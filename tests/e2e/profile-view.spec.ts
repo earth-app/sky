@@ -41,7 +41,11 @@ test.describe('Profile view', () => {
 		await asUser({ username: 'viewer' });
 		await gotoTab(page, gotoHydrated, '/tabs/profile/does-not-exist-999');
 
-		await expect(page.getByText(/user not found/i)).toBeVisible({ timeout: 12_000 });
+		const notFound = page.getByRole('alert').filter({ hasText: /profile not found/i });
+		await expect(notFound).toBeVisible({ timeout: 12_000 });
+		await expect(notFound.getByText(/this account doesn't exist/i)).toBeVisible();
+		// the old copy echoed the route param back at the user; that leak must not return
+		await expect(page.getByText('does-not-exist-999')).toHaveCount(0);
 		await expect(page.locator('#settings-link')).toHaveCount(0);
 	});
 });
