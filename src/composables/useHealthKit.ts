@@ -6,6 +6,8 @@ import { Motion, type AccelListenerEvent } from '@capacitor/motion';
 import { Preferences } from '@capacitor/preferences';
 import { Toast } from '@capacitor/toast';
 import { CapacitorPedometer, type Measurement } from '@capgo/capacitor-pedometer';
+// explicit: module-scope reactive state cannot rely on auto-import injection
+import { computed, ref, watch } from 'vue';
 
 interface HealthKitDistancePlugin {
 	isAvailable(): Promise<{ available: boolean }>;
@@ -292,12 +294,12 @@ type StoredState = {
 	version: 1;
 };
 
-export function distanceStorageKey(ref: {
+export function distanceStorageKey(stepRef: {
 	questId: string;
 	stepIndex: number;
 	altIndex?: number;
 }): string {
-	return `quest_distance:${ref.questId}:${ref.stepIndex}:${ref.altIndex ?? 0}`;
+	return `quest_distance:${stepRef.questId}:${stepRef.stepIndex}:${stepRef.altIndex ?? 0}`;
 }
 
 const activeKey = ref<string | null>(null);
