@@ -52,6 +52,12 @@ export async function installNativeMock(
 
 			// ---- test-observable state ----------------------------------------
 			w.__toasts = [];
+			// the in-app MToast surface never touches the Toast plugin, so mirror its
+			// window event into the same log; toast assertions stay surface-agnostic
+			window.addEventListener('earth-app:toast', (event: Event) => {
+				const text = (event as CustomEvent<{ text?: string }>).detail?.text;
+				if (text) w.__toasts.push(text);
+			});
 			// pre-seed the "already saw the text-size prompt" flag so the onboarding
 			// text-size sheet (MTextSizePrompt) never auto-opens over the page under test
 			// and intercepts clicks; every spec would otherwise hit it on a fresh profile
