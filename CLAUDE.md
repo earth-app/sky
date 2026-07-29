@@ -109,12 +109,45 @@ Key goals when changing this repo:
 ## Styling & UX Conventions
 
 - Global colors and font families live in [`src/assets/css/main.css`](src/assets/css/main.css).
-- CSS variables are defined on `:root`, `html`, `body`, and `ion-app` so native and web shells stay in sync.
 - The app uses a custom Earth palette rather than default Ionic tones.
 - `light` and `dark` classes are used for theme-specific values.
 - Keep Ion/utility classes consistent with the existing mobile shell instead of introducing desktop-first layouts.
 - When adding new app-level styles, ensure they work inside Ionic shadow DOM and the tab shell.
 - Section comments use `// #region <name>` ... `// #endregion` markers (editor-foldable, matches the mantle2/PHP style), NOT dashed dividers like `// ----- x`.
+
+### Every `--ion-*` override goes UNLAYERED on `:root:root`
+
+`@ionic/core/css/core.css` declares `:root { --ion-color-primary: #0054e9 }` with **no cascade layer**, and an unlayered declaration beats anything inside `@layer` at any specificity. So:
+
+- Put Ionic variable overrides **outside every layer**, on `:root:root` / `:root:root.light` / `:root:root.dark`. The doubled selector also removes any dependence on stylesheet load order.
+- **Never** put an `--ion-*` property inside a layer. `tests/unit/design/tokens.spec.ts` fails if one appears.
+- **Never** re-declare an `--ion-*` on `body` or `ion-app`. A local declaration beats an inherited one whatever the specificity, so a later `html.dark` rule would lose to a light value inherited from `body`. (The one deliberate exception is `ion-app { --ion-safe-area-top }`, scoped so `<html>` keeps the real `env()` inset.)
+- **Never read an `--ion-*` without checking Ionic declares it.** Ionic inlines `var(--ion-background-color, #fff)` fallbacks rather than declaring the variable, so reading it directly resolves to whatever fallback you wrote.
+- `!important` **reverses** layer order, so the reduced-motion killswitch lives in an early layer (`@layer theme`) on purpose. Moving it later breaks it.
+- Verify cascade questions against the **built** CSS or `getComputedStyle`, never against the source.
+
+### Design tokens
+
+Four knobs move the whole app; prefer them over per-component edits:
+
+| knob                                                 | where                                    | reaches                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `ui.colors`                                          | [`src/app.config.ts`](src/app.config.ts) | every `text-muted` / `border-default` / `bg-elevated` / `bg-primary`, and all `neutral-*` |
+| `--color-gray-*` aliases                             | `main.css` `@theme`                      | all raw `gray-*` utilities                                                                |
+| `--ui-radius`                                        | unlayered `:root:root`                   | every `rounded-*`, including the `!` variants                                             |
+| `--default-transition-duration` / `-timing-function` | `main.css` `@theme`                      | every `transition-*` utility                                                              |
+
+- Ramps live in `@theme static` because `@nuxt/ui`'s runtime colors plugin reaches them through `var(--color-ink-500, )`, which the Tailwind scanner cannot see. A plain `@theme` would tree-shake them and the failure mode is a silently `unset` colour, not a build error.
+- **`ink`** is the only neutral family: Tailwind gray's lightness ladder held exactly, hue rotated to the brand, chroma constant. Holding lightness is what keeps `gray-*` sites contrast-safe; do not let the chroma drift.
+- **`brand` / `danger` / `warning`** share one lightness ladder but each carries its own chroma, because the sRGB chroma ceiling is hue-dependent. A shared chroma curve clips on yellow and red.
+- **Coloured text on a light surface uses `-700`, never `-500`.** `brand-500` on white is 2.5:1; `brand-700` is 5.2:1. `-500` is for fills. Dark mode uses `-300`/`-400`.
+- Adding a token means adding its assertion to `tests/unit/design/`.
+
+### Tap targets are 44px
+
+Apple's HIG minimum, and Ionic's defaults land under it (buttons render 27-36px, some icon-only buttons 24px wide). `main.css` carries the floor unlayered, and it needs **two selectors** because a bare `ion-button` loses to Ionic's own generated `.sc-ion-buttons-md-s ion-button`. `tests/e2e/layout.mobile.spec.ts` measures every surface at phone width and fails on anything undersized, on horizontal overflow, and on text clipped by its own box.
+
+A tappable `IonChip` also needs `role="button"`, `tabindex="0"`, `:aria-pressed` and `@keydown.enter`/`@keydown.space` — `IonChip` provides none of it, and CSS cannot tell a decorative chip from an interactive one.
 
 ## Backend Integration
 
