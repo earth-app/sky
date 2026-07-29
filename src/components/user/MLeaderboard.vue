@@ -24,8 +24,14 @@
 				:key="m.value"
 				:color="metric === m.value ? 'primary' : 'medium'"
 				:outline="metric !== m.value"
-				class="px-3 py-1 cursor-pointer"
+				role="button"
+				tabindex="0"
+				:aria-pressed="metric === m.value"
+				:aria-label="`Rank by ${m.label}`"
+				class="px-3 py-1 min-h-11 cursor-pointer"
 				@click="metric = m.value"
+				@keydown.enter.prevent="metric = m.value"
+				@keydown.space.prevent="metric = m.value"
 			>
 				<UIcon
 					:name="m.icon"
@@ -44,12 +50,24 @@
 			variant="subtle"
 		/>
 
-		<p
+		<MEmptyState
 			v-if="scope !== 'global' && !isAuthenticated"
-			class="text-sm text-gray-500 my-4 text-center"
-		>
-			Sign in to see how you stack up against your {{ scope }}.
-		</p>
+			icon="mdi:login-variant"
+			title="Sign In to Compare"
+			:description="`Sign in to see how you stack up against your ${scope}.`"
+			cta-label="Sign In"
+			cta-color="primary"
+			cta-to="/login"
+			dense
+		/>
+		<MEmptyState
+			v-else-if="!loading && visibleRows.length === 0"
+			icon="mdi:podium"
+			title="Nobody Ranked Yet"
+			:description="`No ${metricLabel.toLowerCase()} have been recorded for this board yet.`"
+			variant="neutral"
+			dense
+		/>
 		<UTable
 			v-else
 			:columns="columns"

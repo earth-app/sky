@@ -1,5 +1,5 @@
 <template>
-	<div class="min-w-90 w-full h-full overflow-y-auto p-4 border border-gray-700">
+	<div class="min-w-90 w-full h-full overflow-y-auto p-4 border border-default">
 		<MEmptyState
 			v-if="notifications.length === 0"
 			icon="mdi:bell-check-outline"
@@ -27,7 +27,7 @@
 				</span>
 				<span
 					v-else
-					class="text-xs! text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 rounded-full px-2 py-0.5 border-2 border-gray-300/10 dark:border-gray-600/30"
+					class="text-xs! text-muted bg-elevated rounded-full px-2 py-0.5 border-2 border-default/10"
 				>
 					All Read
 				</span>

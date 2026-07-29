@@ -16,6 +16,7 @@
 				>
 					<IonButton
 						id="notifications"
+						aria-label="Notifications"
 						color="medium"
 						router-link="/tabs/profile/notifications"
 						class="size-8 flex items-center"
@@ -38,6 +39,7 @@
 
 					<IonButton
 						id="settings-link"
+						aria-label="Settings"
 						color="tertiary"
 						router-link="/tabs/settings"
 						class="size-6"
@@ -57,9 +59,14 @@
 			/>
 			<div
 				v-else-if="hasResolvedUser && !profileUser"
-				class="flex items-center justify-center h-screen"
+				class="flex h-screen flex-col items-center justify-center px-6"
 			>
-				<IonText>User not found: {{ route.params.id }}</IonText>
+				<MInlineError
+					title="Profile Not Found"
+					description="This account doesn't exist, or it is no longer available."
+					icon="mdi:account-off-outline"
+					@retry="reload"
+				/>
 			</div>
 			<div
 				v-else
@@ -87,10 +94,15 @@ const profileUser = computed(() => {
 	return currentUserValue;
 });
 
-onMounted(() => {
+function reload() {
+	hasResolvedUser.value = false;
 	fetchUser().finally(() => {
 		hasResolvedUser.value = true;
 	});
+}
+
+onMounted(() => {
+	reload();
 	fetchNotifications();
 });
 </script>

@@ -100,25 +100,25 @@
 				</IonCardHeader>
 
 				<IonCardContent class="p-0!">
-					<p class="text-sm! text-gray-600 dark:text-gray-400 whitespace-pre-line">
+					<p class="text-sm! text-muted whitespace-pre-line">
 						{{ step.description }}
 					</p>
 
 					<IonImg
 						v-if="step.image"
 						:src="step.image"
-						class="mt-3 rounded-md w-full max-h-48 object-cover border border-gray-200 dark:border-gray-800"
+						class="mt-3 rounded-md w-full max-h-48 object-cover border border-default"
 					/>
 
 					<div class="mt-1 flex flex-wrap items-center justify-between">
 						<p
 							v-if="step.footer"
-							class="text-xs! text-gray-500 px-2 flex-1"
+							class="text-xs! text-muted px-2 flex-1"
 						>
 							{{ step.footer }}
 						</p>
 						<div class="flex flex-col gap-2 items-end w-full mt-2">
-							<span class="text-xs! text-gray-500 text-center mx-2">
+							<span class="text-xs! text-muted text-center mx-2">
 								Step {{ visibleStepIndex + 1 }} of {{ visibleSteps.length }}
 							</span>
 							<div
@@ -236,6 +236,8 @@ const step = computed(() => props.steps[index.value] || null);
 const TOUR_ROUTE_DURATION_MS = 300;
 const TARGET_LOOKUP_TIMEOUT_MS = 2000;
 const SHADOW_LOOKUP_INTERVAL_MS = 60;
+// the one layer the --m-z-* scale cannot express: ionic writes `z-index: 20000 + index` inline on
+// its overlays, and the tour has to dim over an open modal, so it floors above the whole scale
 const BASE_LAYER_Z_INDEX = 20_000;
 
 const boxStyle = ref({

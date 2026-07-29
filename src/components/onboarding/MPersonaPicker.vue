@@ -84,9 +84,16 @@
 							:key="i.label"
 							:color="interests.includes(i.label) ? 'primary' : 'medium'"
 							:outline="!interests.includes(i.label)"
-							:disabled="!interests.includes(i.label) && interests.length >= 5"
+							:disabled="interestCapped(i.label)"
+							role="button"
+							:tabindex="interestCapped(i.label) ? -1 : 0"
+							:aria-pressed="interests.includes(i.label)"
+							:aria-disabled="interestCapped(i.label) || undefined"
+							:aria-label="`Interested in ${i.label}`"
+							class="px-2 min-h-11"
 							@click="toggleInterest(i.label)"
-							class="px-2"
+							@keydown.enter.prevent="toggleInterest(i.label)"
+							@keydown.space.prevent="toggleInterest(i.label)"
 						>
 							<UIcon
 								:name="i.icon"
@@ -176,6 +183,11 @@ const suggestedInterests = [
 const persona = ref<string>('');
 const interests = ref<string[]>([]);
 const saving = ref(false);
+
+// an unpicked interest is locked once the 5-pick cap is reached
+function interestCapped(label: string): boolean {
+	return !interests.value.includes(label) && interests.value.length >= 5;
+}
 
 function toggleInterest(label: string) {
 	const idx = interests.value.indexOf(label);

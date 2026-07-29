@@ -156,7 +156,7 @@
 							type="text"
 							placeholder="I'm currently feeling..."
 							wrap="hard"
-							class="w-full h-full text-sm min-w-60 my-2 p-2 border border-gray-300 rounded-md resize-none"
+							class="w-full h-full text-sm min-w-60 my-2 p-2 border border-default rounded-md resize-none"
 						/>
 
 						<img
@@ -166,7 +166,7 @@
 							"
 							:src="currentImages[index]"
 							:alt="item.title"
-							class="mt-2 w-full max-h-48 object-cover rounded-lg border border-gray-200"
+							class="mt-2 w-full max-h-48 object-cover rounded-lg border border-default"
 						/>
 					</div>
 				</div>

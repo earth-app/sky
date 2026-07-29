@@ -38,7 +38,7 @@
 			</svg>
 			<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
 				<span class="text-3xl font-bold tabular-nums leading-none">{{ percentLabel }}%</span>
-				<span class="text-[11px] opacity-60 mt-1">of {{ goalMeta.label }}</span>
+				<span class="text-2xs opacity-60 mt-1">of {{ goalMeta.label }}</span>
 			</div>
 		</div>
 		<p class="text-xs opacity-70 mt-2">{{ remaining }} {{ goalMeta.unit }} to Grow Together</p>

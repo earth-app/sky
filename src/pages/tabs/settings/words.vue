@@ -28,23 +28,17 @@
 					Words you've saved from Word of the Day. Stored on this device, up to {{ cap }} entries.
 				</p>
 
-				<div
+				<MEmptyState
 					v-if="list.length === 0"
-					class="w-full rounded-xl border border-black/20 light:border-gray-300 px-6 py-10 text-center"
-				>
-					<UIcon
-						name="mdi:book-alphabet"
-						class="size-10 text-info mb-2"
-					/>
-					<h2 class="text-base! font-semibold m-0! mb-2!">No saved words yet</h2>
-					<p class="text-xs opacity-70 m-0!">
-						Tap Save Word on a Word of the Day card and it will land here.
-					</p>
-				</div>
+					icon="mdi:book-alphabet"
+					title="No Saved Words Yet"
+					description="Tap Save Word on a Word of the Day card and it will land here."
+					variant="neutral"
+				/>
 
 				<IonList
 					v-else
-					class="w-full rounded-xl border border-black/20 light:border-gray-300"
+					class="w-full rounded-xl border border-default"
 				>
 					<IonItem
 						v-for="word in list"
@@ -57,7 +51,7 @@
 								<span class="text-xs italic opacity-70">{{ word.partOfSpeech }}</span>
 								<span
 									v-if="word.savedAt"
-									class="text-[10px] uppercase tracking-wide opacity-50 ml-auto"
+									class="text-3xs uppercase tracking-wide opacity-50 ml-auto"
 									>{{ formatSavedAt(word.savedAt) }}</span
 								>
 							</div>

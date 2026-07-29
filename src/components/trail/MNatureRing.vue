@@ -45,11 +45,11 @@
 				<UiCountUp
 					:value="roundedMinutes"
 					:class="compact ? 'text-sm font-semibold' : 'text-2xl font-bold'"
-					class="tabular-nums leading-none text-primary"
+					class="tabular-nums leading-none m-text-brand"
 				/>
 				<span
 					v-if="!compact"
-					class="text-[10px] opacity-60"
+					class="text-3xs opacity-60"
 					>of {{ target }}</span
 				>
 			</div>
@@ -58,12 +58,12 @@
 			<span class="text-xs font-semibold opacity-80">{{ label }}</span>
 			<span
 				v-if="best > 0"
-				class="text-[11px] opacity-60"
+				class="text-2xs opacity-60"
 				>Personal Best: {{ best }} min</span
 			>
 			<span
 				v-else-if="!compact"
-				class="text-[11px] opacity-60"
+				class="text-2xs opacity-60"
 				>Personal, Never Compared</span
 			>
 		</div>

@@ -1,10 +1,18 @@
 <template>
 	<div
 		v-if="visible"
-		class="w-full max-w-2xl mx-auto px-4 mb-4"
+		class="w-full"
 	>
-		<IonCard :color="theme">
-			<div class="flex items-center gap-4 p-4">
+		<MSurface class="gap-3">
+			<div class="flex items-center gap-2">
+				<UIcon
+					name="mdi:leaf"
+					class="size-5 shrink-0 m-text-brand"
+					aria-hidden="true"
+				/>
+				<h3 class="m-0! truncate text-sm! font-semibold">Nature Minutes</h3>
+			</div>
+			<div class="flex items-center gap-4">
 				<div
 					id="nature-ring"
 					class="shrink-0"
@@ -17,18 +25,11 @@
 						:size="84"
 					/>
 				</div>
-				<div class="flex flex-col gap-1 min-w-0 flex-1">
-					<div class="flex items-center gap-2">
-						<UIcon
-							name="mdi:leaf"
-							class="size-5 text-success"
-						/>
-						<h3 class="text-sm font-semibold m-0! tracking-wide opacity-80">Nature Minutes</h3>
-					</div>
-					<p class="text-xs opacity-60">
+				<div class="flex flex-col gap-2 min-w-0 flex-1">
+					<p class="m-0! text-xs text-muted">
 						{{ remainingLabel }}
 					</p>
-					<div class="flex flex-wrap items-center gap-2 mt-1">
+					<div class="flex flex-wrap items-center gap-2">
 						<IonButton
 							size="small"
 							color="primary"
@@ -63,13 +64,11 @@
 					</div>
 				</div>
 			</div>
-		</IonCard>
+		</MSurface>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { theme } from '~/composables/useSettings';
-
 const { user } = useAuth();
 const { natureMinutes, syncing, healthKitSupported, fetchNatureMinutes, syncFromHealthKit } =
 	useNatureMinutes();

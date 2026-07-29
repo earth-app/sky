@@ -3,7 +3,7 @@
 		<div class="flex items-center gap-2">
 			<UIcon
 				:name="promptId ? 'mdi:comment-quote-outline' : 'mdi:message-plus-outline'"
-				class="size-6 text-primary"
+				class="size-6 m-text-brand"
 			/>
 			<h3 class="text-base! font-semibold m-0!">
 				{{ promptId ? 'Answer From Where You Are' : 'Leave a Note' }}
@@ -26,7 +26,7 @@
 			fill="outline"
 			placeholder="Something to lift the next person who stops here..."
 		/>
-		<div class="text-[11px] opacity-50 text-right mt-1">{{ note.length }}/{{ maxNote }}</div>
+		<div class="text-2xs opacity-50 text-right mt-1">{{ note.length }}/{{ maxNote }}</div>
 
 		<IonInput
 			v-model="place"

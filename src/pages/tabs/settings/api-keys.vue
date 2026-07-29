@@ -28,12 +28,15 @@
 					you grant. Tokens are shown once; copy them immediately. Revoke any key at any time.
 				</p>
 
-				<div
+				<MEmptyState
 					v-if="!user"
-					class="text-center py-12 opacity-70"
-				>
-					You must be signed in to manage API keys.
-				</div>
+					icon="mdi:login-variant"
+					title="Sign In to Manage API Keys"
+					description="You must be signed in to manage API keys."
+					cta-label="Sign In"
+					cta-color="primary"
+					cta-to="/login"
+				/>
 
 				<template v-else>
 					<div
@@ -83,19 +86,17 @@
 						<IonSpinner name="crescent" />
 					</div>
 
-					<div
+					<MEmptyState
 						v-else-if="keys.length === 0"
-						class="w-full rounded-xl border border-black/20 light:border-gray-300 px-6 py-10 text-center"
-					>
-						<h2 class="text-base! font-semibold m-0! mb-2!">No API Keys Yet</h2>
-						<p class="text-sm opacity-80 m-0!">
-							Tap the + in the header to generate your first key.
-						</p>
-					</div>
+						icon="mdi:key-outline"
+						title="No API Keys Yet"
+						description="Tap the + in the header to generate your first key."
+						variant="neutral"
+					/>
 
 					<IonList
 						v-else
-						class="w-full rounded-xl border-2 border-black/40 light:border-gray-300"
+						class="w-full rounded-xl border-2 border-default"
 					>
 						<IonItem
 							v-for="key in keys"
@@ -142,13 +143,13 @@
 									<span
 										v-for="scope in key.scopes"
 										:key="scope"
-										class="font-mono text-[10px] rounded bg-default/40 border border-default/60 px-1.5 py-0.5"
+										class="font-mono text-3xs rounded bg-default/40 border border-default/60 px-1.5 py-0.5"
 									>
 										{{ scope }}
 									</span>
 								</div>
 
-								<div class="text-[11px] opacity-70 flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+								<div class="text-2xs opacity-70 flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
 									<span>Created {{ relative(key.created_at) }}</span>
 									<span v-if="key.last_used_at">Last used {{ relative(key.last_used_at) }}</span>
 									<span
@@ -303,7 +304,7 @@
 									/>
 									<div class="flex flex-col">
 										<div class="font-mono text-xs font-semibold">{{ name }}</div>
-										<div class="text-[11px] opacity-80">{{ node.description }}</div>
+										<div class="text-2xs opacity-80">{{ node.description }}</div>
 									</div>
 								</summary>
 								<div
@@ -321,10 +322,10 @@
 											@ion-change="toggle(String(childName), $event)"
 										/>
 										<div class="flex flex-col">
-											<div class="font-mono text-[11px] font-semibold">
+											<div class="font-mono text-2xs font-semibold">
 												{{ childName }}
 											</div>
-											<div class="text-[11px] opacity-80">{{ child.description }}</div>
+											<div class="text-2xs opacity-80">{{ child.description }}</div>
 										</div>
 									</label>
 								</div>
@@ -332,13 +333,13 @@
 						</div>
 						<div
 							v-if="createForm.scopes.length === 0"
-							class="text-[11px] text-red-500"
+							class="text-2xs text-red-500"
 						>
 							Select at least one permission.
 						</div>
 						<div
 							v-else
-							class="text-[11px] opacity-70"
+							class="text-2xs opacity-70"
 						>
 							{{ createForm.scopes.length }} scope{{ createForm.scopes.length === 1 ? '' : 's' }}
 							selected.
@@ -427,7 +428,7 @@
 									/>
 									<div class="flex flex-col">
 										<div class="font-mono text-xs font-semibold">{{ name }}</div>
-										<div class="text-[11px] opacity-80">{{ node.description }}</div>
+										<div class="text-2xs opacity-80">{{ node.description }}</div>
 									</div>
 								</summary>
 								<div
@@ -445,10 +446,10 @@
 											@ion-change="toggleEdit(String(childName), $event)"
 										/>
 										<div class="flex flex-col">
-											<div class="font-mono text-[11px] font-semibold">
+											<div class="font-mono text-2xs font-semibold">
 												{{ childName }}
 											</div>
-											<div class="text-[11px] opacity-80">{{ child.description }}</div>
+											<div class="text-2xs opacity-80">{{ child.description }}</div>
 										</div>
 									</label>
 								</div>

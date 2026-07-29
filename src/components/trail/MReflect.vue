@@ -4,7 +4,7 @@
 			<div class="size-14 rounded-full bg-primary/10 flex items-center justify-center">
 				<UIcon
 					name="mdi:book-heart-outline"
-					class="size-8 text-primary"
+					class="size-8 m-text-brand"
 				/>
 			</div>
 			<h3 class="text-lg! font-semibold m-0!">A Moment to Reflect</h3>
@@ -29,7 +29,14 @@
 					:key="m.mood"
 					:color="mood === m.mood ? 'primary' : 'medium'"
 					:outline="mood !== m.mood"
+					role="button"
+					tabindex="0"
+					:aria-pressed="mood === m.mood"
+					:aria-label="`It Felt ${m.label}`"
+					class="min-h-11"
 					@click="toggleMood(m.mood)"
+					@keydown.enter.prevent="toggleMood(m.mood)"
+					@keydown.space.prevent="toggleMood(m.mood)"
 				>
 					<UIcon
 						:name="m.icon"
@@ -42,7 +49,7 @@
 
 		<IonItem
 			lines="none"
-			class="rounded-lg border border-neutral-200 dark:border-neutral-800"
+			class="rounded-lg border border-default"
 		>
 			<IonToggle
 				:checked="shareToGarden"

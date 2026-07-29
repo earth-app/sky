@@ -1,21 +1,19 @@
 <template>
 	<div
 		v-if="visible"
-		class="w-full max-w-2xl mx-auto px-4 mb-4"
+		class="w-full"
 	>
-		<IonCard
-			:color="theme"
-			class="m-0 px-3 pt-3 pb-2"
-		>
-			<div class="flex items-center gap-2 mb-4">
+		<MSurface class="gap-3">
+			<div class="flex items-center gap-2">
 				<UIcon
 					name="mdi:shield-star-outline"
-					class="size-5 text-warning"
+					class="size-5 shrink-0 m-text-warning"
+					aria-hidden="true"
 				/>
-				<h3 class="text-sm font-semibold m-0! tracking-wide opacity-80">Recent Badges</h3>
-				<span class="text-xs opacity-60 ml-auto">last 7 days</span>
+				<h3 class="m-0! truncate text-sm! font-semibold">Recent Badges</h3>
+				<span class="ml-auto shrink-0 text-2xs text-muted">last 7 days</span>
 			</div>
-			<div class="flex gap-6 overflow-x-auto -mx-1 px-1 pb-1 scroll-smooth">
+			<div class="flex flex-wrap items-start gap-4">
 				<UserBadgeMCard
 					v-for="badge in recentBadges"
 					:key="badge.id"
@@ -24,13 +22,11 @@
 					class="shrink-0"
 				/>
 			</div>
-		</IonCard>
+		</MSurface>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { theme } from '~/composables/useSettings';
-
 const { user } = useAuth();
 const userId = computed(() => user.value?.id);
 const { badges, fetchBadges } = useUser(userId);

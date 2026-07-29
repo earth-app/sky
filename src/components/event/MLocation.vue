@@ -29,7 +29,7 @@
 
 			<p
 				v-if="hasSelection && summaryCoords"
-				class="text-xs text-gray-500 mt-1 px-1"
+				class="text-xs text-muted mt-1 px-1"
 			>
 				{{ summaryCoords }}
 			</p>
@@ -91,7 +91,7 @@
 							<span class="text-sm font-medium truncate">{{ item.label }}</span>
 							<span
 								v-if="item.subtitle"
-								class="text-xs text-gray-500 truncate"
+								class="text-xs text-muted truncate"
 								>{{ item.subtitle }}</span
 							>
 						</div>
@@ -99,7 +99,7 @@
 							v-if="draft && draft.full_name === item.full_name"
 							slot="end"
 							name="mdi:check-circle"
-							class="size-5 text-primary"
+							class="size-5 m-text-brand"
 						/>
 					</IonItem>
 				</IonList>
@@ -110,10 +110,10 @@
 				>
 					<UIcon
 						name="mdi:map-search-outline"
-						class="size-10 text-gray-400"
+						class="size-10 text-dimmed"
 					/>
-					<p class="text-sm text-gray-500 m-0!">No matches for "{{ searchTerm.trim() }}"</p>
-					<p class="text-xs text-gray-400 m-0!">
+					<p class="text-sm text-muted m-0!">No matches for "{{ searchTerm.trim() }}"</p>
+					<p class="text-xs text-dimmed m-0!">
 						Try a more general name, or enter coordinates below.
 					</p>
 				</div>
@@ -124,12 +124,12 @@
 				>
 					<UIcon
 						name="mdi:map-marker-radius-outline"
-						class="size-10 text-gray-400"
+						class="size-10 text-dimmed"
 					/>
-					<p class="text-sm text-gray-500 m-0!">Start typing to search for a place.</p>
+					<p class="text-sm text-muted m-0!">Start typing to search for a place.</p>
 				</div>
 
-				<div class="mt-6 border-t border-gray-700/30 pt-4">
+				<div class="mt-6 border-t border-default/30 pt-4">
 					<IonButton
 						expand="block"
 						fill="clear"

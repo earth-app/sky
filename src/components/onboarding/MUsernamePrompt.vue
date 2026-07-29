@@ -10,7 +10,7 @@
 			<div class="flex flex-col items-center pt-4 gap-4 max-w-md mx-auto">
 				<UIcon
 					name="mdi:account-edit-outline"
-					class="size-12 text-primary"
+					class="size-12 m-text-brand"
 				/>
 				<h2 class="text-xl font-semibold m-0! text-center">Pick a Username</h2>
 				<p class="text-sm text-center text-gray-700 dark:text-gray-200">

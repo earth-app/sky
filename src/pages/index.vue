@@ -13,7 +13,7 @@
 				>
 					The Earth App
 				</h1>
-				<h2 class="text-sm! font-medium! mt-0! px-2 text-center text-gray-600">
+				<h2 class="text-sm! font-medium! mt-0! px-2 text-center text-muted">
 					Find your Novelty, Try New Things, Discover the World
 				</h2>
 				<div class="mt-8 px-8 max-w-md">
@@ -21,7 +21,7 @@
 						v-if="offlineAuthBlocked"
 						class="space-y-3 text-center"
 					>
-						<p class="text-sm text-gray-600 dark:text-gray-300">
+						<p class="text-sm text-muted">
 							You are offline and logged out. Please come back online to log in.
 						</p>
 					</div>
@@ -81,7 +81,7 @@
 					<div v-else>
 						<UIcon
 							name="mdi:loading"
-							class="animate-spin size-8 text-gray-600 dark:text-gray-300 mx-auto"
+							class="animate-spin size-8 text-muted mx-auto"
 						/>
 					</div>
 				</div>

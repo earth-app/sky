@@ -60,7 +60,7 @@
 			<div class="flex items-center gap-2 mb-3">
 				<UIcon
 					name="mdi:handshake-outline"
-					class="size-5 text-primary"
+					class="size-5 m-text-brand"
 				/>
 				<span class="font-semibold text-sm">You're in this together</span>
 				<UBadge

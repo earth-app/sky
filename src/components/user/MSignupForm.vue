@@ -81,7 +81,7 @@
 				By signing up, you agree to our
 				<button
 					type="button"
-					class="text-primary! font-semibold! underline!"
+					class="m-text-brand! font-semibold! underline!"
 					@click="openTos"
 				>
 					Terms of Service
@@ -89,7 +89,7 @@
 				and
 				<button
 					type="button"
-					class="text-primary! font-semibold! underline!"
+					class="m-text-brand! font-semibold! underline!"
 					@click="openPrivacy"
 				>
 					Privacy Policy</button

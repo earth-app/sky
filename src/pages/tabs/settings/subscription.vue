@@ -16,12 +16,15 @@
 					time.
 				</p>
 
-				<div
+				<MEmptyState
 					v-if="!user"
-					class="text-center py-12 opacity-70"
-				>
-					You must be signed in to manage your subscription.
-				</div>
+					icon="mdi:login-variant"
+					title="Sign In to Manage Your Plan"
+					description="You must be signed in to manage your subscription."
+					cta-label="Sign In"
+					cta-color="primary"
+					cta-to="/login"
+				/>
 
 				<template v-else>
 					<div
@@ -32,7 +35,7 @@
 					</div>
 
 					<template v-else>
-						<div class="w-full rounded-xl border-2 border-black/40 light:border-gray-300 p-4 mb-4">
+						<div class="w-full rounded-xl border-2 border-default p-4 mb-4">
 							<div class="flex items-center justify-between gap-2">
 								<div class="text-lg font-semibold">{{ tierLabel }}</div>
 								<span
@@ -53,9 +56,7 @@
 							</div>
 						</div>
 
-						<div
-							class="w-full rounded-xl border border-black/20 light:border-gray-300 p-4 mb-4 flex flex-col gap-3"
-						>
+						<div class="w-full rounded-xl border border-default p-4 mb-4 flex flex-col gap-3">
 							<div class="text-sm font-medium">Redeem a Code</div>
 							<IonItem>
 								<IonInput

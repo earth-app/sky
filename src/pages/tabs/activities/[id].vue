@@ -29,7 +29,7 @@
 								v-if="isDownloading"
 								key="downloading"
 								name="line-md:downloading-loop"
-								class="text-primary size-8"
+								class="m-text-brand size-8"
 							/>
 							<UIcon
 								v-else-if="isDownloaded"
@@ -40,7 +40,7 @@
 								v-else
 								key="download"
 								name="material-symbols:download-for-offline-outline"
-								class="text-primary size-8 cursor-pointer"
+								class="m-text-brand size-8 cursor-pointer"
 								@click.stop="startDownload"
 							/>
 						</Transition>
@@ -54,7 +54,7 @@
 							:class="
 								canDeleteDownload
 									? 'text-error size-8 cursor-pointer'
-									: 'text-gray-400 size-8 opacity-60 cursor-not-allowed'
+									: 'text-dimmed size-8 opacity-60 cursor-not-allowed'
 							"
 							@click.stop="deleteDownload"
 						/>
@@ -74,23 +74,26 @@
 		</IonContent>
 		<div
 			v-else-if="unavailableOffline"
-			class="h-screen flex flex-col"
+			class="h-screen flex flex-col items-center justify-center px-6 pb-16"
 		>
-			<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
-				<h2 class="text-xl font-semibold">Activity unavailable offline</h2>
-				<p class="text-gray-500 text-sm">
-					Connect once and download this activity to open it without internet.
-				</p>
-			</div>
+			<MInlineError
+				title="Activity Unavailable Offline"
+				description="Connect once and download this activity to open it without internet."
+				icon="mdi:wifi-off"
+				severity="warning"
+				@retry="loadActivityForView"
+			/>
 		</div>
 		<div
 			v-else-if="notFound"
-			class="h-screen flex flex-col"
+			class="h-screen flex flex-col items-center justify-center px-6 pb-16"
 		>
-			<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
-				<h2 class="text-xl font-semibold">Activity Not Found</h2>
-				<p class="text-gray-500 text-sm">This activity doesn't exist or was removed.</p>
-			</div>
+			<MInlineError
+				title="Activity Not Found"
+				description="This activity doesn't exist or was removed."
+				icon="mdi:tag-off-outline"
+				@retry="loadActivityForView"
+			/>
 		</div>
 		<div
 			v-else

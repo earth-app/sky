@@ -5,7 +5,7 @@
 		>
 
 		<div
-			class="size-16 rounded-full bg-primary/10 flex items-center justify-center text-primary motion-safe:animate-pulse"
+			class="size-16 rounded-full bg-primary/10 flex items-center justify-center m-text-brand motion-safe:animate-pulse"
 		>
 			<UIcon
 				name="mdi:compass-outline"

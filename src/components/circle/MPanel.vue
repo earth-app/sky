@@ -6,7 +6,7 @@
 		>
 			<UIcon
 				name="mdi:flower-tulip-outline"
-				class="size-7 text-primary"
+				class="size-7 m-text-brand"
 			/>
 			<div class="min-w-0">
 				<h2 class="text-xl! font-bold m-0!">My Shared Garden</h2>
@@ -22,21 +22,15 @@
 			/>
 		</div>
 
-		<div
+		<MEmptyState
 			v-if="!currentUid"
-			class="flex flex-col items-center text-center rounded-xl border border-neutral-200 dark:border-neutral-800 py-10"
-		>
-			<UIcon
-				name="mdi:login-variant"
-				class="size-10 mb-2 opacity-70"
-			/>
-			<p class="text-sm opacity-70 mb-3">Sign in to join your circle.</p>
-			<IonButton
-				color="primary"
-				@click="goToLogin"
-				>Sign In</IonButton
-			>
-		</div>
+			icon="mdi:login-variant"
+			title="Join Your Circle"
+			description="Sign in to grow a shared garden with your friends."
+			cta-label="Sign In"
+			cta-color="primary"
+			@cta="goToLogin"
+		/>
 
 		<template v-else>
 			<section
@@ -65,16 +59,14 @@
 					:garden="gardenData"
 					:height="280"
 				/>
-				<div
+				<MEmptyState
 					v-else-if="gardenLoaded"
-					class="flex flex-col items-center text-center rounded-2xl bg-primary/5 py-10"
-				>
-					<UIcon
-						name="mdi:sprout-outline"
-						class="size-10 mb-2 text-success"
-					/>
-					<p class="text-sm opacity-70">Your garden grows as the circle spends time outside.</p>
-				</div>
+					icon="mdi:sprout-outline"
+					title="Nothing Has Sprouted Yet"
+					description="Your garden grows as the circle spends time outside."
+					variant="success"
+					class="rounded-2xl bg-primary/5"
+				/>
 				<div
 					v-else
 					class="rounded-2xl bg-primary/5 flex items-center justify-center h-[280px]"

@@ -46,8 +46,14 @@
 					:key="opt.value"
 					:color="activeTheme === opt.value ? 'primary' : 'medium'"
 					:outline="activeTheme !== opt.value"
+					role="button"
+					tabindex="0"
+					:aria-pressed="activeTheme === opt.value"
+					:aria-label="`Show ${opt.label} Trails`"
+					class="px-2 min-h-11 min-w-11"
 					@click="activeTheme = opt.value"
-					class="px-2"
+					@keydown.enter.prevent="activeTheme = opt.value"
+					@keydown.space.prevent="activeTheme = opt.value"
 				>
 					<IonLabel class="text-xs font-semibold">{{ opt.label }}</IonLabel>
 				</IonChip>
@@ -78,16 +84,13 @@
 					@preview="previewTrail"
 				/>
 			</div>
-			<div
+			<MEmptyState
 				v-else
-				class="flex flex-col items-center text-center py-12 opacity-70"
-			>
-				<UIcon
-					name="mdi:compass-off-outline"
-					class="size-10 mb-2"
-				/>
-				<p class="text-sm">No Trails Here Yet.</p>
-			</div>
+				icon="mdi:compass-off-outline"
+				title="No Trails Here Yet."
+				description="Try another theme, or check back once new trails are published."
+				variant="neutral"
+			/>
 		</div>
 
 		<TrailMRunner

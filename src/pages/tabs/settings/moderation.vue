@@ -46,7 +46,7 @@
 
 					<div
 						v-if="status.history.length === 0"
-						class="w-full rounded-xl border border-black/20 light:border-gray-300 px-6 py-10 text-center"
+						class="w-full rounded-xl border border-default px-6 py-10 text-center"
 					>
 						<UIcon
 							name="mdi:shield-check-outline"
@@ -58,7 +58,7 @@
 
 					<IonList
 						v-else
-						class="w-full rounded-xl border border-black/20 light:border-gray-300"
+						class="w-full rounded-xl border border-default"
 					>
 						<IonItem
 							v-for="(entry, i) in status.history"
@@ -98,7 +98,7 @@
 
 				<div
 					v-else
-					class="w-full rounded-xl border border-black/20 light:border-gray-300 px-6 py-10 text-center"
+					class="w-full rounded-xl border border-default px-6 py-10 text-center"
 				>
 					<UIcon
 						name="mdi:cloud-alert-outline"

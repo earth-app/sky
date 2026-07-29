@@ -3,6 +3,7 @@
 		:fill="fill"
 		:size="size"
 		color="secondary"
+		shape="round"
 		:aria-label="ariaLabel"
 		:title="ariaLabel"
 		:class="['m-tour-button', { 'm-tour-button--attn': showRing }]"

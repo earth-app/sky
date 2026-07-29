@@ -17,7 +17,7 @@
 
 		<p
 			v-if="selectedSummary"
-			class="mt-2 text-sm text-gray-500"
+			class="mt-2 text-sm text-muted"
 		>
 			{{ selectedSummary }}
 		</p>
@@ -77,10 +77,15 @@
 							</div>
 						</IonCheckbox>
 					</IonItem>
-					<IonItem v-if="!activitiesLoading && filteredActivities.length === 0">
-						<IonLabel>No activities found.</IonLabel>
-					</IonItem>
 				</IonList>
+				<MEmptyState
+					v-if="!activitiesLoading && filteredActivities.length === 0"
+					icon="mdi:magnify-close"
+					title="No Activities Found"
+					description="Try a different search term."
+					variant="neutral"
+					dense
+				/>
 			</IonContent>
 		</IonModal>
 	</div>

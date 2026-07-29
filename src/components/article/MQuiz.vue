@@ -12,7 +12,7 @@
 					>
 					<span
 						v-if="score"
-						class="text-xs! font-semibold text-primary"
+						class="text-xs! font-semibold m-text-brand"
 						>{{ score.scorePercent }}% ({{ score.score }}/{{ score.total }})</span
 					>
 				</div>
@@ -79,7 +79,7 @@
 							v-else-if="currentQuestion.type === 'multi_select'"
 							class="flex flex-col gap-2 w-full px-2"
 						>
-							<p class="text-xs! text-gray-500 m-0!">Select every option that applies.</p>
+							<p class="text-xs! text-muted m-0!">Select every option that applies.</p>
 							<IonItem
 								v-for="(option, i) in currentQuestion.options"
 								:key="`ms-${index}-${i}`"
@@ -144,21 +144,19 @@
 							</template>
 
 							<template v-else-if="currentQuestion.type === 'order'">
-								<p class="text-xs! text-gray-500 m-0!">Correct order:</p>
+								<p class="text-xs! text-muted m-0!">Correct order:</p>
 								<ol class="flex flex-col gap-1">
 									<li
 										v-for="(item, i) in currentResult.correct_order || []"
 										:key="`co-${i}`"
-										class="flex items-center gap-2 rounded-md border border-gray-700/40 px-3 py-2"
+										class="flex items-center gap-2 rounded-md border border-default/40 px-3 py-2"
 										:class="
 											currentResult.user_order && currentResult.user_order[i] === item
 												? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
 												: ''
 										"
 									>
-										<span class="text-xs text-gray-500 w-5 text-right tabular-nums"
-											>{{ i + 1 }}.</span
-										>
+										<span class="text-xs text-muted w-5 text-right tabular-nums">{{ i + 1 }}.</span>
 										<span>{{ item }}</span>
 									</li>
 								</ol>

@@ -46,7 +46,7 @@
 					<!-- none / revoked: the application form -->
 					<div
 						v-if="state === 'none' || state === 'revoked'"
-						class="w-full rounded-xl border border-black/20 light:border-gray-300 p-4 flex flex-col gap-3"
+						class="w-full rounded-xl border border-default p-4 flex flex-col gap-3"
 					>
 						<IonInput
 							v-model="form.organization"
@@ -121,7 +121,7 @@
 					<!-- pending -->
 					<div
 						v-else-if="state === 'pending'"
-						class="w-full rounded-xl border border-black/20 light:border-gray-300 p-4"
+						class="w-full rounded-xl border border-default p-4"
 					>
 						<p class="text-sm opacity-80">
 							Applied {{ relative(application?.applied_at) }}. Applications are reviewed in the
@@ -132,7 +132,7 @@
 					<!-- approved -->
 					<div
 						v-else-if="state === 'approved'"
-						class="w-full rounded-xl border border-black/20 light:border-gray-300 p-4 flex flex-col gap-3"
+						class="w-full rounded-xl border border-default p-4 flex flex-col gap-3"
 					>
 						<p class="text-sm opacity-80">
 							Verified {{ relative(application?.reviewed_at) }}. Submit activities from the web app
@@ -155,7 +155,7 @@
 					<!-- denied -->
 					<div
 						v-else
-						class="w-full rounded-xl border border-black/20 light:border-gray-300 p-4 flex flex-col gap-3"
+						class="w-full rounded-xl border border-default p-4 flex flex-col gap-3"
 					>
 						<p
 							v-if="application?.notes"

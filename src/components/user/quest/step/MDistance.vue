@@ -20,7 +20,7 @@
 								: 'mdi:map-marker-distance'
 					"
 					class="text-3xl"
-					:class="tracking ? 'text-lime-400' : completed ? 'text-success' : 'text-neutral-400'"
+					:class="tracking ? 'text-lime-400' : completed ? 'text-success' : 'text-dimmed'"
 				/>
 			</div>
 			<p class="text-sm! font-semibold! tracking-[0.12em] uppercase opacity-80!">
@@ -52,7 +52,7 @@
 					class="rounded-full overflow-hidden"
 				/>
 			</div>
-			<div class="flex justify-between text-[0.65rem]! opacity-50 mt-1!">
+			<div class="flex justify-between text-2xs! opacity-50 mt-1!">
 				<span>{{ formatDistance(0) }}</span>
 				<span>{{ formatDistance(targetMeters) }}</span>
 			</div>
@@ -65,7 +65,7 @@
 				<UIcon
 					:name="healthKitDenied ? 'mdi:heart-off' : 'mdi:heart-pulse'"
 					class="size-4 shrink-0"
-					:class="healthKitDenied ? 'text-amber-500' : 'text-primary'"
+					:class="healthKitDenied ? 'text-amber-500' : 'm-text-brand'"
 				/>
 				<span v-if="healthKitDenied"
 					>Apple Health access is off, so distance is counted by your phone's pedometer only. Allow

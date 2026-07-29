@@ -25,29 +25,25 @@
 			<IonSpinner name="crescent" />
 		</div>
 
-		<div
+		<MEmptyState
 			v-else-if="!members.length"
-			class="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800 p-4 text-center"
-		>
-			<UIcon
-				name="mdi:account-multiple-plus-outline"
-				class="size-8 opacity-60"
-			/>
-			<p class="text-sm opacity-70">
-				Your circle is empty. Invite friends to grow a garden together.
-			</p>
-			<IonButton
-				size="small"
-				color="primary"
-				@click="inviteOpen = true"
-			>
-				<UIcon
-					name="mdi:account-plus"
-					class="size-4 mr-2"
-				/>
-				Invite Friends
-			</IonButton>
-		</div>
+			icon="mdi:account-multiple-plus-outline"
+			title="Your Circle is Empty"
+			description="Invite friends to grow a garden together."
+			cta-label="Invite Friends"
+			cta-icon="mdi:account-plus"
+			cta-color="primary"
+			dense
+			@cta="inviteOpen = true"
+		/>
+
+		<MEmptyState
+			v-else-if="!filtered.length"
+			icon="mdi:account-search-outline"
+			title="No One in Your Circle Matches That Search."
+			variant="neutral"
+			dense
+		/>
 
 		<IonList
 			v-else
@@ -59,7 +55,8 @@
 				:key="m.id"
 				button
 				:detail="false"
-				class="rounded-lg border border-neutral-200 dark:border-neutral-700 mb-1 last:mb-0"
+				:aria-label="`View ${m.username}'s Profile`"
+				class="rounded-lg border border-default mb-1 last:mb-0"
 				@click="openProfile(m)"
 			>
 				<UAvatar
@@ -70,12 +67,6 @@
 				/>
 				<IonLabel class="ml-2 truncate text-sm font-medium">{{ m.username }}</IonLabel>
 				<UserMTypeBadge :user="m" />
-			</IonItem>
-			<IonItem
-				v-if="!filtered.length"
-				lines="none"
-			>
-				<IonLabel class="text-sm opacity-60">No One in Your Circle Matches That Search.</IonLabel>
 			</IonItem>
 		</IonList>
 

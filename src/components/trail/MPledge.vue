@@ -3,7 +3,7 @@
 		<div class="flex items-center gap-2">
 			<UIcon
 				name="mdi:hand-heart-outline"
-				class="size-6 text-primary"
+				class="size-6 m-text-brand"
 			/>
 			<h3 class="text-base! font-semibold m-0!">Make Your Pledge</h3>
 		</div>

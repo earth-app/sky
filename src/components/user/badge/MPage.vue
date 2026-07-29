@@ -42,12 +42,14 @@
 				<Loading />
 			</div>
 
-			<div
+			<MEmptyState
 				v-else-if="masteryList && activeMasteryItems.length === 0"
-				class="text-xs opacity-60 text-center max-w-72 py-2"
-			>
-				No active mastery quests. Generate one from any completed badge below.
-			</div>
+				icon="mdi:medal-outline"
+				title="No Active Mastery Quests"
+				description="Generate one from any completed badge below."
+				variant="neutral"
+				dense
+			/>
 
 			<IonList
 				v-else-if="activeMasteryItems.length > 0"
@@ -105,12 +107,14 @@
 				hydrate-on-visible
 			/>
 		</div>
-		<p
+		<MEmptyState
 			v-else-if="normalizedSearch.length > 0"
-			class="text-sm text-gray-500"
-		>
-			No badges found.
-		</p>
+			icon="mdi:magnify-close"
+			title="No Badges Found"
+			description="Try a different search term."
+			variant="neutral"
+			dense
+		/>
 		<div
 			v-else
 			class="flex items-center"

@@ -12,10 +12,10 @@
 			<div class="flex flex-col items-center pt-6 gap-4 max-w-md mx-auto">
 				<UIcon
 					name="mdi:lock-reset"
-					class="size-12 text-primary"
+					class="size-12 m-text-brand"
 				/>
 				<h1 class="text-xl font-semibold m-0!">Forgot your Password?</h1>
-				<p class="text-sm text-center text-gray-600 dark:text-gray-300">
+				<p class="text-sm text-center text-muted">
 					Enter the email on your account and we'll send a reset link. The link works for one hour.
 				</p>
 
@@ -64,7 +64,7 @@
 					</IonButton>
 				</UForm>
 
-				<p class="text-xs text-gray-500 dark:text-gray-300 text-center mt-2">
+				<p class="text-xs text-muted text-center mt-2">
 					Don't see the email after a minute? Check spam, or wait two minutes before requesting
 					another.
 				</p>

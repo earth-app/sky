@@ -24,21 +24,17 @@
 				</div>
 
 				<template v-else>
-					<div
+					<MEmptyState
 						v-if="blocked.length === 0"
-						class="w-full rounded-xl border border-black/20 light:border-gray-300 px-6 py-10 text-center"
-					>
-						<UIcon
-							name="mdi:account-cancel-outline"
-							class="size-10 text-info mb-2"
-						/>
-						<h2 class="text-base! font-semibold m-0! mb-2!">No blocked users</h2>
-						<p class="text-sm opacity-80 m-0!">You haven't blocked anyone.</p>
-					</div>
+						icon="mdi:account-cancel-outline"
+						title="No Blocked Users"
+						description="You haven't blocked anyone."
+						variant="neutral"
+					/>
 
 					<IonList
 						v-else
-						class="w-full rounded-xl border border-black/20 light:border-gray-300"
+						class="w-full rounded-xl border border-default"
 					>
 						<IonItem
 							v-for="blockedUser in blocked"

@@ -21,7 +21,7 @@
 							: undefined,
 						link: `/tabs/profile/@${response?.owner.username}`
 					}"
-					class="w-full p-4 border-2 border-gray-800 light:border-gray-500"
+					class="w-full p-4 border-2 border-default"
 					:report="
 						canReport
 							? {

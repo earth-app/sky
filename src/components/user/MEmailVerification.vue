@@ -12,13 +12,13 @@
 			</h2>
 			<p
 				v-if="user?.account.email"
-				class="text-sm text-gray-500"
+				class="text-sm text-muted"
 			>
 				Enter the 8-digit code sent to {{ user.account.email }}.
 			</p>
 			<p
 				v-else
-				class="text-sm text-gray-500"
+				class="text-sm text-muted"
 			>
 				Add an email address to your account before verifying.
 			</p>
@@ -70,7 +70,7 @@
 
 			<p
 				v-if="user?.account.email && codeCountdownLabel"
-				class="text-xs text-gray-600 dark:text-gray-300"
+				class="text-xs text-muted"
 				:class="codeExpired ? 'text-red-500 dark:text-red-400 font-medium' : ''"
 				aria-live="polite"
 			>

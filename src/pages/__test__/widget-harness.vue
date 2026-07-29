@@ -4,7 +4,7 @@
 			<div class="p-4! flex flex-col gap-4">
 				<div
 					data-testid="harness-ready"
-					class="text-xs text-gray-500"
+					class="text-xs text-muted"
 				>
 					{{ ready ? 'ready' : 'loading' }}
 				</div>
@@ -51,7 +51,7 @@
 				>
 					<div
 						data-testid="tap-count"
-						class="text-xs text-gray-500"
+						class="text-xs text-muted"
 					>
 						{{ tapCount }}
 					</div>

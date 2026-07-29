@@ -8,7 +8,7 @@
 			>
 				<UIcon
 					:name="meta.icon"
-					class="size-8 text-primary"
+					class="size-8 m-text-brand"
 				/>
 			</div>
 			<h3 class="text-lg! font-semibold m-0!">{{ meta.label }}</h3>
@@ -29,7 +29,7 @@
 
 		<div
 			v-if="meta.photos"
-			class="flex items-center gap-3 rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2"
+			class="flex items-center gap-3 rounded-lg border border-default px-3 py-2"
 		>
 			<span class="text-sm opacity-80">Photos Taken</span>
 			<IonButton

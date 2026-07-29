@@ -4,7 +4,8 @@
 		class="relative"
 	>
 		<MInfoCard
-			:subtitle="articleData.title"
+			:title="articleData.title"
+			:subtitle="articleSource"
 			:content="trimString(articleData.content, 300)"
 			:link="noLink ? undefined : `/tabs/articles/${articleData.id}`"
 			:footer="footer"
@@ -62,6 +63,9 @@ const articleData = computed(() => {
 
 	return article;
 });
+
+// articles carry no image anywhere in the contract, so the syndication source is the second anchor
+const articleSource = computed(() => articleData.value?.ocean?.source || undefined);
 
 const footer = ref<string | undefined>(undefined);
 

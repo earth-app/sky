@@ -52,7 +52,7 @@
 					<UIcon
 						v-if="additional"
 						name="mdi:delete-outline"
-						class="size-5 text-gray-500"
+						class="size-5 text-muted"
 						title="Delete Notification"
 						@click.stop="removeNotification"
 					/>
@@ -68,10 +68,8 @@
 			class="p-0!"
 		>
 			<div class="flex flex-col mt-2">
-				<p class="text-xs! md:text-sm text-gray-400 light:text-gray-800">
-					{{ timestamp }} | {{ fullTimestamp }}
-				</p>
-				<p class="text-xs! md:text-sm text-gray-600 light:text-gray-300">
+				<p class="text-xs! md:text-sm text-muted">{{ timestamp }} | {{ fullTimestamp }}</p>
+				<p class="text-xs! md:text-sm text-muted">
 					{{ notification.source }} | ID: {{ notification.id }}
 				</p>
 			</div>

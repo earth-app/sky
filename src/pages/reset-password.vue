@@ -16,7 +16,7 @@
 						class="size-12 text-red-500"
 					/>
 					<h1 class="text-xl font-semibold m-0!">Reset Link Invalid</h1>
-					<p class="text-sm text-center text-gray-600 dark:text-gray-300">
+					<p class="text-sm text-center text-muted">
 						This reset link is missing required information. Request a new one from the login
 						screen.
 					</p>
@@ -34,7 +34,7 @@
 						class="size-12 text-red-500"
 					/>
 					<h1 class="text-xl font-semibold m-0!">Reset Link Expired</h1>
-					<p class="text-sm text-center text-gray-600 dark:text-gray-300">
+					<p class="text-sm text-center text-muted">
 						This link is no longer valid. Reset links work for one hour; request a fresh one.
 					</p>
 					<IonButton
@@ -48,10 +48,10 @@
 				<template v-else>
 					<UIcon
 						name="mdi:lock-reset"
-						class="size-12 text-primary"
+						class="size-12 m-text-brand"
 					/>
 					<h1 class="text-xl font-semibold m-0!">Choose a New Password</h1>
-					<p class="text-sm text-center text-gray-600 dark:text-gray-300">
+					<p class="text-sm text-center text-muted">
 						Enter a new password for your account. You'll need to log in with it afterwards.
 					</p>
 

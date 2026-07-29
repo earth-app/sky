@@ -96,16 +96,13 @@
 				:distance-meters="distanceOf(mark)"
 			/>
 		</div>
-		<div
+		<MEmptyState
 			v-else
-			class="flex flex-col items-center text-center py-10 opacity-70"
-		>
-			<UIcon
-				name="mdi:map-marker-off-outline"
-				class="size-9 mb-2"
-			/>
-			<p class="text-sm">Be the First to Leave One.</p>
-		</div>
+			icon="mdi:map-marker-off-outline"
+			title="Be the First to Leave One."
+			description="No notes have been left around here yet. Yours would be the first."
+			variant="neutral"
+		/>
 
 		<ClientOnly>
 			<MSiteTour

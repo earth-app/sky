@@ -42,7 +42,7 @@
 				v-else-if="user === null"
 				class="flex flex-col items-center justify-center h-full gap-3"
 			>
-				<p class="text-center text-gray-500">Please log in to verify your email.</p>
+				<p class="text-center text-muted">Please log in to verify your email.</p>
 				<IonButton
 					color="tertiary"
 					@click="goToLogin"

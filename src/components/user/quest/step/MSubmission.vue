@@ -16,7 +16,7 @@
 			>
 			<h3
 				v-if="step.reward"
-				class="text-sm! text-neutral-500 m-0!"
+				class="text-sm! text-muted m-0!"
 			>
 				+{{ step.reward }} Bonus Points
 			</h3>
@@ -24,13 +24,13 @@
 
 		<h2
 			v-if="!step.isCurrentQuest && !step.completed"
-			class="text-sm! text-neutral-500 mb-2!"
+			class="text-sm! text-muted mb-2!"
 		>
 			Start this quest to unlock the step interface.
 		</h2>
 		<h2
 			v-else-if="!step.isUnlocked && !step.completed"
-			class="text-sm! text-neutral-500 mb-2!"
+			class="text-sm! text-muted mb-2!"
 		>
 			Complete previous steps to unlock this step.
 		</h2>
@@ -42,7 +42,7 @@
 		>
 			<UIcon
 				name="i-lucide-lightbulb"
-				class="size-5 shrink-0 text-primary"
+				class="size-5 shrink-0 m-text-brand"
 			/>
 			<span class="text-gray-700 dark:text-gray-200">{{ step.tutorial_hint }}</span>
 		</div>
@@ -82,7 +82,7 @@
 						v-if="progress.data && (category === 'photo' || category === 'draw_picture')"
 						:src="progress.data"
 						alt="Submitted image"
-						class="mt-3 max-w-full max-h-72! rounded-lg! object-contain border border-neutral-200 dark:border-neutral-700"
+						class="mt-3 max-w-full max-h-72! rounded-lg! object-contain border border-default"
 					/>
 					<audio
 						v-else-if="progress.data && category === 'audio'"
@@ -94,7 +94,7 @@
 						v-else-if="
 							category === 'article_quiz' && step.type === 'article_quiz' && stepArticle !== null
 						"
-						class="flex flex-col items-center gap-3 py-4 px-6 border border-neutral-200 dark:border-neutral-700 rounded-lg"
+						class="flex flex-col items-center gap-3 py-4 px-6 border border-default rounded-lg"
 					>
 						<ArticleMCard
 							v-if="stepArticle"
@@ -112,7 +112,7 @@
 					</div>
 					<div
 						v-else-if="category === 'scan_barcode' && barcodeSubmission"
-						class="flex flex-col items-center gap-2 py-4 px-6 border border-neutral-200 dark:border-neutral-700 rounded-lg"
+						class="flex flex-col items-center gap-2 py-4 px-6 border border-default rounded-lg"
 					>
 						<UIcon
 							:name="barcodeKindIcon"
@@ -127,7 +127,7 @@
 					</div>
 					<div
 						v-else-if="category === 'distance_covered' && distanceSubmission"
-						class="flex flex-col items-center gap-2 py-4 px-6 border border-neutral-200 dark:border-neutral-700 rounded-lg"
+						class="flex flex-col items-center gap-2 py-4 px-6 border border-default rounded-lg"
 					>
 						<UIcon
 							name="mdi:map-marker-distance"
@@ -138,7 +138,7 @@
 					</div>
 					<div
 						v-else-if="category === 'describe_text' && describeSubmission"
-						class="flex flex-col items-start gap-2 py-4 px-6 border border-neutral-200 dark:border-neutral-700 rounded-lg max-w-md! w-full"
+						class="flex flex-col items-start gap-2 py-4 px-6 border border-default rounded-lg max-w-md! w-full"
 					>
 						<span class="text-xs! opacity-60 uppercase tracking-wide">Your response</span>
 						<p class="text-sm! whitespace-pre-wrap m-0!">{{ describeSubmission }}</p>
@@ -174,7 +174,7 @@
 				>
 					<UIcon
 						name="i-lucide-upload"
-						class="size-10 animate-bounce text-primary"
+						class="size-10 animate-bounce m-text-brand"
 					/>
 					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
@@ -204,7 +204,7 @@
 				>
 					<UIcon
 						name="i-lucide-upload"
-						class="size-10 animate-bounce text-primary"
+						class="size-10 animate-bounce m-text-brand"
 					/>
 					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
@@ -240,7 +240,7 @@
 				>
 					<UIcon
 						name="i-lucide-upload"
-						class="size-10 animate-bounce text-primary!"
+						class="size-10 animate-bounce m-text-brand!"
 					/>
 					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
@@ -302,7 +302,7 @@
 				>
 					<UIcon
 						name="i-lucide-upload"
-						class="size-10 animate-bounce text-primary"
+						class="size-10 animate-bounce m-text-brand"
 					/>
 					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
@@ -335,7 +335,7 @@
 				>
 					<UIcon
 						name="i-lucide-upload"
-						class="size-10 animate-bounce text-primary"
+						class="size-10 animate-bounce m-text-brand"
 					/>
 					<span class="text-sm! opacity-70">{{ validatingMessage }}</span>
 				</div>
@@ -355,7 +355,7 @@
 				<div class="flex flex-col items-center gap-4 py-8! w-full max-w-sm">
 					<UIcon
 						name="mdi:book-clock-outline"
-						class="size-10 text-primary"
+						class="size-10 m-text-brand"
 					/>
 					<p class="text-sm! text-center opacity-80 m-0!">
 						Keep reading to complete this step; your time is tracked automatically.

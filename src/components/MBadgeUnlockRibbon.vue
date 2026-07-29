@@ -21,7 +21,7 @@
 							</div>
 
 							<div class="flex flex-col min-w-0 flex-1">
-								<span class="text-[11px] uppercase font-semibold tracking-wider opacity-80">
+								<span class="text-2xs uppercase font-semibold tracking-wider opacity-80">
 									New Badge Unlocked
 								</span>
 								<span class="font-semibold text-sm truncate">{{ current.badgeName }}</span>
@@ -132,13 +132,14 @@ onBeforeUnmount(() => clearTimers());
 <style scoped>
 .m-badge-ribbon-wrap {
 	position: fixed;
-	top: calc(env(safe-area-inset-top, 0px) + 8px);
+	top: calc(var(--m-safe-top) + 0.5rem);
 	left: 0;
 	right: 0;
 	margin: 0 auto;
 	max-width: 28rem;
 	padding: 0 12px;
-	z-index: 9999;
+	/* above the offline banner: a 5s unlock ribbon may land while the pill is up */
+	z-index: var(--m-z-toast);
 	pointer-events: none;
 }
 

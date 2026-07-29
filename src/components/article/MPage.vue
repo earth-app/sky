@@ -116,14 +116,14 @@
 			<p
 				v-for="(paragraph, index) in contentParagraphs"
 				:key="index"
-				class="mb-2"
+				class="mb-2 text-base"
 			>
 				{{ paragraph }}
 			</p>
 		</div>
 		<h3
 			id="article-time"
-			class="text-xs! text-gray-600 dark:text-gray-300"
+			class="text-xs! text-muted"
 		>
 			{{ time }}
 		</h3>

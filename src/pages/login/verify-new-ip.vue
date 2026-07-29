@@ -15,10 +15,10 @@
 			>
 				<UIcon
 					name="mdi:shield-key-outline"
-					class="size-12 text-primary mt-2"
+					class="size-12 m-text-brand mt-2"
 				/>
 				<h2 class="text-xl font-semibold text-center">Verify it's You</h2>
-				<p class="text-sm text-center text-gray-500">
+				<p class="text-sm text-center text-muted">
 					We sent an 8-digit code to
 					<span class="font-medium">{{ pendingLogin.email }}</span
 					>. Enter it below to finish signing in.
@@ -39,7 +39,7 @@
 				</IonItem>
 
 				<p
-					class="text-xs text-gray-500 self-start"
+					class="text-xs text-muted self-start"
 					aria-live="polite"
 				>
 					<template v-if="secondsRemaining > 0">
@@ -108,7 +108,7 @@
 					name="crescent"
 					class="size-10"
 				/>
-				<p class="text-center text-gray-500">Signing you in...</p>
+				<p class="text-center text-muted">Signing you in...</p>
 			</div>
 			<div
 				v-else
@@ -116,7 +116,7 @@
 			>
 				<UIcon
 					name="mdi:login-variant"
-					class="size-12 text-gray-600 dark:text-gray-300"
+					class="size-12 text-muted"
 				/>
 				<p class="text-center text-gray-700 dark:text-gray-200">No pending login verification.</p>
 				<IonButton

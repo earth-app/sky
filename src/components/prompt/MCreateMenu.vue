@@ -8,7 +8,7 @@
 				class="min-h-24"
 			/>
 
-			<IonList class="w-full border! rounded-lg! py-2! border-gray-300 light:border-gray-600">
+			<IonList class="w-full border! rounded-lg! py-2! border-default">
 				<IonItem>
 					<IonTextarea
 						label="Prompt"

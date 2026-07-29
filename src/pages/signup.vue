@@ -29,11 +29,11 @@
 				>
 					<UserMSignupForm @signupSuccess="handleSignupSuccess" />
 				</div>
-				<p class="text-sm text-gray-500 mt-3">
+				<p class="text-sm text-muted mt-3">
 					Already have an account?
 					<button
 						type="button"
-						class="text-primary font-semibold"
+						class="m-text-brand font-semibold"
 						@click="goToLogin"
 					>
 						Login

@@ -10,7 +10,7 @@
 			<div class="flex flex-col items-center pt-4 gap-4 max-w-md mx-auto">
 				<UIcon
 					name="mdi:format-size"
-					class="size-12 text-primary"
+					class="size-12 m-text-brand"
 				/>
 				<h2 class="text-xl font-semibold m-0! text-center">How does this Look?</h2>
 				<p class="text-sm text-center text-gray-700 dark:text-gray-200">
@@ -32,7 +32,7 @@
 						:class="
 							selected === option.value
 								? 'border-primary! bg-primary/10'
-								: 'border-gray-300! dark:border-gray-600! active:bg-gray-100! dark:active:bg-gray-800!'
+								: 'border-default! active:bg-elevated!'
 						"
 						@click="select(option.value)"
 					>

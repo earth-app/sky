@@ -33,7 +33,7 @@
 				>
 					<UIcon
 						name="mdi:timer-sand"
-						class="size-4 text-primary"
+						class="size-4 m-text-brand"
 					/>
 					<span>{{ total }} unhurried minutes across {{ entries.length }} reflections</span>
 				</div>
@@ -68,13 +68,13 @@
 					<li
 						v-for="(e, i) in entries"
 						:key="`${e.trailId}-${e.completedAt}-${i}`"
-						class="flex flex-col gap-2 rounded-lg border border-neutral-200 dark:border-neutral-800 p-3"
+						class="flex flex-col gap-2 rounded-lg border border-default p-3"
 					>
 						<div class="flex items-center justify-between gap-2">
 							<div class="flex items-center gap-2 min-w-0">
 								<UIcon
 									:name="practiceMeta(e.practice).icon"
-									class="size-5 text-primary shrink-0"
+									class="size-5 m-text-brand shrink-0"
 								/>
 								<span class="font-medium truncate">{{ e.title }}</span>
 							</div>
@@ -118,7 +118,7 @@
 							</span>
 							<span
 								v-if="e.reflection.sharedToGarden"
-								class="flex items-center gap-1 text-primary"
+								class="flex items-center gap-1 m-text-brand"
 							>
 								<UIcon
 									name="mdi:flower-tulip"

@@ -129,7 +129,7 @@ onBeforeUnmount(() => {
 	left: 50%;
 	transform: translateX(-50%);
 	bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
-	z-index: 40;
+	z-index: var(--m-z-cue);
 	display: inline-flex;
 	align-items: center;
 	gap: 0.5rem;
