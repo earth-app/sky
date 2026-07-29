@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { interleaveFeed } from '~/utils/feed';
+import { caughtUpQuestCta, interleaveFeed, MIN_GROUP_ITEMS, shouldGroup } from '~/utils/feed';
 
 type Item = { type: string; id: number };
 
@@ -86,5 +86,79 @@ describe('interleaveFeed', () => {
 		const out = interleaveFeed(buckets, 5);
 		expect(out).toHaveLength(6);
 		expect(maxRun(out)).toBeLessThanOrEqual(1);
+	});
+});
+
+describe('shouldGroup', () => {
+	it('needs a second item before a carousel is worth its chrome', () => {
+		expect(MIN_GROUP_ITEMS).toBe(2);
+		expect(shouldGroup(bucket('user', 2))).toBe(true);
+		expect(shouldGroup(bucket('user', 5))).toBe(true);
+	});
+
+	// THE REGRESSION: the dashboard grouped one user into a carousel with arrows and dots
+	it('refuses a group of one, whatever the feed intended', () => {
+		expect(shouldGroup(bucket('user', 1))).toBe(false);
+		expect(shouldGroup(bucket('user', 1), true)).toBe(false);
+	});
+
+	it('refuses an empty or missing bucket', () => {
+		expect(shouldGroup([])).toBe(false);
+		expect(shouldGroup(null)).toBe(false);
+		expect(shouldGroup(undefined)).toBe(false);
+	});
+
+	it('lets the caller veto a group it never wanted', () => {
+		expect(shouldGroup(bucket('user', 4), false)).toBe(false);
+	});
+
+	it('holds at the boundary as MIN_GROUP_ITEMS moves', () => {
+		expect(shouldGroup(bucket('user', MIN_GROUP_ITEMS - 1))).toBe(false);
+		expect(shouldGroup(bucket('user', MIN_GROUP_ITEMS))).toBe(true);
+	});
+});
+
+describe('caughtUpQuestCta', () => {
+	it('offers the daily quest when nothing is in progress', () => {
+		expect(caughtUpQuestCta(null, 'daily-1')).toEqual({
+			label: "Today's Quest",
+			questId: 'daily-1',
+			daily: true
+		});
+	});
+
+	it('offers the in-progress quest and beats the daily one', () => {
+		expect(caughtUpQuestCta('open-9', 'daily-1')).toEqual({
+			label: 'Continue Quest',
+			questId: 'open-9',
+			daily: false
+		});
+	});
+
+	it('offers the in-progress quest with no daily quest loaded', () => {
+		expect(caughtUpQuestCta('open-9', null)?.questId).toBe('open-9');
+	});
+
+	it('offers nothing when neither quest exists', () => {
+		expect(caughtUpQuestCta(null, null)).toBeNull();
+		expect(caughtUpQuestCta(undefined, undefined)).toBeNull();
+	});
+
+	it('treats an empty id as no quest, so a half-hydrated store cannot route to /quests/', () => {
+		expect(caughtUpQuestCta('', 'daily-1')?.questId).toBe('daily-1');
+		expect(caughtUpQuestCta('', '')).toBeNull();
+	});
+
+	it('keeps the calm copy: Title Case labels with no exclamation', () => {
+		for (const cta of [caughtUpQuestCta('open-9', null), caughtUpQuestCta(null, 'daily-1')]) {
+			expect(cta).not.toBeNull();
+			expect(cta!.label).not.toContain('!');
+			expect(cta!.label).toBe(
+				cta!.label
+					.split(' ')
+					.map((w) => `${w.charAt(0).toUpperCase()}${w.slice(1)}`)
+					.join(' ')
+			);
+		}
 	});
 });

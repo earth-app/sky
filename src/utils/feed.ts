@@ -47,3 +47,38 @@ export function interleaveFeed<T>(buckets: T[][], seed?: number): T[] {
 	slots.sort((a, b) => a.pos - b.pos || a.order - b.order);
 	return slots.map((s) => s.item);
 }
+
+/** a carousel is only worth its chrome (arrows, dots, counter) once there is a second slide */
+export const MIN_GROUP_ITEMS = 2;
+
+export function shouldGroup<T>(
+	items: readonly T[] | null | undefined,
+	intended: boolean = true
+): boolean {
+	if (!intended || !Array.isArray(items)) return false;
+
+	return items.length >= MIN_GROUP_ITEMS;
+}
+
+export interface CaughtUpQuestCta {
+	label: string;
+	questId: string;
+	/** the daily-quest chip is only marked tapped when the daily quest is what got opened */
+	daily: boolean;
+}
+
+/**
+ * Which quest the end-of-feed card should offer.
+ *
+ * An unfinished quest wins: sending someone to a second quest while one is open is the one thing the
+ * calmest card in the app should not do.
+ */
+export function caughtUpQuestCta(
+	currentQuestId: string | null | undefined,
+	dailyQuestId: string | null | undefined
+): CaughtUpQuestCta | null {
+	if (currentQuestId) return { label: 'Continue Quest', questId: currentQuestId, daily: false };
+	if (dailyQuestId) return { label: "Today's Quest", questId: dailyQuestId, daily: true };
+
+	return null;
+}
