@@ -29,7 +29,7 @@
 								v-if="isDownloading"
 								key="downloading"
 								name="line-md:downloading-loop"
-								class="text-primary size-8"
+								class="m-text-brand size-8"
 							/>
 							<UIcon
 								v-else-if="isDownloaded"
@@ -38,7 +38,7 @@
 								:class="
 									canDeleteDownload
 										? 'text-error size-8 cursor-pointer'
-										: 'text-gray-400 size-8 opacity-60 cursor-not-allowed'
+										: 'text-dimmed size-8 opacity-60 cursor-not-allowed'
 								"
 								@click.stop="deleteDownload"
 							/>
@@ -46,7 +46,7 @@
 								v-else
 								key="download"
 								name="material-symbols:download-for-offline-outline"
-								class="text-primary size-8 cursor-pointer"
+								class="m-text-brand size-8 cursor-pointer"
 								@click.stop="startDownload"
 							/>
 						</Transition>
@@ -94,14 +94,15 @@
 		</IonContent>
 		<div
 			v-else-if="unavailableOffline"
-			class="h-screen flex flex-col"
+			class="h-screen flex flex-col items-center justify-center px-6 pb-16"
 		>
-			<div class="flex flex-col items-center justify-center h-full pb-16 px-8 text-center gap-2">
-				<h2 class="text-xl font-semibold">Prompt unavailable offline</h2>
-				<p class="text-gray-500 text-sm">
-					Connect once and download this prompt to open it without internet.
-				</p>
-			</div>
+			<MInlineError
+				title="Prompt Unavailable Offline"
+				description="Connect once and download this prompt to open it without internet."
+				icon="mdi:wifi-off"
+				severity="warning"
+				@retry="loadPromptForView"
+			/>
 		</div>
 		<div
 			v-else

@@ -71,6 +71,7 @@
 					<LazyUBadge
 						:key="altIndex"
 						:id="`tile-${index}:${altIndex}`"
+						:aria-label="`Step ${index + 1} Option ${altIndex + 1}${altStep.completed ? ', Completed' : ''}`"
 						:icon="altStep.icon"
 						:color="
 							isCurrentQuest
@@ -106,7 +107,7 @@
 					>
 					<span
 						v-if="!altStep.completed && item.some((s) => s.completed)"
-						class="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-300"
+						class="text-3xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-300"
 					>
 						Bonus
 					</span>
@@ -117,6 +118,7 @@
 				>
 					<LazyUBadge
 						:id="`tile-${index}:0`"
+						:aria-label="`Step ${index + 1}${item.completed ? ', Completed' : ''}`"
 						:icon="item.icon"
 						:color="
 							isCurrentQuest
@@ -161,6 +163,7 @@
 		<div class="flex flex-col items-center my-4 min-h-24 gap-1">
 			<LazyUBadge
 				id="tile-end"
+				aria-label="Quest Reward"
 				icon="mdi:medal-outline"
 				color="warning"
 				variant="solid"

@@ -1,6 +1,7 @@
 <template>
 	<IonButton
 		color="secondary"
+		aria-label="Share"
 		:class="text ? 'my-4' : ''"
 		:fill="text ? 'solid' : 'clear'"
 		@click="share"
@@ -9,7 +10,7 @@
 			name="mdi:share-variant"
 			:class="text ? 'mr-2 size-5' : 'size-8'"
 		/>
-		<span v-if="text">Back</span>
+		<span v-if="text">Share</span>
 	</IonButton>
 </template>
 
