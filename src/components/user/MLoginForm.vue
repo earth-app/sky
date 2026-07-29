@@ -19,6 +19,7 @@
 				<IonInput
 					v-model="userOrEmail"
 					:disabled="isSubmitting"
+					aria-label="Username or Email"
 					placeholder="cooldude78 or you@example.com"
 					class="min-w-60 w-2/5 max-w-120"
 					counter
@@ -36,6 +37,7 @@
 				<IonInput
 					v-model="password"
 					:disabled="isSubmitting"
+					aria-label="Password"
 					placeholder="SuperSecretPassword_"
 					type="password"
 					class="min-w-60 w-2/5 max-w-120"

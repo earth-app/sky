@@ -18,6 +18,7 @@
 				<IonInput
 					v-model="email"
 					:disabled="loading"
+					aria-label="Email"
 					placeholder="me@example.com"
 					type="email"
 					class="min-w-60 w-2/5 max-w-120"
@@ -34,6 +35,7 @@
 				<IonInput
 					v-model="fullName"
 					:disabled="loading"
+					aria-label="Name"
 					placeholder="John Doe"
 					class="min-w-60 w-2/5 max-w-120"
 					autocapitalize="words"
@@ -49,6 +51,7 @@
 				<IonInput
 					v-model="username"
 					:disabled="loading"
+					aria-label="Username"
 					placeholder="cooldude78"
 					class="min-w-60 w-2/5 max-w-120"
 					counter
@@ -66,6 +69,7 @@
 				<IonInput
 					v-model="password"
 					:disabled="loading"
+					aria-label="Password"
 					placeholder="SuperSecretPassword_"
 					type="password"
 					class="min-w-60 w-2/5 max-w-120"
