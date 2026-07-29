@@ -173,6 +173,23 @@ A tappable `IonChip` also needs `role="button"`, `tabindex="0"`, `:aria-pressed`
 - Native build generation uses the `generate:ios` and `generate:android` scripts before Capacitor sync/build steps.
 - The build jobs use Bun and require GitHub Packages access for the scoped `@earth-app/*` packages.
 
+### build.yml lane shape (7 jobs)
+
+- `build-ios` / `build-android` prove the production Nuxt build works. `unit` is the gate every test lane hangs off.
+- `test` (chromium + mobile-chromium, with coverage) and `webkit` each **shard 4x**. Always write the denominator as `--shard=${{ matrix.shard }}/${{ strategy.job-total }}`; a hardcoded number that disagrees with the matrix makes a shard silently never run, and the job still passes.
+- `native-ios` / `native-android` compile the native project **and** run the Maestro flows in one job: prod build -> compile -> archive + attest -> mock-env rebuild -> maestro. Archive before the mock rebuild or the attested artifact points at localhost. Do not split these back apart; the mock lane needs its own bundle (`ssr: false` bakes base URLs at build time), so a separate job pays a second cold native compile.
+- `on:` is `push: [master]` + `pull_request`, never `on: [push, pull_request]` - a branch push and its PR are the same commit, so the bare form runs the whole matrix twice.
+- CI runners are **2-core**: `workers` stays at 2. Speed comes from more runners (shards), never from more workers, and never from running fewer tests - see the global `never-decrease-coverage-for-performance` rule. Tiering a platform's flows to master-only is explicitly banned.
+
+### Maestro selector contract
+
+- Matching is **literal equality OR a full regex** - never a substring. `Username or Email` does not match `Username or Email*`.
+- Android's a11y bridge folds `UFormField`'s required `*` into the label's own text node; iOS keeps it separate. So **every required label needs `\*?`**, single-quoted in YAML: `'Username or Email\*?'`. A bare required label inside `assertNotVisible` passes **vacuously** on Android, which is a dead guard, not a passing test.
+- Never select on an `IonInput` `placeholder`: it is shadow DOM and Android exposes no name for it at all. Give the input an `aria-label` (which Android does surface as `text`) and tap that, anchored `below:` its label so it stays unambiguous on iOS too.
+- `UFormField` only wires its `<label for>` to **Nuxt UI** inputs. Wrapping an `IonInput` leaves the label orphaned and the field with no accessible name - a real a11y bug, so add `aria-label` regardless of testing.
+- `id:` selectors never match DOM content (WKWebView publishes no `resource-id`).
+- `tests/unit/maestro/*.spec.ts` enforce all of this in ~2s; keep new flows passing them rather than discovering a bad selector in a 20-minute emulator lane.
+
 ## How to Run (Local Developer Commands)
 
 - Install dependencies: `bun install`
