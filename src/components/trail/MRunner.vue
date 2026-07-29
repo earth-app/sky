@@ -10,7 +10,7 @@
 					<div class="flex items-center gap-2 ml-1 min-w-0">
 						<UIcon
 							:name="trail.icon || 'mdi:map-marker-path'"
-							class="size-6 text-primary shrink-0"
+							class="size-6 m-text-brand shrink-0"
 						/>
 						<span class="font-semibold text-base! truncate">{{ trail.title }}</span>
 					</div>
@@ -75,7 +75,7 @@
 					<div class="flex items-start gap-2 p-3 rounded-lg border border-primary/25 bg-primary/5">
 						<UIcon
 							name="mdi:eye-outline"
-							class="size-5 text-primary shrink-0 mt-0.5"
+							class="size-5 m-text-brand shrink-0 mt-0.5"
 						/>
 						<p class="text-sm opacity-90 wrap-break-word">
 							You're previewing this trail. Begin it to make your pledge and head out.
@@ -158,6 +158,7 @@
 					<TrailMReveal
 						v-else-if="phase === 'reveal'"
 						:reveal="trail.reveal"
+						:seed="trail.id"
 						:minutes="loggedMinutes"
 						:personal-best="personalBest"
 						@finish="isOpen = false"
