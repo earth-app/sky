@@ -14,25 +14,28 @@
 					class="text-3xl text-lime-400"
 				/>
 			</div>
-			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
+			<p class="text-xs! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
 				Take a Photo
 			</p>
-			<p class="text-[0.72rem] text-neutral-500 leading-[1.65]">
+			<p class="text-2xs text-neutral-500 leading-[1.65]">
 				This component uses your device camera directly.<br />No file uploads are permitted.
 			</p>
-			<button
+			<UserQuestStepMChromeButton
 				v-if="supportsFlip"
-				class="px-4! py-2! rounded-xl! border border-neutral-700 text-white text-xs! font-medium! tracking-wide"
+				variant="outline"
+				class="px-4! text-xs!"
+				:aria-label="`Switch to the ${facingLabel} Camera`"
 				@click="flipCamera"
 			>
 				Use {{ facingLabel }} Camera
-			</button>
-			<button
-				class="mt-1! px-6! py-2.5! rounded-xl! bg-neutral-800! text-white text-sm! font-medium! tracking-wide"
+			</UserQuestStepMChromeButton>
+			<UserQuestStepMChromeButton
+				class="mt-1!"
+				aria-label="Continue to the Camera"
 				@click="startCamera"
 			>
 				Continue
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -47,18 +50,19 @@
 					class="text-3xl text-lime-400"
 				/>
 			</div>
-			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
+			<p class="text-xs! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
 				Opening Camera
 			</p>
-			<p class="text-[0.72rem] text-neutral-500 leading-[1.65]">
+			<p class="text-2xs text-neutral-500 leading-[1.65]">
 				Your camera app or picker should open now.<br />If it does not, tap retry.
 			</p>
-			<button
-				class="mt-1! px-6! py-2.5! rounded-xl! bg-neutral-800! text-white text-sm! font-medium! tracking-wide"
+			<UserQuestStepMChromeButton
+				class="mt-1!"
+				aria-label="Retry Opening the Camera"
 				@click="startCamera"
 			>
 				Retry
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -71,16 +75,18 @@
 					class="text-3xl text-red-400"
 				/>
 			</div>
-			<p class="text-[0.8rem]! font-medium! tracking-[0.12em] uppercase text-red-400!">
+			<p class="text-xs! font-medium! tracking-[0.12em] uppercase text-red-400!">
 				Camera Unavailable
 			</p>
-			<p class="text-[0.72rem]! text-neutral-500! leading-[1.65]!">{{ errorMsg }}</p>
-			<button
-				class="mt-2! px-6! py-2! rounded-xl! border border-neutral-700 text-white text-sm!"
+			<p class="text-2xs! text-neutral-500! leading-[1.65]!">{{ errorMsg }}</p>
+			<UserQuestStepMChromeButton
+				variant="outline"
+				class="mt-2!"
+				aria-label="Try the Camera Again"
 				@click="startCamera"
 			>
 				Try Again
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -104,7 +110,7 @@
 				style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent)"
 			>
 				<span
-					class="ml-2 mt-2 text-[0.65rem] tracking-[0.14em] uppercase text-white/50 px-2 py-0.5 border border-white/15 rounded bg-white/[0.07]"
+					class="ml-2 mt-2 text-2xs tracking-[0.14em] uppercase text-white/50 px-2 py-0.5 border border-white/15 rounded bg-white/[0.07]"
 				>
 					PREVIEW
 				</span>
@@ -116,7 +122,7 @@
 			>
 				<button
 					class="w-12! h-12! rounded-full! border border-red-500/50 bg-black/30 backdrop-blur-sm flex items-center justify-center text-red-400 cursor-pointer hover:border-red-400 transition-colors duration-200"
-					aria-label="Retake"
+					aria-label="Retake Photo"
 					@click="rejectPhoto"
 				>
 					<UIcon
@@ -133,7 +139,7 @@
 							: 'bg-lime-400 cursor-pointer hover:bg-lime-300 active:scale-90 [box-shadow:0_0_28px_rgb(163_230_53/0.45)]'
 					"
 					:disabled="props.disabled"
-					aria-label="Accept photo"
+					aria-label="Accept Photo"
 					@click="acceptPhoto"
 				>
 					<UIcon

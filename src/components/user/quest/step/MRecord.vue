@@ -14,18 +14,19 @@
 					class="text-3xl text-primary"
 				/>
 			</div>
-			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
+			<p class="text-xs! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
 				Record Audio
 			</p>
-			<p class="text-[0.72rem]! text-neutral-500! leading-[1.65]!">
+			<p class="text-2xs! text-neutral-500! leading-[1.65]!">
 				Direct microphone only.<br />No file uploads permitted.
 			</p>
-			<button
-				class="mt-2! px-6! py-2.5! rounded-xl! bg-neutral-800! text-white text-sm! font-medium! tracking-wide!"
+			<UserQuestStepMChromeButton
+				class="mt-2!"
+				aria-label="Continue to the Microphone"
 				@click="requestPermission"
 			>
 				Continue
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -38,12 +39,14 @@
 			/>
 			<p class="text-sm! font-medium! text-red-400!">Microphone Unavailable</p>
 			<p class="text-xs! text-neutral-500! leading-relaxed!">{{ errorMsg }}</p>
-			<button
-				class="mt-2! px-6! py-2! rounded-xl! border border-neutral-700 text-white text-sm!"
+			<UserQuestStepMChromeButton
+				variant="outline"
+				class="mt-2!"
+				aria-label="Try the Microphone Again"
 				@click="requestPermission"
 			>
 				Try Again
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -75,7 +78,7 @@
 
 			<span
 				v-if="stage === 'recording' && !canStop"
-				class="-mt-4! text-[0.72rem]! text-neutral-500! tabular-nums!"
+				class="-mt-4! text-2xs! text-neutral-500! tabular-nums!"
 				>Keep Recording - {{ stopCountdown }}s left</span
 			>
 

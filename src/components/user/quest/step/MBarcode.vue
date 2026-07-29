@@ -14,27 +14,27 @@
 					class="text-3xl text-lime-400"
 				/>
 			</div>
-			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
+			<p class="text-xs! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
 				Scan {{ kindLabel }} Barcode
 			</p>
-			<p class="text-[0.72rem] text-neutral-500 leading-[1.65]">
+			<p class="text-2xs text-neutral-500 leading-[1.65]">
 				{{ kindInstructions }}<br />
 				{{ kindFormatNote }}
 			</p>
 			<p
 				v-if="keywordHint"
-				class="text-[0.7rem] text-lime-300/80 italic"
+				class="text-2xs text-lime-300/80 italic"
 			>
 				The resolved title must contain "{{ keywordHint }}".
 			</p>
-			<button
-				class="mt-1! px-6! py-2.5! rounded-xl! bg-neutral-800! text-white text-sm! font-medium! tracking-wide"
+			<UserQuestStepMChromeButton
+				class="mt-1!"
 				:disabled="props.disabled"
-				:class="props.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
+				aria-label="Continue to the Scanner"
 				@click="startScan"
 			>
 				Continue
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -49,18 +49,19 @@
 					class="text-3xl text-lime-400"
 				/>
 			</div>
-			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
+			<p class="text-xs! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
 				Opening Scanner
 			</p>
-			<p class="text-[0.72rem] text-neutral-500 leading-[1.65]">
+			<p class="text-2xs text-neutral-500 leading-[1.65]">
 				The native scanner should open now.<br />Hold the barcode steady within the viewfinder.
 			</p>
-			<button
-				class="mt-1! px-6! py-2.5! rounded-xl! bg-neutral-800! text-white text-sm! font-medium! tracking-wide"
+			<UserQuestStepMChromeButton
+				class="mt-1!"
+				aria-label="Retry Opening the Scanner"
 				@click="startScan"
 			>
 				Retry
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -71,15 +72,16 @@
 				:id="scannerElementId"
 				class="flex-1 w-full bg-black overflow-hidden rounded-xl"
 			></div>
-			<p class="mt-3! text-[0.7rem]! text-neutral-400! text-center tracking-wide">
+			<p class="mt-3! text-2xs! text-neutral-400! text-center tracking-wide">
 				{{ liveFrameLabel }}
 			</p>
-			<button
-				class="mt-3! mx-auto! px-6! py-2! rounded-xl! bg-neutral-800! text-white! text-sm! font-medium! tracking-wide cursor-pointer"
+			<UserQuestStepMChromeButton
+				class="mt-3! mx-auto!"
+				aria-label="Cancel the Scan"
 				@click="cancelWebScan"
 			>
 				Cancel
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -92,16 +94,18 @@
 					class="text-3xl text-red-400"
 				/>
 			</div>
-			<p class="text-[0.8rem]! font-medium! tracking-[0.12em] uppercase text-red-400!">
+			<p class="text-xs! font-medium! tracking-[0.12em] uppercase text-red-400!">
 				Scan Unavailable
 			</p>
-			<p class="text-[0.72rem]! text-neutral-500! leading-[1.65]!">{{ errorMsg }}</p>
-			<button
-				class="mt-2! px-6! py-2! rounded-xl! border border-neutral-700 text-white text-sm!"
+			<p class="text-2xs! text-neutral-500! leading-[1.65]!">{{ errorMsg }}</p>
+			<UserQuestStepMChromeButton
+				variant="outline"
+				class="mt-2!"
+				aria-label="Try the Scanner Again"
 				@click="startScan"
 			>
 				Try Again
-			</button>
+			</UserQuestStepMChromeButton>
 		</div>
 
 		<div
@@ -114,14 +118,14 @@
 					class="text-3xl text-lime-400"
 				/>
 			</div>
-			<p class="text-[0.8rem]! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
+			<p class="text-xs! font-semibold! tracking-[0.12em] uppercase text-neutral-100!">
 				Barcode Captured
 			</p>
 			<div class="flex flex-col items-center gap-1 mb-8">
 				<p class="text-base! font-mono! text-white! tracking-widest break-all">
 					{{ scannedValue }}
 				</p>
-				<p class="text-[0.65rem] tracking-[0.14em] uppercase text-neutral-500">
+				<p class="text-2xs tracking-[0.14em] uppercase text-neutral-500">
 					Format: {{ scannedFormatLabel }}
 				</p>
 			</div>
@@ -136,7 +140,7 @@
 				style="background: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent)"
 			>
 				<span
-					class="ml-2 mt-2 text-[0.65rem] tracking-[0.14em] uppercase text-white/50 px-2 py-0.5 border border-white/15 rounded bg-white/[0.07]"
+					class="ml-2 mt-2 text-2xs tracking-[0.14em] uppercase text-white/50 px-2 py-0.5 border border-white/15 rounded bg-white/[0.07]"
 				>
 					PREVIEW
 				</span>
@@ -165,7 +169,7 @@
 							: 'bg-lime-400 cursor-pointer hover:bg-lime-300 active:scale-90 [box-shadow:0_0_28px_rgb(163_230_53/0.45)]'
 					"
 					:disabled="props.disabled"
-					aria-label="Submit scan"
+					aria-label="Submit Scan"
 					@click="acceptScan"
 				>
 					<UIcon
