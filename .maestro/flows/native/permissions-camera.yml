@@ -2,6 +2,7 @@ appId: com.earthapp.sky
 name: Camera Plugin Bridge With Media Access Revoked
 tags:
   - gate
+  - s2
 ---
 - runFlow:
     file: ../_shared/sign-in.yml

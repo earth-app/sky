@@ -2,6 +2,7 @@ appId: com.earthapp.sky
 name: Sign In And Browse Every Tab
 tags:
   - gate
+  - s1
 ---
 - runFlow:
     file: ../_shared/sign-in.yml

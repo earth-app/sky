@@ -2,6 +2,7 @@ appId: com.earthapp.sky
 name: Custom Scheme Deep Links
 tags:
   - gate
+  - s1
 ---
 - runFlow:
     file: ../_shared/launch-clean.yml

@@ -15,6 +15,8 @@ import {
 } from './harness';
 
 const LANE_TAGS = ['gate', 'eval'];
+/** the native lanes select one of these per runner; must stay in step with build.yml's matrix */
+const SHARD_TAGS = ['s1', 's2'];
 
 const REQUIRED_FLOWS = [
 	'.maestro/flows/_shared/launch-clean.yml',
@@ -171,6 +173,39 @@ describe('maestro flow files', () => {
 			const lanes = (tags as string[]).filter((tag) => LANE_TAGS.includes(tag));
 			expect(lanes, `${flow.rel} lane tags`).toHaveLength(1);
 		}
+	});
+
+	// the native lanes shard across runners by tag (`MAESTRO_TAGS=s1`), so a gate flow with no
+	// shard tag is never selected by either job - it silently stops running while ci stays green.
+	// same failure mode as a shard denominator that disagrees with the matrix
+	it('assigns every gate flow to exactly one shard', () => {
+		// _shared/ helpers are tagged gate but config.yaml does not select them; they only ever run
+		// through runFlow, so sharding them would be meaningless
+		const gateFlows = flows.filter(
+			(flow) => (flow.config.tags as string[])?.includes('gate') && !flow.rel.includes('/_shared/')
+		);
+		expect(gateFlows.length, 'gate flows exist to shard').toBeGreaterThan(0);
+		for (const flow of gateFlows) {
+			const shards = (flow.config.tags as string[]).filter((tag) => SHARD_TAGS.includes(tag));
+			expect(shards, `${flow.rel} shard tags`).toHaveLength(1);
+		}
+	});
+
+	// an eval flow carries no shard tag, so a stray one would run in a gate shard too
+	it('keeps shard tags off the eval lane', () => {
+		for (const flow of flows.filter((f) => (f.config.tags as string[])?.includes('eval'))) {
+			const shards = (flow.config.tags as string[]).filter((tag) => SHARD_TAGS.includes(tag));
+			expect(shards, `${flow.rel} must not be sharded`).toHaveLength(0);
+		}
+	});
+
+	// balance is what makes sharding worth it; a 5/1 split just moves the bottleneck
+	it('splits the gate flows evenly enough to be worth two runners', () => {
+		const counts = SHARD_TAGS.map(
+			(shard) => flows.filter((f) => (f.config.tags as string[])?.includes(shard)).length
+		);
+		const spread = Math.max(...counts) - Math.min(...counts);
+		expect(spread, `shard sizes ${counts.join(' vs ')}`).toBeLessThanOrEqual(2);
 	});
 
 	it('populates both lanes so --include-tags actually splits them', () => {

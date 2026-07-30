@@ -2,6 +2,7 @@ appId: com.earthapp.sky
 name: Simulated Movement Through The Geolocation Bridge
 tags:
   - gate
+  - s1
 ---
 - runFlow:
     file: ../_shared/sign-in.yml

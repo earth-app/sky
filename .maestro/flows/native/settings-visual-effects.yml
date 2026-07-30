@@ -2,6 +2,7 @@ appId: com.earthapp.sky
 name: Settings Reachable From The Profile Header
 tags:
   - gate
+  - s1
 ---
 - runFlow:
     file: ../_shared/sign-in.yml

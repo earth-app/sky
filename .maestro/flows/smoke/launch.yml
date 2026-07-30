@@ -2,6 +2,7 @@ appId: com.earthapp.sky
 name: Cold Launch Clears The Splash
 tags:
   - gate
+  - s2
 ---
 - runFlow:
     file: ../_shared/launch-clean.yml

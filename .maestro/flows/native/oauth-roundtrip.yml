@@ -2,6 +2,7 @@ appId: com.earthapp.sky
 name: OAuth Callback Session Survives A Cold Relaunch
 tags:
   - gate
+  - s2
 env:
   SESSION_TOKEN: mock-session-token-abc123
 ---
