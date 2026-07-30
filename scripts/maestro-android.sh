@@ -82,6 +82,23 @@ boot_emulator() {
 	die "the emulator booted but never reported sys.boot_completed; see $WORK_DIR/emulator.log"
 }
 
+# the emulator's software renderer cannot finish gboard's insets-show animation: ci logcat shows
+# `force finish cuj, time out: J<IME_INSETS_SHOW_ANIMATION::...com.earthapp.sky>` plus
+# `WindowManager: Timed out waiting for animations to complete` on MainActivity, with frames up to
+# 18s and the ime taking 2146 of 2400px in fullscreen mode. inputText then blocks on a ui that
+# never settles, which silently killed all six typing flows for their whole timeout.
+# maestro injects text through its driver rather than the keyboard, so no ime is needed at all
+disable_ime() {
+	local serial="$1" ime
+	for ime in $("$ADB" -s "$serial" shell ime list -s 2> /dev/null | tr -d '\r'); do
+		[ -n "$ime" ] || continue
+		"$ADB" -s "$serial" shell ime disable "$ime" > /dev/null 2>&1 || true
+		log "disabled ime $ime"
+	done
+	# belt and braces: with a hardware keyboard reported, the soft window stays down anyway
+	"$ADB" -s "$serial" shell settings put secure show_ime_with_hard_keyboard 0 > /dev/null 2>&1 || true
+}
+
 # #endregion
 
 STARTED_EMULATOR=0
@@ -110,6 +127,7 @@ if [ -z "$SERIAL" ]; then
 	boot_emulator
 fi
 log "using device $SERIAL"
+disable_ime "$SERIAL"
 
 log "installing $APK"
 "$ADB" -s "$SERIAL" install -r "$APK"
