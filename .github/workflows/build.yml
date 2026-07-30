@@ -413,7 +413,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -memory 4096
+          emulator-options: -no-window -gpu swiftshader_indirect -feature -Vulkan -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 4096
           script: bun run maestro:android
       - name: Archive Maestro Artifacts
         if: ${{ always() }}

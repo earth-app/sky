@@ -224,6 +224,11 @@ run_flows() {
 		log "splitting flows across $shard_count devices"
 	fi
 
+	local -a output_args=(--debug-output "$artifacts")
+	if [ "$TAGS" = 'eval' ] || [ "${MAESTRO_STEP_SHOTS:-0}" = '1' ]; then
+		output_args=(--test-output-dir "$artifacts")
+	fi
+
 	log "running '$TAGS' flows from $WORKSPACE on $device"
 	"$MAESTRO" test \
 		--udid "$device" \
@@ -231,7 +236,8 @@ run_flows() {
 		--include-tags="$TAGS" \
 		--format=JUNIT \
 		--output="$junit" \
-		--test-output-dir="$artifacts" \
+		"${output_args[@]}" \
+		--flatten-debug-output \
 		${config_args[@]+"${config_args[@]}"} \
 		-e SHOT_DIR="$artifacts" \
 		"$WORKSPACE"
