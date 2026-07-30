@@ -422,8 +422,10 @@ async function handleIncomingDeepLink(url: string) {
 		}
 
 		// fresh oauth signup gets the optional username-change step on the dashboard
+		// awaited: the dashboard's username step reads this flag on mount, so it has to be durable
+		// before we navigate there
 		if (resolved.context === 'signup') {
-			void Preferences.set({ key: OAUTH_USERNAME_PROMPT_KEY, value: 'true' }).catch(() => {});
+			await Preferences.set({ key: OAUTH_USERNAME_PROMPT_KEY, value: 'true' }).catch(() => {});
 		}
 
 		authStore.setSessionToken(resolved.sessionToken);

@@ -79,6 +79,7 @@ import { usernameSchema } from 'schemas';
 import {
 	OAUTH_USERNAME_PROMPT_KEY,
 	USERNAME_NO_SPACES_MESSAGE,
+	shouldOpenUsernamePrompt,
 	usernameFromEmail,
 	usernameHasWhitespace
 } from '~/utils/username';
@@ -187,17 +188,37 @@ function handleDidDismiss() {
 	emit('closed');
 }
 
+const USER_WAIT_MS = 8_000;
+
+// resolve once a user appears; bounded so a genuinely logged-out mount still closes
+function waitForUser(): Promise<void> {
+	return new Promise<void>((resolve) => {
+		const stop = watch(user, (value) => {
+			if (value) {
+				stop();
+				clearTimeout(timer);
+				resolve();
+			}
+		});
+		const timer = setTimeout(() => {
+			stop();
+			resolve();
+		}, USER_WAIT_MS);
+	});
+}
+
 async function maybeOpen() {
 	// only for fresh oauth signups; app.vue sets this flag on oauth-complete (context=signup)
-	let pending = false;
-	try {
-		const { value } = await Preferences.get({ key: OAUTH_USERNAME_PROMPT_KEY });
-		pending = value === 'true';
-	} catch {
-		// preferences read failed; treat as not-pending so we never block returning users
-	}
+	const shouldOpen = await shouldOpenUsernamePrompt({
+		readPending: async () => {
+			const { value } = await Preferences.get({ key: OAUTH_USERNAME_PROMPT_KEY });
+			return value === 'true';
+		},
+		hasUser: () => Boolean(user.value),
+		waitForUser
+	});
 
-	if (!pending || !user.value) {
+	if (!shouldOpen) {
 		emit('closed');
 		return;
 	}
