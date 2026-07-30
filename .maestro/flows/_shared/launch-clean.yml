@@ -29,9 +29,13 @@ tags:
 # onMounted, so any content at all proves the boot chain completed. the first-run modal
 # also proves the Preferences prefix was cleared (hasOpened is a Preferences key that
 # survives a plain localStorage wipe)
+# 90s, not 40s: this is the first launch of a freshly installed binary on a cold device, so it
+# pays dyld, the webview cold start and a first-run keychain/Preferences write that no later flow
+# does - it measured 2m37s on a ci simulator while every later flow cleared in seconds. this is a
+# max wait, not a sleep, so a splash that never clears still fails, just not spuriously
 - extendedWaitUntil:
     visible: Welcome to The Earth App!
-    timeout: 40000
+    timeout: 90000
     label: Splash cleared and the first-run onboarding modal rendered
 
 # the modal covers the index page, and its ionic backdrop carries no accessible name, so
