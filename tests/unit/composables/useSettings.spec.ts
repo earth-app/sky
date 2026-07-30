@@ -260,6 +260,31 @@ describe('ambientScenes + translucency settings', () => {
 		expect(APP_SETTINGS_DEFAULTS.translucency).toBe(true);
 	});
 
+	// the emulator's software renderer loses gralloc handles under the 30fps canvas and
+	// backdrop-filter, stops painting, and every maestro flow that reaches the dashboard times out
+	it('forces both off in a native test build without touching the stored preference', () => {
+		const settings = settingsWith({ ambientScenes: true, translucency: true });
+		const cfg = useRuntimeConfig();
+		const previous = cfg.public.nativeTest;
+		cfg.public.nativeTest = true;
+		try {
+			applyAppSettingsToDocument(settings);
+			expect(hasClass('ambient-disabled')).toBe(true);
+			expect(hasClass('glass-disabled')).toBe(true);
+			// the user's own choice is untouched, so the settings screen still reflects it
+			expect(settings.ambientScenes).toBe(true);
+			expect(settings.translucency).toBe(true);
+		} finally {
+			cfg.public.nativeTest = previous;
+		}
+	});
+
+	it('leaves both on outside a native test build', () => {
+		applyAppSettingsToDocument(settingsWith({ ambientScenes: true, translucency: true }));
+		expect(hasClass('ambient-disabled')).toBe(false);
+		expect(hasClass('glass-disabled')).toBe(false);
+	});
+
 	it('round-trips false through persistence as the JSON form the reader expects', async () => {
 		const settings = useSettings();
 		await settings.set(toSettingStorageKey('ambientScenes'), false);

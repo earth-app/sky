@@ -149,6 +149,20 @@ function fontFamilyFor(font: FontSetting) {
 	}
 }
 
+/**
+ * True in the maestro native lanes only.
+ *
+ * Read defensively: this module's document pass is a plain function, so it is reachable outside a
+ * Nuxt context (unit tests), where `useRuntimeConfig` throws.
+ */
+export function isNativeTestBuild(): boolean {
+	try {
+		return Boolean(useRuntimeConfig().public.nativeTest);
+	} catch {
+		return false;
+	}
+}
+
 export function applyAppSettingsToDocument(settings: AppSettings) {
 	if (!import.meta.client) return;
 
@@ -156,11 +170,18 @@ export function applyAppSettingsToDocument(settings: AppSettings) {
 	const appliedTheme = resolveTheme(settings.theme);
 	const appFontFamily = fontFamilyFor(settings.font);
 
+	// an emulator's software renderer loses gralloc handles under the 30fps ambient canvas and
+	// backdrop-filter, so it stops painting entirely. force both off for the native lanes; the
+	// stored preference is left untouched so the settings screen still reads what the user chose
+	const nativeTest = isNativeTestBuild();
+	const ambientScenes = settings.ambientScenes && !nativeTest;
+	const translucency = settings.translucency && !nativeTest;
+
 	root.classList.remove('light', 'dark');
 	root.classList.add(appliedTheme);
 	root.classList.toggle('animations-disabled', !settings.animations);
-	root.classList.toggle('ambient-disabled', !settings.ambientScenes);
-	root.classList.toggle('glass-disabled', !settings.translucency);
+	root.classList.toggle('ambient-disabled', !ambientScenes);
+	root.classList.toggle('glass-disabled', !translucency);
 
 	// glass-full / glass-reduced / glass-off; all translucency is css keyed off the class, so the
 	// render path stays free of js
@@ -168,8 +189,8 @@ export function applyAppSettingsToDocument(settings: AppSettings) {
 		visualEffects: settings.visualEffects,
 		dataSaverMode: settings.dataSaverMode,
 		animations: settings.animations,
-		ambientScenes: settings.ambientScenes,
-		translucency: settings.translucency
+		ambientScenes,
+		translucency
 	});
 	applyVisualTierClass();
 
