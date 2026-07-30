@@ -4,6 +4,9 @@ on:
   push:
     branches: [master]
   pull_request:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -254,6 +257,10 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     needs: [unit, build-ios]
+    # nightly + manual only. github's hosted ios simulators render in software and time the job out
+    # (actions/runner-images#3239), and maestro has open ios driver-hang bugs (#2628, #2906, #1585),
+    # so gating every commit on this lane blocks merges on upstream defects we cannot fix
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
       packages: read
@@ -347,6 +354,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [unit, build-android]
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
 
     permissions:
       contents: read
@@ -407,8 +415,6 @@ jobs:
           subject-name: sky-compile-android-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
       - name: Pre-install the Android emulator package
-        # best-effort ONLY: on the happy path this warms the package so the action's own
-        # retry-less install is a no-op, but it must never be the step that fails the job
         run: |
           sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           sdkmanager="$(command -v sdkmanager || true)"
