@@ -305,10 +305,16 @@ jobs:
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/derived-data-ios" \
+            -quiet \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=YES \
             build
-      # ditto keeps the bundle's symlinks and permissions; uploading App.app raw would not
+      - name: Report Disk Usage
+        if: ${{ always() }}
+        run: |
+          df -h /
+          du -sh "$RUNNER_TEMP/derived-data-ios" 2> /dev/null || true
       - name: Zip App Bundle
         run: |
           ditto -c -k --keepParent \
@@ -328,9 +334,11 @@ jobs:
           subject-name: sky-compile-ios-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
       - name: Run Maestro Gate Flows (iOS Simulator)
+        timeout-minutes: 30
         run: bun run maestro:ios
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
+          MAESTRO_DERIVED_DATA: ${{ runner.temp }}/derived-data-ios
       - name: Archive Maestro Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7

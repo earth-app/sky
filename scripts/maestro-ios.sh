@@ -8,6 +8,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/maestro-common.sh"
 PLATFORM='ios'
 REPRODUCE='bun run maestro:ios'
 
+BOOT_TIMEOUT="${MAESTRO_IOS_BOOT_TIMEOUT:-300}"
+
 DOTENV="$ROOT/.config/maestro-ios.env"
 DERIVED="${MAESTRO_DERIVED_DATA:-$WORK_DIR/derived-data-ios}"
 APP_PATH="$DERIVED/Build/Products/Debug-iphonesimulator/App.app"
@@ -40,14 +42,34 @@ pick_simulator() {
 }
 
 boot_simulator() {
-	local udid="$1" boot_log="$WORK_DIR/bootstatus-$udid.log"
-	log "booting simulator $udid"
+	local udid="$1" boot_log="$WORK_DIR/bootstatus-$udid.log" waited=0 boot_pid status=0
+	log "booting simulator $udid (timeout ${BOOT_TIMEOUT}s)"
 	mkdir -p "$WORK_DIR"
-	if ! xcrun simctl bootstatus "$udid" -b > "$boot_log" 2>&1; then
+
+	# bounded AND chatty on purpose: bootstatus blocks with its output redirected, so a hung
+	# boot used to burn a whole 74-minute ci job and emit nothing to explain it
+	xcrun simctl bootstatus "$udid" -b > "$boot_log" 2>&1 &
+	boot_pid=$!
+	while kill -0 "$boot_pid" 2> /dev/null; do
+		if [ "$waited" -ge "$BOOT_TIMEOUT" ]; then
+			kill -9 "$boot_pid" 2> /dev/null || true
+			warn "last lines of $boot_log:"
+			tail -20 "$boot_log" >&2
+			die "simulator $udid never booted within ${BOOT_TIMEOUT}s"
+		fi
+		sleep 5
+		waited=$((waited + 5))
+		if [ $((waited % 20)) -eq 0 ]; then
+			log "still booting $udid (${waited}s)"
+		fi
+	done
+	wait "$boot_pid" || status=$?
+	if [ "$status" -ne 0 ]; then
 		warn "simulator boot failed; last lines of $boot_log:"
 		tail -20 "$boot_log" >&2
 		die "the simulator never reached a booted state"
 	fi
+
 	log "booted after $(grep -cE '^\[' "$boot_log" 2> /dev/null || echo '?') status polls"
 	# the window server makes wkwebview rendering (and screenshots) behave
 	open -a Simulator --args -CurrentDeviceUDID "$udid" > /dev/null 2>&1 || true
@@ -79,6 +101,7 @@ xcodebuild \
 	-quiet \
 	CODE_SIGNING_ALLOWED=NO \
 	CODE_SIGNING_REQUIRED=NO \
+	ONLY_ACTIVE_ARCH=YES \
 	build
 
 [ -d "$APP_PATH" ] || die "xcodebuild produced no app at $APP_PATH"
