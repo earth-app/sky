@@ -3,7 +3,7 @@
 buildscript {
     // resolved once here so the four capacitor plugins that apply kotlin-android share one
     // instance; per-subproject classpaths loaded it twice and broke on the 'kotlin' extension
-    ext.kotlin_version = '2.2.20'
+    ext.kotlin_version = '2.4.10'
 
     repositories {
         google()
