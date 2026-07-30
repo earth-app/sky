@@ -40,9 +40,15 @@ pick_simulator() {
 }
 
 boot_simulator() {
-	local udid="$1"
+	local udid="$1" boot_log="$WORK_DIR/bootstatus-$udid.log"
 	log "booting simulator $udid"
-	xcrun simctl bootstatus "$udid" -b
+	mkdir -p "$WORK_DIR"
+	if ! xcrun simctl bootstatus "$udid" -b > "$boot_log" 2>&1; then
+		warn "simulator boot failed; last lines of $boot_log:"
+		tail -20 "$boot_log" >&2
+		die "the simulator never reached a booted state"
+	fi
+	log "booted after $(grep -cE '^\[' "$boot_log" 2> /dev/null || echo '?') status polls"
 	# the window server makes wkwebview rendering (and screenshots) behave
 	open -a Simulator --args -CurrentDeviceUDID "$udid" > /dev/null 2>&1 || true
 }
