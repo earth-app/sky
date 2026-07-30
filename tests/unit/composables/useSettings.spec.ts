@@ -279,6 +279,27 @@ describe('ambientScenes + translucency settings', () => {
 		}
 	});
 
+	// ionic's ~520ms page transitions dominate every flow on a software renderer and no flow
+	// asserts animation timing, so the native lanes run without them
+	it('forces animations off in a native test build without touching the stored preference', () => {
+		const settings = settingsWith({ animations: true });
+		const cfg = useRuntimeConfig();
+		const previous = cfg.public.nativeTest;
+		cfg.public.nativeTest = true;
+		try {
+			applyAppSettingsToDocument(settings);
+			expect(hasClass('animations-disabled')).toBe(true);
+			expect(settings.animations).toBe(true);
+		} finally {
+			cfg.public.nativeTest = previous;
+		}
+	});
+
+	it('leaves animations on outside a native test build', () => {
+		applyAppSettingsToDocument(settingsWith({ animations: true }));
+		expect(hasClass('animations-disabled')).toBe(false);
+	});
+
 	it('leaves both on outside a native test build', () => {
 		applyAppSettingsToDocument(settingsWith({ ambientScenes: true, translucency: true }));
 		expect(hasClass('ambient-disabled')).toBe(false);

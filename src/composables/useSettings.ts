@@ -176,10 +176,14 @@ export function applyAppSettingsToDocument(settings: AppSettings) {
 	const nativeTest = isNativeTestBuild();
 	const ambientScenes = settings.ambientScenes && !nativeTest;
 	const translucency = settings.translucency && !nativeTest;
+	// animations go too. both ci simulators/emulators render in software ("GL pipe is running in
+	// software mode"), where ionic's ~520ms page transitions dominate every flow and add nothing:
+	// no flow asserts animation timing, and reduced motion has its own playwright coverage
+	const animations = settings.animations && !nativeTest;
 
 	root.classList.remove('light', 'dark');
 	root.classList.add(appliedTheme);
-	root.classList.toggle('animations-disabled', !settings.animations);
+	root.classList.toggle('animations-disabled', !animations);
 	root.classList.toggle('ambient-disabled', !ambientScenes);
 	root.classList.toggle('glass-disabled', !translucency);
 
@@ -188,7 +192,7 @@ export function applyAppSettingsToDocument(settings: AppSettings) {
 	noteVisualSettings({
 		visualEffects: settings.visualEffects,
 		dataSaverMode: settings.dataSaverMode,
-		animations: settings.animations,
+		animations,
 		ambientScenes,
 		translucency
 	});
