@@ -139,8 +139,6 @@ jobs:
     timeout-minutes: 45
     needs: unit
 
-    # 361 specs on one runner took 42m. the runners are 2-core, so `workers` is already at
-    # capacity (raising it starves hydration); more runners is the only lever left
     strategy:
       fail-fast: false
       matrix:
@@ -176,8 +174,6 @@ jobs:
           COVERAGE: '1'
           PLAYWRIGHT_PROD: '1'
       - name: Upload Playwright Artifacts (Failure)
-        # not gated on push: branch pushes no longer start a run, so gating this would leave a
-        # failing pull request with no trace, screenshot or video to diagnose from
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
@@ -245,8 +241,6 @@ jobs:
           CI: true
           PLAYWRIGHT_PROD: '1'
       - name: Upload Playwright Artifacts (Failure)
-        # not gated on push: branch pushes no longer start a run, so gating this would leave a
-        # failing pull request with no trace, screenshot or video to diagnose from
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
@@ -260,12 +254,6 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     needs: [unit, build-ios]
-
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [s1, s2]
-
     permissions:
       contents: read
       packages: read
@@ -321,37 +309,34 @@ jobs:
           df -h /
           du -sh "$RUNNER_TEMP/derived-data-ios" 2> /dev/null || true
       - name: Zip App Bundle
-        if: ${{ matrix.shard == 's1' }}
         run: |
           ditto -c -k --keepParent \
             "$RUNNER_TEMP/derived-data-ios/Build/Products/Debug-iphonesimulator/App.app" \
             "$RUNNER_TEMP/App-Debug-iphonesimulator.zip"
       - name: Archive Compiled App
         id: archive
-        if: ${{ matrix.shard == 's1' }}
         uses: actions/upload-artifact@v7
         with:
           name: sky-compile-ios-${{ github.run_id }}
           path: ${{ runner.temp }}/App-Debug-iphonesimulator.zip
           overwrite: true
       - name: Attest Compiled App
-        if: ${{ matrix.shard == 's1' && steps.archive.outputs.artifact-digest != '' }}
+        if: ${{ steps.archive.outputs.artifact-digest != '' }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: sky-compile-ios-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
       - name: Run Maestro Gate Flows (iOS Simulator)
-        timeout-minutes: 35
+        timeout-minutes: 50
         run: bun run maestro:ios
         env:
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '60000'
           MAESTRO_DERIVED_DATA: ${{ runner.temp }}/derived-data-ios
-          MAESTRO_TAGS: ${{ matrix.shard }}
       - name: Archive Maestro Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: maestro-ios-${{ github.run_id }}-${{ matrix.shard }}
+          name: maestro-ios-${{ github.run_id }}
           path: |
             /tmp/sky-maestro/ios/report.xml
             /tmp/sky-maestro/ios/artifacts
@@ -447,7 +432,10 @@ jobs:
       - name: Run Maestro Gate Flows (Android Emulator)
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
+          # 60s, not 300s: at 300s a driver that fails to start burns five minutes and reports NO
+          # assertion error, which is exactly how 8 android flows looked identical at ~4m41s. a
+          # short budget surfaces the driver's own error instead of hiding it behind a long wait
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '60000'
         with:
           api-level: 35
           target: google_apis

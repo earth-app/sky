@@ -82,12 +82,14 @@ boot_emulator() {
 	die "the emulator booted but never reported sys.boot_completed; see $WORK_DIR/emulator.log"
 }
 
-# the emulator's software renderer cannot finish gboard's insets-show animation: ci logcat shows
-# `force finish cuj, time out: J<IME_INSETS_SHOW_ANIMATION::...com.earthapp.sky>` plus
-# `WindowManager: Timed out waiting for animations to complete` on MainActivity, with frames up to
-# 18s and the ime taking 2146 of 2400px in fullscreen mode. inputText then blocks on a ui that
-# never settles, which silently killed all six typing flows for their whole timeout.
-# maestro injects text through its driver rather than the keyboard, so no ime is needed at all
+# removes the on-screen keyboard from the equation. ci logcat does show it stalling on the
+# emulator's software renderer (`force finish cuj, time out:
+# J<IME_INSETS_SHOW_ANIMATION::...com.earthapp.sky>` plus `WindowManager: Timed out waiting for
+# animations to complete`, frames up to 18s, ime at 2146 of 2400px in fullscreen mode), so this is
+# worth keeping - but it is NOT the cause of the ~4m41s silent flow failures: those persisted
+# unchanged with both imes disabled, and are the driver startup timeout instead.
+# verified locally that no ime is required at all: 11/11 flows passed with both disabled, because
+# maestro injects text through its own driver rather than the keyboard
 disable_ime() {
 	local serial="$1" ime
 	for ime in $("$ADB" -s "$serial" shell ime list -s 2> /dev/null | tr -d '\r'); do
