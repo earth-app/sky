@@ -41,6 +41,11 @@ pick_simulator() {
 	printf '%s' "$udid"
 }
 
+prefer_hardware_keyboard() {
+	defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool true > /dev/null 2>&1 || true
+	log 'simulator set to report a hardware keyboard (no software keyboard animation)'
+}
+
 boot_simulator() {
 	local udid="$1" boot_log="$WORK_DIR/bootstatus-$udid.log" waited=0 boot_pid status=0
 	log "booting simulator $udid (timeout ${BOOT_TIMEOUT}s)"
@@ -110,6 +115,9 @@ xcodebuild \
 # container, so they cannot race each other's Preferences
 SHARDS="${MAESTRO_IOS_SHARDS:-1}"
 UDIDS="$(pick_simulator "$SHARDS")"
+
+# before any boot: Simulator.app reads this preference at launch
+prefer_hardware_keyboard
 
 for udid in ${UDIDS//,/ }; do
 	boot_simulator "$udid"
