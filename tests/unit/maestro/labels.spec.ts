@@ -35,6 +35,10 @@ const OS_OWNED = new Map<string, string>([
 	[
 		'.*Access to the photos has been prohibited.*',
 		'body copy of the @capacitor/camera iOS denial alert, owned by the plugin'
+	],
+	[
+		'Don.t allow',
+		'deny button on the android runtime permission dialog; matched as a regex because the button uses a curly apostrophe'
 	]
 ]);
 

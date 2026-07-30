@@ -30,6 +30,8 @@ tags:
           permissions:
             location: deny
           label: Relaunch with location denied
+      - runFlow:
+          file: ../_shared/dismiss-tour.yml
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000
@@ -44,15 +46,12 @@ tags:
     text: Trailmarks
 - waitForAnimationToEnd:
     timeout: 5000
+# the page asks for a fix on mount, so the OS prompt lands here; it has to go before the tour
+# check, because while it is up the tour is not in the accessibility tree to be found
 - runFlow:
-    when:
-      visible:
-        text: Close tour
-    commands:
-      - tapOn:
-          text: Close tour
-      - waitForAnimationToEnd:
-          timeout: 5000
+    file: ../_shared/deny-system-permission.yml
+- runFlow:
+    file: ../_shared/dismiss-tour.yml
 
 - extendedWaitUntil:
     visible: Location Needed
@@ -89,6 +88,8 @@ tags:
           permissions:
             location: allow
           label: Relaunch with location granted
+      - runFlow:
+          file: ../_shared/dismiss-tour.yml
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000

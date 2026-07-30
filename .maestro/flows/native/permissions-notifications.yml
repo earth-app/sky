@@ -25,6 +25,13 @@ tags:
       notifications: deny
     label: Cold launch with push registration guaranteed to fail
 
+# initPushNotifications() re-requests, so the OS prompt lands on top of the booting dashboard.
+# the tour resumes on any relaunch, and both of these own the a11y tree while they are up
+- runFlow:
+    file: ../_shared/deny-system-permission.yml
+- runFlow:
+    file: ../_shared/dismiss-tour.yml
+
 - extendedWaitUntil:
     visible: Open Your Profile
     timeout: 40000
@@ -63,6 +70,8 @@ tags:
     permissions:
       notifications: allow
     label: Cold launch with push granted
+- runFlow:
+    file: ../_shared/dismiss-tour.yml
 - extendedWaitUntil:
     visible: Open Your Profile
     timeout: 40000

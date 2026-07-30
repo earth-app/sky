@@ -32,6 +32,8 @@ tags:
             photos: deny
             medialibrary: deny
           label: Relaunch with every camera-backed permission revoked
+      - runFlow:
+          file: ../_shared/dismiss-tour.yml
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000
@@ -109,6 +111,8 @@ tags:
             photos: allow
             medialibrary: allow
           label: Relaunch with camera-backed permissions re-granted
+      - runFlow:
+          file: ../_shared/dismiss-tour.yml
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000
