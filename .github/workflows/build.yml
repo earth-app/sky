@@ -43,7 +43,7 @@ jobs:
           path: dist/
           overwrite: true
       - name: Attest Build Artifacts
-        if: success() || failure()
+        if: ${{ steps.archive.outputs.artifact-digest != '' }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: sky-build-ios-${{ github.run_id }}
@@ -82,7 +82,9 @@ jobs:
           path: dist/
           overwrite: true
       - name: Attest Build Artifacts
-        if: success() || failure()
+        # only when the archive actually produced a digest: on a failed build this step used to
+        # emit "subject-digest must be in the format" and bury the real compile error
+        if: ${{ steps.archive.outputs.artifact-digest != '' }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: sky-build-android-${{ github.run_id }}
@@ -320,7 +322,7 @@ jobs:
           path: ${{ runner.temp }}/App-Debug-iphonesimulator.zip
           overwrite: true
       - name: Attest Compiled App
-        if: success() || failure()
+        if: ${{ steps.archive.outputs.artifact-digest != '' }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: sky-compile-ios-${{ github.run_id }}
@@ -398,7 +400,7 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           overwrite: true
       - name: Attest Compiled APK
-        if: success() || failure()
+        if: ${{ steps.archive.outputs.artifact-digest != '' }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: sky-compile-android-${{ github.run_id }}
@@ -409,7 +411,7 @@ jobs:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
         with:
           api-level: 35
-          target: default
+          target: google_apis
           arch: x86_64
           profile: pixel_6
           disable-animations: true
