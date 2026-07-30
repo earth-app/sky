@@ -26,7 +26,12 @@ export default defineNuxtConfig({
 			// per-platform store url for the rate-app prompt (ios app store / play store)
 			appStoreReviewUrl: process.env.NUXT_PUBLIC_APP_STORE_REVIEW_URL || '',
 			// gates test-only pages (__test__/*) + the client-moderation e2e signature hook
-			testBuild: process.env.NUXT_PUBLIC_TEST_BUILD === '1'
+			testBuild: process.env.NUXT_PUBLIC_TEST_BUILD === '1',
+			// maestro lanes only. an emulator's software renderer cannot sustain the ambient canvas
+			// (30fps) or backdrop-filter: it loses gralloc handles, logs "Failed to find
+			// ColorBuffer", and stops painting. deliberately NOT keyed off testBuild, so the
+			// playwright visual-eval lane still measures the real visuals
+			nativeTest: process.env.NUXT_PUBLIC_NATIVE_TEST === '1'
 		}
 	},
 	ssr: false,
