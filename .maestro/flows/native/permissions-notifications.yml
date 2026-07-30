@@ -25,16 +25,10 @@ tags:
       notifications: deny
     label: Cold launch with push registration guaranteed to fail
 
-# initPushNotifications() re-requests, so the OS prompt lands on top of the booting dashboard.
-# the tour resumes on any relaunch, and both of these own the a11y tree while they are up
+# initPushNotifications() re-requests, so the OS prompt covers the booting dashboard - twice, since
+# it asks again after being refused
 - runFlow:
-    file: ../_shared/deny-system-permission.yml
-- runFlow:
-    file: ../_shared/dismiss-tour.yml
-
-- extendedWaitUntil:
-    visible: Open Your Profile
-    timeout: 40000
+    file: ../_shared/settle-after-launch.yml
     label: Splash cleared and the dashboard rendered despite the denial
 - assertNotVisible:
     text: Find your Novelty, Try New Things, Discover the World
@@ -71,8 +65,5 @@ tags:
       notifications: allow
     label: Cold launch with push granted
 - runFlow:
-    file: ../_shared/dismiss-tour.yml
-- extendedWaitUntil:
-    visible: Open Your Profile
-    timeout: 40000
+    file: ../_shared/settle-after-launch.yml
     label: Granted path boots identically

@@ -1,0 +1,68 @@
+appId: com.earthapp.sky
+name: Settle On The Dashboard After A Launch
+tags:
+  - gate
+---
+# clears whatever transient window is covering the dashboard after a (re)launch, then proves we
+# actually landed. use this after every launchApp instead of asserting the dashboard directly.
+#
+# a system dialog or an ionic modal owns the ENTIRE android accessibility tree while it is up, so
+# anything behind it reads as "not visible" even when the screenshot plainly shows it. three
+# separate things can be covering the screen here, and each defeats a simpler construct:
+#   - the OS runtime permission prompt: `deny` maps to pm revoke, which leaves the permission
+#     re-promptable, so the app asks on boot - and dismissing it RESUMES the app, which re-runs
+#     triggerRegister and can raise another prompt behind the first
+#   - the welcome tour: closing it with the X persists a resume point rather than completion
+#     (MSiteTour only calls markCompleted on the finished path), so it resumes on some launches
+#   - neither of them, on launches where the state is already granted or the tour is done
+#
+# so a plain conditional races the late ones and a hard wait fails when the overlay never comes.
+# the dismissal pair runs twice per retry pass, because clearing one layer is what lets the next
+# one appear; maestro caps maxRetries at 3, so doubling it here is how we get six attempts. the
+# retry still exits as soon as the dashboard is reachable, so the common (nothing covering it)
+# case costs one pass
+- retry:
+    maxRetries: 3
+    commands:
+      - runFlow:
+          when:
+            visible:
+              text: Don.t allow
+          commands:
+            - tapOn:
+                text: Don.t allow
+                label: Refuse the OS prompt, which is the honest deny path
+            - waitForAnimationToEnd:
+                timeout: 5000
+      - runFlow:
+          when:
+            visible:
+              text: Close tour
+          commands:
+            - tapOn:
+                text: Close tour
+            - waitForAnimationToEnd:
+                timeout: 5000
+      - runFlow:
+          when:
+            visible:
+              text: Don.t allow
+          commands:
+            - tapOn:
+                text: Don.t allow
+                label: Refuse the prompt the resume raised behind the first
+            - waitForAnimationToEnd:
+                timeout: 5000
+      - runFlow:
+          when:
+            visible:
+              text: Close tour
+          commands:
+            - tapOn:
+                text: Close tour
+            - waitForAnimationToEnd:
+                timeout: 5000
+      - extendedWaitUntil:
+          visible: Open Your Profile
+          timeout: 15000
+          label: Landed on the dashboard with nothing covering it

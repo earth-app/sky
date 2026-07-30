@@ -78,11 +78,11 @@ env:
     timeout: 20000
     label: Welcome tour auto-started
 
-# the X persists a RESUME point, not completion (MSiteTour only calls markCompleted on the
-# finished path), so the tour comes back on every later relaunch - each of those has to dismiss it
-# again via _shared/dismiss-tour.yml. walking to Finish to make it durable was tried and reverted:
-# `repeat while visible: Next` matches case-insensitively, and NEXT also appears on non-tour
-# screens, so the loop tapped its way into a signed-out state and cost ~1min per flow
+# the X persists a RESUME point, not completion (MSiteTour only calls markCompleted on the finished
+# path), so the tour can come back on a later relaunch - _shared/settle-after-launch.yml clears it
+# there. walking to Finish to make it durable was tried and reverted: `repeat while visible: Next`
+# matches case-insensitively and NEXT also appears on non-tour screens, so the loop tapped its way
+# into a signed-out state and cost ~1min per flow
 - tapOn:
     text: Close tour
 - waitForAnimationToEnd:

@@ -64,6 +64,17 @@ const DERIVED = new Map<
 		}
 	],
 	[
+		// the ion-title sits next to an icon, and android's a11y bridge folds the pair into one
+		// text node (" Create Event"), so the literal never matches
+		'.*Create Event.*',
+		{
+			file: 'src/pages/tabs/events/new.vue',
+			source: 'Create Event',
+			sample: 'Create Event',
+			alsoMatches: [' Create Event']
+		}
+	],
+	[
 		'.*erase all local log files.*',
 		{
 			file: 'src/pages/tabs/settings/index.vue',

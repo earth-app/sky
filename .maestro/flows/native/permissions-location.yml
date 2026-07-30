@@ -30,11 +30,10 @@ tags:
           permissions:
             location: deny
           label: Relaunch with location denied
+      # the dashboard's nearby widget asks for a fix during boot, so the OS prompt covers the
+      # screen before the tour can resume behind it
       - runFlow:
-          file: ../_shared/dismiss-tour.yml
-      - extendedWaitUntil:
-          visible: Open Your Profile
-          timeout: 40000
+          file: ../_shared/settle-after-launch.yml
           label: Back on the dashboard with the session intact
 
 - scrollUntilVisible:
@@ -46,17 +45,36 @@ tags:
     text: Trailmarks
 - waitForAnimationToEnd:
     timeout: 5000
-# the page asks for a fix on mount, so the OS prompt lands here; it has to go before the tour
-# check, because while it is up the tour is not in the accessibility tree to be found
-- runFlow:
-    file: ../_shared/deny-system-permission.yml
-- runFlow:
-    file: ../_shared/dismiss-tour.yml
-
-- extendedWaitUntil:
-    visible: Location Needed
-    timeout: 30000
-    label: Denied location surfaces the recovery alert, not a spinner forever
+# the page asks again on mount, so the prompt is back on top of the recovery UI. same shape as
+# settle-after-launch, scoped to this assertion: dismiss whatever is covering the screen, re-check,
+# and let the retry absorb a prompt that lands late or a second time
+- retry:
+    maxRetries: 3
+    commands:
+      # dismissed twice per pass: refusing the prompt resumes the app, which re-requests and can
+      # raise another one, and maxRetries is capped at 3
+      - runFlow:
+          when:
+            visible:
+              text: Don.t allow
+          commands:
+            - tapOn:
+                text: Don.t allow
+            - waitForAnimationToEnd:
+                timeout: 5000
+      - runFlow:
+          when:
+            visible:
+              text: Don.t allow
+          commands:
+            - tapOn:
+                text: Don.t allow
+            - waitForAnimationToEnd:
+                timeout: 5000
+      - extendedWaitUntil:
+          visible: Location Needed
+          timeout: 15000
+          label: Denied location surfaces the recovery alert, not a spinner forever
 - assertVisible:
     text: Re-check Location
 
@@ -89,10 +107,7 @@ tags:
             location: allow
           label: Relaunch with location granted
       - runFlow:
-          file: ../_shared/dismiss-tour.yml
-      - extendedWaitUntil:
-          visible: Open Your Profile
-          timeout: 40000
+          file: ../_shared/settle-after-launch.yml
       - scrollUntilVisible:
           element:
             text: Trailmarks
