@@ -414,17 +414,28 @@ jobs:
           subject-name: sky-compile-android-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
       - name: Pre-install the Android emulator package
+        # best-effort ONLY: on the happy path this warms the package so the action's own
+        # retry-less install is a no-op, but it must never be the step that fails the job
         run: |
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          sdkmanager="$(command -v sdkmanager || true)"
+          if [ -z "$sdkmanager" ]; then
+            sdkmanager="$(find "$sdk_root/cmdline-tools" -maxdepth 3 -name sdkmanager -type f 2> /dev/null | head -1)"
+          fi
+          if [ -z "$sdkmanager" ]; then
+            echo "::warning::sdkmanager not found under $sdk_root; leaving the emulator install to the runner action"
+            exit 0
+          fi
           for attempt in 1 2 3; do
-            if sdkmanager --install emulator --channel=0 > /dev/null; then
+            if "$sdkmanager" --install emulator --channel=0 > /dev/null; then
               echo "emulator package ready (attempt $attempt)"
               exit 0
             fi
-            echo "emulator sdk download failed (attempt $attempt); retrying"
+            echo "emulator sdk download failed (attempt $attempt of 3)"
             sleep 15
           done
-          echo "::error::could not download the android emulator package after 3 attempts"
-          exit 1
+          echo "::warning::could not pre-download the emulator package; the runner action will try once more"
+          exit 0
       - name: Run Maestro Gate Flows (Android Emulator)
         uses: reactivecircus/android-emulator-runner@v2
         env:
