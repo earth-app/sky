@@ -124,9 +124,6 @@ const {
 	isActiveTour
 } = useSiteTour();
 const router = useIonRouter();
-// vue-router alongside the ion router: ion's navigate() is fire-and-forget with no failure
-// signal, so the only way to know a deep link landed is to read the committed route back
-const vueRouter = useRouter();
 const isNative = Capacitor.isNativePlatform();
 const { recordSession, recordMeaningfulAction, maybePromptForReview } = useRateApp();
 
@@ -401,22 +398,6 @@ function shouldIgnoreDuplicateDeepLink(url: string) {
 	return now - last < 1_500;
 }
 
-/**
- * Route a resolved deep link, verifying it committed.
- *
- * `useIonRouter().navigate()` returns void, so a dropped navigation is silent: the oauth signup
- * step used to sit on /login forever because nothing noticed the dashboard never mounted.
- */
-async function navigateToDeepLinkTarget(target: string): Promise<void> {
-	const targetPath = target.split('?')[0]!.split('#')[0]!;
-	const landed = await navigateUntilLanded({
-		navigate: async () => router.navigate(target, 'root', 'replace'),
-		landed: () => vueRouter.currentRoute.value.path === targetPath,
-		onError: (err) => console.error('[deep-link] navigation threw:', err)
-	});
-	if (!landed) console.warn('[deep-link] never landed on', targetPath);
-}
-
 async function handleIncomingDeepLink(url: string) {
 	if (!url || shouldIgnoreDuplicateDeepLink(url)) return;
 
@@ -461,7 +442,7 @@ async function handleIncomingDeepLink(url: string) {
 
 		// if OAuth was started somewhere without an in-outlet `user` watcher,
 		// still attempt a navigation from here
-		await navigateToDeepLinkTarget(resolved.target);
+		router.navigate(resolved.target, 'root', 'replace');
 		return;
 	}
 
@@ -478,7 +459,7 @@ async function handleIncomingDeepLink(url: string) {
 		return;
 	}
 
-	await navigateToDeepLinkTarget(resolved.target);
+	router.navigate(resolved.target, 'root', 'replace');
 }
 
 async function handleAppUrlOpen(event: URLOpenListenerEvent) {
