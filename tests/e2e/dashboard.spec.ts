@@ -47,6 +47,7 @@ test.describe('Dashboard tab', () => {
 	});
 
 	test('feed streams content cards from the catalog', async ({ page, gotoHydrated, asUser }) => {
+		skipIfIntegration('needs the seeded mock catalog; a fresh mantle2 has no content to stream');
 		await asUser({ username: 'dashuser' });
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 

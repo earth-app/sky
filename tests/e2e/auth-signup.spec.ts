@@ -1,4 +1,4 @@
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 
 test.describe('Signup page (anonymous)', () => {
 	test.beforeEach(async ({ asAnonymous }) => {
@@ -21,6 +21,7 @@ test.describe('Signup page (anonymous)', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('writes a real account into mantle2 and depends on a clean username');
 		await gotoHydrated('/signup');
 
 		await page.getByPlaceholder(/me@example\.com/i).fill('newbie@example.com');
@@ -37,6 +38,7 @@ test.describe('Signup page (anonymous)', () => {
 		page,
 		gotoHydrated
 	}) => {
+		skipIfIntegration('writes a real account into mantle2 and depends on a clean username');
 		await gotoHydrated('/signup');
 
 		// no email so the flow would otherwise land on /tabs; the 409 short-circuits it

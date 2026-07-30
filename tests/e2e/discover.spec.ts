@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, test } from './utils/fixtures';
+import { expect, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 
 // ionic segment buttons keep their value as a JS property, not an html attribute, so read it live
@@ -26,6 +26,7 @@ async function clickSegmentByValue(page: Page, value: string): Promise<void> {
 
 test.describe('Discover tab', () => {
 	test('renders the default shuffled results feed', async ({ page, gotoHydrated, asUser }) => {
+		skipIfIntegration('needs the seeded mock catalog; a fresh mantle2 returns an empty shuffle');
 		await asUser();
 		await gotoTab(page, gotoHydrated, '/tabs/discover');
 
@@ -42,6 +43,7 @@ test.describe('Discover tab', () => {
 		gotoHydrated,
 		asUser
 	}) => {
+		skipIfIntegration('pagination needs more seeded activities than a fresh mantle2 holds');
 		await asUser();
 		// route-pinned segment reveals the selector + the "Activities - N Results" summary
 		await gotoTab(page, gotoHydrated, '/tabs/discover?tab=activity');

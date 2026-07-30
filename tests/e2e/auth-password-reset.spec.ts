@@ -9,6 +9,9 @@ test.describe('Forgot password page (anonymous)', () => {
 	});
 
 	test('renders the form and confirms the reset link was sent', async ({ page, gotoHydrated }) => {
+		// the confirmation toast only fires when mantle2 accepts the send; a real backend with no
+		// mail transport configured returns an error instead, so there is no toast to match
+		skipIfIntegration('confirmation toast needs a backend that can actually send the mail');
 		await gotoHydrated('/forgot-password');
 		await expect(page.getByPlaceholder(/you@example\.com/i)).toBeVisible({ timeout: 10_000 });
 
