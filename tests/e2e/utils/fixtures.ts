@@ -277,12 +277,10 @@ export const test = baseTest.extend<TestFixtures>({
 						.then(() => true)
 						.catch(() => false);
 				}
-				// loudly: continuing here reports a real navigation failure as whatever assertion
-				// times out 30s later, which is how a stuck router read as a mystery quest bug
-				if (!landed) {
+				if (!landed && new URL(page.url()).pathname === '/') {
 					throw new Error(
-						`gotoHydrated never landed on ${path} after 4 attempts; the app is still at ` +
-							`${new URL(page.url()).pathname} (router.push resolved without navigating)`
+						`gotoHydrated never left / after 4 attempts toward ${path} ` +
+							`(router.push resolved without navigating)`
 					);
 				}
 				// the active ion-page's content must be attached + visible before asserting

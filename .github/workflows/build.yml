@@ -328,7 +328,7 @@ jobs:
       - name: Run Maestro Gate Flows (iOS Simulator)
         run: bun run maestro:ios
         env:
-          MAESTRO_IOS_SHARDS: '2'
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
       - name: Archive Maestro Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
@@ -405,12 +405,15 @@ jobs:
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
       - name: Run Maestro Gate Flows (Android Emulator)
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
         with:
           api-level: 35
-          target: google_apis
+          target: default
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -camera-back none -memory 4096
           script: bun run maestro:android
       - name: Archive Maestro Artifacts
         if: ${{ always() }}
