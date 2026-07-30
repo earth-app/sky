@@ -154,9 +154,13 @@ export async function initPushNotifications(): Promise<PushTeardown> {
 	const triggerRegister = async (): Promise<void> => {
 		try {
 			const status = await PushNotifications.checkPermissions();
-			if (status.receive !== 'granted') {
+			if (!anyGranted(status.receive)) {
+				// never re-request a refusal. dismissing the OS prompt RESUMES the app, which fires
+				// appStateChange and lands back here, so re-asking put the same dialog straight back
+				// in front of a user who had just said no
+				if (!shouldRequest(status.receive)) return;
 				const req = await PushNotifications.requestPermissions();
-				if (req.receive !== 'granted') return;
+				if (!anyGranted(req.receive)) return;
 			}
 			await PushNotifications.register();
 		} catch (error) {

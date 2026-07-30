@@ -77,10 +77,13 @@ export function useQuestPermissions() {
 	async function ensureMotion(): Promise<boolean> {
 		try {
 			const current = await CapacitorPedometer.checkPermissions();
-			let granted = current.activityRecognition === 'granted';
+			let granted = anyGranted(current.activityRecognition);
 			if (!granted) {
+				// a refusal is final until Settings changes it; re-requesting only re-shows the
+				// dialog at a user who already declined
+				if (!shouldRequest(current.activityRecognition)) return false;
 				const req = await CapacitorPedometer.requestPermissions();
-				granted = req.activityRecognition === 'granted';
+				granted = anyGranted(req.activityRecognition);
 			}
 			if (!granted) return false;
 		} catch (e) {
@@ -189,11 +192,24 @@ export function useQuestPermissions() {
 		return granted;
 	}
 
+	// true once only Settings can turn motion back on, so the ui can keep the refusal on screen
+	// with instructions instead of pretending the step is startable
+	async function isMotionBlocked(): Promise<boolean> {
+		try {
+			const current = await CapacitorPedometer.checkPermissions();
+			if (anyGranted(current.activityRecognition)) return false;
+			return !shouldRequest(current.activityRecognition);
+		} catch {
+			return false;
+		}
+	}
+
 	return {
 		labels: PERMISSION_LABELS,
 		ensure,
 		prime,
 		require,
-		notifyDenied
+		notifyDenied,
+		isMotionBlocked
 	};
 }

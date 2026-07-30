@@ -25,12 +25,27 @@ export function useMGeolocation() {
 		return Geolocation.getCurrentPosition(options);
 	}
 
-	// check then request; true when fine or coarse location is granted
+	// check then request; true when fine or coarse location is granted.
+	// a refusal is NOT re-requested: both platforms re-show the dialog, so the user got asked again
+	// the moment anything touched location. callers surface the recovery ui instead
 	async function ensureLocationGranted(): Promise<boolean> {
 		const current = await checkPermissions();
-		if (current.location === 'granted' || current.coarseLocation === 'granted') return true;
+		if (anyGranted(current.location, current.coarseLocation)) return true;
+		if (!shouldRequest(current.location, current.coarseLocation)) return false;
 		const req = await requestPermissions();
-		return req.location === 'granted' || req.coarseLocation === 'granted';
+		return anyGranted(req.location, req.coarseLocation);
+	}
+
+	// true once only Settings can turn location back on, so the ui can say so instead of
+	// offering a retry that would do nothing
+	async function isLocationBlocked(): Promise<boolean> {
+		try {
+			const current = await checkPermissions();
+			if (anyGranted(current.location, current.coarseLocation)) return false;
+			return !shouldRequest(current.location, current.coarseLocation);
+		} catch {
+			return false;
+		}
 	}
 
 	async function ensurePermission(): Promise<boolean> {
@@ -81,6 +96,7 @@ export function useMGeolocation() {
 		checkPermissions,
 		requestPermissions,
 		getCurrentPosition,
-		ensureLocationGranted
+		ensureLocationGranted,
+		isLocationBlocked
 	};
 }
