@@ -258,8 +258,13 @@ jobs:
 
   native-ios:
     runs-on: macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     needs: [unit, build-ios]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [s1, s2]
 
     permissions:
       contents: read
@@ -316,34 +321,37 @@ jobs:
           df -h /
           du -sh "$RUNNER_TEMP/derived-data-ios" 2> /dev/null || true
       - name: Zip App Bundle
+        if: ${{ matrix.shard == 's1' }}
         run: |
           ditto -c -k --keepParent \
             "$RUNNER_TEMP/derived-data-ios/Build/Products/Debug-iphonesimulator/App.app" \
             "$RUNNER_TEMP/App-Debug-iphonesimulator.zip"
       - name: Archive Compiled App
         id: archive
+        if: ${{ matrix.shard == 's1' }}
         uses: actions/upload-artifact@v7
         with:
           name: sky-compile-ios-${{ github.run_id }}
           path: ${{ runner.temp }}/App-Debug-iphonesimulator.zip
           overwrite: true
       - name: Attest Compiled App
-        if: ${{ steps.archive.outputs.artifact-digest != '' }}
+        if: ${{ matrix.shard == 's1' && steps.archive.outputs.artifact-digest != '' }}
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: sky-compile-ios-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
       - name: Run Maestro Gate Flows (iOS Simulator)
-        timeout-minutes: 30
+        timeout-minutes: 35
         run: bun run maestro:ios
         env:
           MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
           MAESTRO_DERIVED_DATA: ${{ runner.temp }}/derived-data-ios
+          MAESTRO_TAGS: ${{ matrix.shard }}
       - name: Archive Maestro Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: maestro-ios-${{ github.run_id }}
+          name: maestro-ios-${{ github.run_id }}-${{ matrix.shard }}
           path: |
             /tmp/sky-maestro/ios/report.xml
             /tmp/sky-maestro/ios/artifacts
