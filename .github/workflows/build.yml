@@ -327,6 +327,8 @@ jobs:
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
       - name: Run Maestro Gate Flows (iOS Simulator)
         run: bun run maestro:ios
+        env:
+          MAESTRO_IOS_SHARDS: '2'
       - name: Archive Maestro Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
