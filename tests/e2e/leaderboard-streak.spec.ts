@@ -167,7 +167,7 @@ test.describe('Leaderboard streak + journey hero journey', () => {
 			timeout: 12_000
 		});
 		await expect(challengeButtons(page)).toHaveCount(3, { timeout: 12_000 });
-		await expect(board(page).getByText(/@host/i).first()).toBeVisible();
+		await expect(board(page).getByText(/@host/i).filter({ visible: true }).first()).toBeVisible();
 
 		// circle resolves the same scoped endpoint; board still renders
 		await switchScope(page, 'Circle');

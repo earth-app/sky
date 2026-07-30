@@ -54,10 +54,17 @@ test.describe('Cross-content navigation does not blank between tabs/types', () =
 		});
 
 		await gotoHydrated('/tabs/prompts/pmt-1');
-		await expect(page.getByText(/sample prompt 1\?/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/sample prompt 1\?/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 
 		await gotoHydrated('/tabs/events/evt-1');
-		await expect(page.getByText('Event 1').first()).toBeVisible({ timeout: 12_000 });
+		await expect(page.getByText('Event 1').filter({ visible: true }).first()).toBeVisible({
+			timeout: 12_000
+		});
 
 		await gotoHydrated('/tabs/activities/act-1');
 		await expect(page.getByRole('heading', { name: 'Sample Activity 1', level: 1 })).toBeVisible({
@@ -170,7 +177,9 @@ test.describe('Prompt detail self-heals malformed responses', () => {
 			makePrompt({ id: 'pmt-env-1', prompt: 'Enveloped prompt body?' })
 		);
 		await gotoHydrated('/tabs/prompts/pmt-env-1');
-		await expect(page.getByText('Enveloped prompt body?').first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page.getByText('Enveloped prompt body?').filter({ visible: true }).first()
+		).toBeVisible({ timeout: 12_000 });
 	});
 
 	test('recovers after a transient 500', async ({ page, asUser, mockApi, gotoHydrated }) => {
@@ -178,7 +187,12 @@ test.describe('Prompt detail self-heals malformed responses', () => {
 		await asUser();
 		await mockApi.respondTransientThenSuccess('GET', '/v2/prompts/pmt-3');
 		await gotoHydrated('/tabs/prompts/pmt-3');
-		await expect(page.getByText(/sample prompt 3\?/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/sample prompt 3\?/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 	});
 });
 
@@ -197,7 +211,9 @@ test.describe('Event detail self-heals malformed responses', () => {
 			makeEvent({ id: 'evt-2', name: 'Stringified Event' })
 		);
 		await gotoHydrated('/tabs/events/evt-2');
-		await expect(page.getByText('Stringified Event').first()).toBeVisible({ timeout: 12_000 });
+		await expect(page.getByText('Stringified Event').filter({ visible: true }).first()).toBeVisible(
+			{ timeout: 12_000 }
+		);
 	});
 
 	test('recovers after a transient 500', async ({ page, asUser, mockApi, gotoHydrated }) => {
@@ -205,7 +221,9 @@ test.describe('Event detail self-heals malformed responses', () => {
 		await asUser();
 		await mockApi.respondTransientThenSuccess('GET', '/v2/events/evt-3');
 		await gotoHydrated('/tabs/events/evt-3');
-		await expect(page.getByText('Event 3').first()).toBeVisible({ timeout: 12_000 });
+		await expect(page.getByText('Event 3').filter({ visible: true }).first()).toBeVisible({
+			timeout: 12_000
+		});
 	});
 });
 
@@ -253,7 +271,12 @@ test.describe('Profile editor + settings load under degraded responses', () => {
 		// a flaky secondary fetch (badges) 500s once; the editor must still render
 		await mockApi.respondTransientThenSuccess('GET', /^\/v2\/users\/[^/]+\/badges$/);
 		await gotoHydrated('/tabs/profile/editor');
-		await expect(page.getByText(/Edit Profile/i).first()).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page
+				.getByText(/Edit Profile/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
 		expect(errors, `page errors: ${errors.join(' | ')}`).toEqual([]);
 	});
 

@@ -10,7 +10,12 @@ test.describe('Verify email page (unverified user)', () => {
 	test('renders the code entry UI', async ({ page, gotoHydrated }) => {
 		skipIfIntegration('depends on email_verified:false override; real admin is already verified');
 		await gotoHydrated('/verify-email');
-		await expect(page.getByText(/Email Verification/i).first()).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page
+				.getByText(/Email Verification/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 10_000 });
 		await expect(page.getByPlaceholder(/12345678/i)).toBeVisible();
 		await expect(page.getByRole('button', { name: /^Verify$/i })).toBeVisible();
 	});
@@ -53,7 +58,12 @@ test.describe('Verify email page (unverified user)', () => {
 		await page.getByRole('button', { name: /^Verify$/i }).click();
 
 		// stays on the page and shows the danger message
-		await expect(page.getByText(/incorrect|invalid/i).first()).toBeVisible({ timeout: 10_000 });
+		await expect(
+			page
+				.getByText(/incorrect|invalid/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 10_000 });
 		expect(page.url()).toMatch(/\/verify-email/);
 	});
 });

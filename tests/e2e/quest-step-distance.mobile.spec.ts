@@ -31,7 +31,12 @@ test.describe('Quest step: distance_covered (native)', () => {
 		// reaching the goal flips the step to Goal Reached / Step Complete; a single-step
 		// quest auto-submits and can race straight into the Quest Complete overlay, so
 		// accept either the in-step goal state or the completion celebration
-		await expect(page.getByText(/goal reached|step complete|quest complete/i).first()).toBeVisible({
+		await expect(
+			page
+				.getByText(/goal reached|step complete|quest complete/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({
 			timeout: 8000
 		});
 	});

@@ -123,8 +123,18 @@ test.describe('IonModal lifecycle', () => {
 		// open: the tapped saved word mounts the interactive widget in a modal
 		await wordBtn.click();
 		let modal = page.locator('ion-modal:visible').first();
-		await expect(modal.getByText(/word of the day/i).first()).toBeVisible({ timeout: 8000 });
-		await expect(modal.getByText(/petrichor/i).first()).toBeVisible();
+		await expect(
+			modal
+				.getByText(/word of the day/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 8000 });
+		await expect(
+			modal
+				.getByText(/petrichor/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 
 		// close via the labelled Close button
 		await modal.getByRole('button', { name: /close word of the day/i }).click();
@@ -133,7 +143,12 @@ test.describe('IonModal lifecycle', () => {
 		// reopen: @did-dismiss reset wordModalOpen so the list button opens it again
 		await wordBtn.click();
 		modal = page.locator('ion-modal:visible').first();
-		await expect(modal.getByText(/word of the day/i).first()).toBeVisible({ timeout: 8000 });
+		await expect(
+			modal
+				.getByText(/word of the day/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 8000 });
 	});
 
 	test('an event without fields.info renders no About Event button and no about modal', async ({

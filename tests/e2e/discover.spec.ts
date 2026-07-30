@@ -84,7 +84,12 @@ test.describe('Discover tab', () => {
 
 		// typing enters search mode which reveals the segment selector + summary
 		await expect(page.locator('#discover-segments')).toBeVisible({ timeout: 12_000 });
-		await expect(page.getByText(/-\s*\d+\s*results/i).first()).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page
+				.getByText(/-\s*\d+\s*results/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
 	});
 
 	test('infinite scroll grows the activities stream or reports no more content', async ({

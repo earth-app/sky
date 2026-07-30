@@ -30,9 +30,14 @@ test.describe('Article detail page', () => {
 			timeout: 12_000
 		});
 		// author rendered as "@writer" (mock seeds art-1 authored by writer-1/writer)
-		await expect(page.getByText('@writer').first()).toBeVisible();
+		await expect(page.getByText('@writer').filter({ visible: true }).first()).toBeVisible();
 		// body is split into <p> paragraphs; the mock content mentions "test article"
-		await expect(page.getByText(/test article/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/test article/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 	});
 
 	test('shows the Take Quiz CTA when the article has a quiz', async ({

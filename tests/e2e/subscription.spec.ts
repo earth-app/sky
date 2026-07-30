@@ -68,9 +68,19 @@ test.describe('Subscription pages (logged in, web)', () => {
 		]);
 
 		await gotoTab(page, gotoHydrated, '/tabs/settings/subscription');
-		await expect(page.getByText(/Subscription/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/Subscription/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		// .first() because the tab outlet keeps a mounted duplicate page in the DOM
-		await expect(page.getByText(/Redeem a Code/i).first()).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page
+				.getByText(/Redeem a Code/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
 	});
 
 	test('Subscription settings page shows the live plan + status + cancel', async ({
@@ -91,10 +101,19 @@ test.describe('Subscription pages (logged in, web)', () => {
 		]);
 
 		await gotoTab(page, gotoHydrated, '/tabs/settings/subscription');
-		await expect(page.getByText('Pro', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
-		await expect(page.getByText('Active', { exact: true }).first()).toBeVisible();
+		await expect(
+			page.getByText('Pro', { exact: true }).filter({ visible: true }).first()
+		).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page.getByText('Active', { exact: true }).filter({ visible: true }).first()
+		).toBeVisible();
 		// active + not cancel_at_period_end -> one-click cancel is offered
-		await expect(page.getByText(/Cancel Subscription/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/Cancel Subscription/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 	});
 
 	test('Memberships (upgrade) page renders the plans', async ({ page, gotoHydrated, mockApi }) => {
@@ -107,9 +126,19 @@ test.describe('Subscription pages (logged in, web)', () => {
 		});
 
 		await gotoTab(page, gotoHydrated, '/tabs/upgrade');
-		await expect(page.getByText(/Memberships/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/Memberships/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		await expect(page.locator('#plan-Pro')).toBeVisible({ timeout: 10_000 });
-		await expect(page.getByText(/\$5\.99/).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/\$5\.99/)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 	});
 });
 

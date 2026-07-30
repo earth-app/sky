@@ -27,7 +27,12 @@ test.describe('Quest health + mastery disclosures', () => {
 		);
 		await gotoQuestDetail(page, gotoHydrated, 'q-health');
 
-		await expect(page.getByText(/apple health/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/apple health/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 	});
 
 	test('shows the Badge Mastery warning for an uncompleted mastery quest', async ({
@@ -55,6 +60,11 @@ test.describe('Quest health + mastery disclosures', () => {
 		);
 		await gotoQuestDetail(page, gotoHydrated, 'badge_mastery_b-1');
 
-		await expect(page.getByText(/badge mastery quest/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/badge mastery quest/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 	});
 });

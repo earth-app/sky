@@ -46,10 +46,13 @@ test.describe('Quest step: describe_text', () => {
 		// fill a valid-length answer so submit is enabled; the mock rejects the submission
 		await submitDescribeText(page);
 
-		await expect(page.getByText(/did not pass validation|could not validate/i).first()).toBeVisible(
-			{
-				timeout: 8000
-			}
-		);
+		await expect(
+			page
+				.getByText(/did not pass validation|could not validate/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({
+			timeout: 8000
+		});
 	});
 });

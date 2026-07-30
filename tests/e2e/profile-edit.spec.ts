@@ -21,7 +21,9 @@ async function openEditor(
 	gotoHydrated: (path: string) => Promise<void>
 ): Promise<void> {
 	await gotoTab(page, gotoHydrated, '/tabs/profile/editor');
-	await expect(page.getByText('Edit Profile').first()).toBeVisible({ timeout: 15_000 });
+	await expect(page.getByText('Edit Profile').filter({ visible: true }).first()).toBeVisible({
+		timeout: 15_000
+	});
 	await expect(usernameInput(page)).toBeVisible({ timeout: 12_000 });
 }
 

@@ -80,11 +80,23 @@ test.describe('Event thumbnail image modal', () => {
 		await expect(closeBtn).toBeVisible();
 
 		// caption renders the event name + date + location + photo author
-		await expect(modal.getByText('Riverside Landscape Walk').first()).toBeVisible();
+		await expect(
+			modal.getByText('Riverside Landscape Walk').filter({ visible: true }).first()
+		).toBeVisible();
 		// timezone-independent: the formatted date/time row carries the year
-		await expect(modal.getByText(/2026/).first()).toBeVisible();
-		await expect(modal.getByText(/40\.7851, -73\.9683/).first()).toBeVisible();
-		await expect(modal.getByText(/Photo by Ansel Adams/i).first()).toBeVisible();
+		await expect(modal.getByText(/2026/).filter({ visible: true }).first()).toBeVisible();
+		await expect(
+			modal
+				.getByText(/40\.7851, -73\.9683/)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
+		await expect(
+			modal
+				.getByText(/Photo by Ansel Adams/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 
 		// zoom container is interactive; a double-tap zooms even a landscape (non-overflowing) image
 		const viewport = modal.locator('[data-testid="image-zoom-viewport"]');
@@ -155,7 +167,7 @@ test.describe('Event thumbnail image modal', () => {
 		const modal = await openThumbnailModal(page);
 
 		// name still renders and dismiss still works
-		await expect(modal.getByText('Mystery Popup').first()).toBeVisible();
+		await expect(modal.getByText('Mystery Popup').filter({ visible: true }).first()).toBeVisible();
 
 		// absent optional fields render no rows (location + author omitted, no crash)
 		await expect(modal.getByText(/Photo by/i)).toHaveCount(0);

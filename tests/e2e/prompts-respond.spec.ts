@@ -12,9 +12,19 @@ test.describe('Prompt respond', () => {
 		await asUser();
 		await gotoHydrated('/tabs/prompts/pmt-1');
 
-		await expect(page.getByText(/sample prompt 1\?/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/sample prompt 1\?/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 		// the responses mock seeds two entries with this default body
-		await expect(page.getByText(/write playwright tests/i).first()).toBeVisible({
+		await expect(
+			page
+				.getByText(/write playwright tests/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({
 			timeout: 8000
 		});
 	});

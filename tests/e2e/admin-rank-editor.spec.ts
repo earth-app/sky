@@ -73,7 +73,12 @@ test.describe('Admin rank editor', () => {
 		);
 
 		// plain badge still renders for a non-FREE user, but there is no editor affordance
-		await expect(page.getByText(/organizer/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/organizer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 		await expect(page.locator('[data-testid="type-badge-editor"]')).toHaveCount(0);
 	});
 });

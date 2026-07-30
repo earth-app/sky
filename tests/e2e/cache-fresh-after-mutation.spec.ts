@@ -35,7 +35,12 @@ test.describe('Quest history refresh serves fresh data (force -> null cache key)
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
 		// the initial (non-force) history fetch primes the store cache with an empty map, so a
 		// non-force refetch would short-circuit; only force can surface anything new
-		await expect(page.getByText(/daily explorer/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/daily explorer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 
 		// arm a persistent history override that reports a quest NOT in the static catalog, so it
 		// can only appear if the forced refetch actually merges fresh server data into the store
@@ -88,7 +93,12 @@ test.describe('Quest history refresh serves fresh data (force -> null cache key)
 		skipIfIntegration('depends on seeded quest data + mock backend');
 		await asUser();
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
-		await expect(page.getByText(/daily explorer/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/daily explorer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 
 		let historyFetches = 0;
 		page.on('request', (r) => {

@@ -69,7 +69,7 @@ test.describe('Content deep-link routing', () => {
 
 		await page.waitForURL(/\/tabs\/events\/evt-1(\?|#|$)/, { timeout: 15_000 });
 		await expect(page.locator('#event-profile-card')).toBeVisible({ timeout: 12_000 });
-		await expect(page.getByText('Event 1').first()).toBeVisible();
+		await expect(page.getByText('Event 1').filter({ visible: true }).first()).toBeVisible();
 	});
 
 	test('a prompt universal link routes to /tabs/prompts/:id and renders the prompt', async ({
@@ -84,7 +84,12 @@ test.describe('Content deep-link routing', () => {
 		await fireAppUrl(page, 'https://app.earth-app.com/prompts/pmt-1');
 
 		await page.waitForURL(/\/tabs\/prompts\/pmt-1(\?|#|$)/, { timeout: 15_000 });
-		await expect(page.getByText(/sample prompt 1\?/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/sample prompt 1\?/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 	});
 
 	test('an unknown-host / garbage deep link is ignored, staying put without a crash', async ({

@@ -148,7 +148,12 @@ test.describe('New-user onboarding journey', () => {
 		await bindSignedUpUser(context, mockApi, username, testId);
 		await gotoHydrated('/verify-email');
 
-		await expect(page.getByText(/Email Verification/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/Email Verification/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 
 		// a stray fresh-user welcome tour can overlay the verify screen; dismiss it so the code
 		// field is reachable (the real tour still plays later on the dashboard chain)

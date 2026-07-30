@@ -90,7 +90,12 @@ async function runSearch(page: Page, term: string): Promise<void> {
 	await input.fill(term);
 	await input.press('Enter');
 	await expect(page.locator('#discover-segments')).toBeVisible({ timeout: 12_000 });
-	await expect(page.getByText(/-\s*\d+\s*results/i).first()).toBeVisible({ timeout: 15_000 });
+	await expect(
+		page
+			.getByText(/-\s*\d+\s*results/i)
+			.filter({ visible: true })
+			.first()
+	).toBeVisible({ timeout: 15_000 });
 	await page.waitForTimeout(1500);
 }
 

@@ -157,8 +157,15 @@ test.describe('Journey: article author -> reader -> quiz', () => {
 		await expect(submit).toBeVisible({ timeout: 8000 });
 		await submit.click();
 
-		await expect(page.getByText(/100%/).first()).toBeVisible({ timeout: 8000 });
-		await expect(page.getByText(/\(2\/2\)/).first()).toBeVisible();
+		await expect(page.getByText(/100%/).filter({ visible: true }).first()).toBeVisible({
+			timeout: 8000
+		});
+		await expect(
+			page
+				.getByText(/\(2\/2\)/)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 	});
 
 	test('ORGANIZER attaches a quiz and the authoring POST carries the question', async ({
@@ -244,8 +251,15 @@ test.describe('Journey: article author -> reader -> quiz', () => {
 		await submit.click();
 
 		// passing flips the score header and hides Submit (the taken/completed state)
-		await expect(page.getByText(/100%/).first()).toBeVisible({ timeout: 8000 });
-		await expect(page.getByText(/\(2\/2\)/).first()).toBeVisible();
+		await expect(page.getByText(/100%/).filter({ visible: true }).first()).toBeVisible({
+			timeout: 8000
+		});
+		await expect(
+			page
+				.getByText(/\(2\/2\)/)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		await expect(submit).toHaveCount(0);
 	});
 
@@ -346,9 +360,19 @@ test.describe('Journey: article author -> reader -> quiz', () => {
 
 		await expect(page.getByText(/question 1 of 3/i)).toBeVisible({ timeout: 12_000 });
 		// prior score is shown and the quiz cannot be re-submitted
-		await expect(page.getByText(/100%/).first()).toBeVisible();
-		await expect(page.getByText(/\(3\/3\)/).first()).toBeVisible();
-		await expect(page.getByText(/^Correct$/).first()).toBeVisible();
+		await expect(page.getByText(/100%/).filter({ visible: true }).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/\(3\/3\)/)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
+		await expect(
+			page
+				.getByText(/^Correct$/)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		const quizNav = page.locator('#quiz-nav');
 		await expect(quizNav.getByRole('button', { name: /^submit$/i })).toHaveCount(0);
 
@@ -357,7 +381,7 @@ test.describe('Journey: article author -> reader -> quiz', () => {
 		await quizNav.getByRole('button', { name: /^next$/i }).click();
 		await expect(page.getByText(/question 3 of 3/i)).toBeVisible();
 		await expect(page.getByText(/correct order/i)).toBeVisible({ timeout: 8000 });
-		await expect(page.getByText('Mercury').first()).toBeVisible();
+		await expect(page.getByText('Mercury').filter({ visible: true }).first()).toBeVisible();
 	});
 
 	test('Back is disabled on the first question and Next on the last', async ({

@@ -56,8 +56,12 @@ test.describe('Shared Garden - shared goal, garden, counter-free kudos (mobile)'
 		// scope to the contributor list so it is a stable sync point under parallel load
 		const contribList = page.locator('#circle-kudos');
 		await expect(contribList).toBeVisible({ timeout: 12000 });
-		await expect(contribList.getByText(new RegExp(alice.user.username)).first()).toBeVisible();
-		await expect(contribList.getByText(new RegExp(bob.user.username)).first()).toBeVisible();
+		await expect(
+			contribList.getByText(new RegExp(alice.user.username)).filter({ visible: true }).first()
+		).toBeVisible();
+		await expect(
+			contribList.getByText(new RegExp(bob.user.username)).filter({ visible: true }).first()
+		).toBeVisible();
 		await expect(page.getByText(/#\s*1\b|1st place|Rank\b/i)).toHaveCount(0);
 		// the shared garden is grown, not the first-minutes empty state
 		await expect(page.getByText(/garden grows as the circle spends time outside/i)).toHaveCount(0);
@@ -70,7 +74,9 @@ test.describe('Shared Garden - shared goal, garden, counter-free kudos (mobile)'
 		await expect(
 			page.getByText(new RegExp(`Cheered ${bob.user.username}`, 'i')).first()
 		).toBeVisible({ timeout: 12000 });
-		await expect(page.getByText('Encouraging someone lifts you, too.').first()).toBeVisible();
+		await expect(
+			page.getByText('Encouraging someone lifts you, too.').filter({ visible: true }).first()
+		).toBeVisible();
 		// no numeric tally / counter is ever rendered in the kudos surface
 		await expect(page.getByText(/\d+\s*(kudos|cheers)/i)).toHaveCount(0);
 

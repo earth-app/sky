@@ -51,12 +51,17 @@ test.describe('Deep-link routing journey', () => {
 		await fireAppUrl(page, 'https://app.earth-app.com/events/evt-1');
 		await page.waitForURL(/\/tabs\/events\/evt-1(\?|#|$)/, { timeout: 15_000 });
 		await expect(page.locator('#event-profile-card')).toBeVisible({ timeout: 12_000 });
-		await expect(page.getByText('Event 1').first()).toBeVisible();
+		await expect(page.getByText('Event 1').filter({ visible: true }).first()).toBeVisible();
 
 		// 4) prompt -> /tabs/prompts/:id
 		await fireAppUrl(page, 'https://app.earth-app.com/prompts/pmt-1');
 		await page.waitForURL(/\/tabs\/prompts\/pmt-1(\?|#|$)/, { timeout: 15_000 });
-		await expect(page.getByText(/sample prompt 1\?/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/sample prompt 1\?/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 
 		// 5) quest via a BARE /quests/<id> link -> /tabs/quests/:id; must resolve out of <Loading>
 		// into the catalog timeline (quest-detail-blank seam), not a blank page

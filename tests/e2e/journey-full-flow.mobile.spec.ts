@@ -78,7 +78,12 @@ test.describe('Full journey - trail -> shared garden -> kudos -> trailmark -> pr
 		await gotoTab(page, gotoHydrated, '/tabs/circle');
 		await expect(page.getByRole('heading', { name: expTitle })).toBeVisible({ timeout: 15000 });
 		// Alice's contribution now shows (contribution in minutes, never a rank)
-		await expect(page.getByText(/12\s*min/i).first()).toBeVisible({ timeout: 12000 });
+		await expect(
+			page
+				.getByText(/12\s*min/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12000 });
 		// the garden has left the first-minutes state
 		await expect(page.getByText(/garden grows as the circle spends time outside/i)).toHaveCount(0);
 

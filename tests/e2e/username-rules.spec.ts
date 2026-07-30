@@ -15,7 +15,9 @@ test.describe('Username no-spaces rule', () => {
 
 		await page.getByRole('button', { name: /^Sign Up$/i }).click();
 
-		await expect(page.getByText('Username cannot contain spaces').first()).toBeVisible({
+		await expect(
+			page.getByText('Username cannot contain spaces').filter({ visible: true }).first()
+		).toBeVisible({
 			timeout: 10_000
 		});
 		// the spaced username must never reach the signup call / tabs shell

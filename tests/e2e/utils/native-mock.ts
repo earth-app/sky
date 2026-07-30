@@ -106,9 +106,27 @@ export async function installNativeMock(
 			// ---- listener registries ------------------------------------------
 			// keyed by `${pluginName}:${eventName}` -> array of callbacks
 			const listeners: Record<string, Function[]> = {};
+			// events worth holding until someone listens. capacitor queues a launch url and hands it
+			// over once the app registers, so dropping it makes every "fire the deep link straight
+			// after goto" spec a race against app.vue's addListener - it silently stayed on /login
+			const queueable = new Set(['App:appUrlOpen']);
+			const pending: Record<string, unknown[]> = {};
+			const deliver = (plugin: string, event: string, cb: Function, payload?: unknown) => {
+				try {
+					cb(payload);
+				} catch (e) {
+					// swallow listener errors so one bad handler can't break the test driver
+					console.error('[native-mock] listener error', plugin, event, e);
+				}
+			};
 			const addListener = (plugin: string, event: string, cb: Function) => {
 				const key = `${plugin}:${event}`;
 				(listeners[key] ||= []).push(cb);
+				const held = pending[key];
+				if (held && held.length > 0) {
+					pending[key] = [];
+					for (const payload of held) deliver(plugin, event, cb, payload);
+				}
 				return Promise.resolve({
 					remove: () => {
 						listeners[key] = (listeners[key] || []).filter((f) => f !== cb);
@@ -117,14 +135,13 @@ export async function installNativeMock(
 				});
 			};
 			const fire = (plugin: string, event: string, payload?: unknown) => {
-				for (const cb of listeners[`${plugin}:${event}`] || []) {
-					try {
-						cb(payload);
-					} catch (e) {
-						// swallow listener errors so one bad handler can't break the test driver
-						console.error('[native-mock] listener error', plugin, event, e);
-					}
+				const key = `${plugin}:${event}`;
+				const cbs = listeners[key] || [];
+				if (cbs.length === 0 && queueable.has(key)) {
+					(pending[key] ||= []).push(payload);
+					return;
 				}
+				for (const cb of cbs) deliver(plugin, event, cb, payload);
 			};
 
 			// ---- test driver hooks --------------------------------------------

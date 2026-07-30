@@ -29,7 +29,9 @@ test.describe('verified publisher settings', () => {
 		await asUser({ account: { account_type: 'ORGANIZER' } });
 		await gotoTab(page, gotoHydrated, '/tabs/settings/verified-publisher');
 
-		await expect(page.getByText('Verified Publisher').first()).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page.getByText('Verified Publisher').filter({ visible: true }).first()
+		).toBeVisible({ timeout: 15_000 });
 		await expect(page.locator('ion-back-button')).toHaveAttribute('default-href', '/tabs/settings');
 	});
 

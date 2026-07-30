@@ -99,7 +99,12 @@ test.describe('Challenge a friend - two-user journey', () => {
 		await gotoHydrated(`/tabs/quests/${questId}`);
 		const banner = page.locator('#quest-challenge-banner');
 		await expect(banner).toBeVisible({ timeout: 12_000 });
-		await expect(page.getByText(/challenged you to this quest/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/challenged you to this quest/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		const acceptBtn = page.getByRole('button', { name: /accept/i }).first();
 		await expect(acceptBtn).toBeVisible();
 

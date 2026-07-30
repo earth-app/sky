@@ -156,7 +156,9 @@ test.describe('Quest lifecycle journey', () => {
 		await scanAndSubmitBarcode(page);
 
 		// the reassuring, progress-preserving 5xx copy shows in-modal...
-		await expect(page.getByText(FIVE_XX_COPY).first()).toBeVisible({ timeout: 12_000 });
+		await expect(page.getByText(FIVE_XX_COPY).filter({ visible: true }).first()).toBeVisible({
+			timeout: 12_000
+		});
 		// ...the celebration did NOT fire...
 		await expect(sparkleCanvas(page)).toHaveCount(0);
 		// ...the step did NOT advance (a validated submit auto-closes the modal)...

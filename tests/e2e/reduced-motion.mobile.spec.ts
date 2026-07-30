@@ -107,7 +107,12 @@ test.describe('Reduced motion (mobile)', () => {
 		assertNothingRunsForever('discover (/tabs/discover)', await census(page, 'discover'));
 
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
-		await expect(page.getByText(/daily explorer/i).first()).toBeVisible({ timeout: 15000 });
+		await expect(
+			page
+				.getByText(/daily explorer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15000 });
 		assertNothingRunsForever('quests (/tabs/quests)', await census(page, 'quests'));
 	});
 

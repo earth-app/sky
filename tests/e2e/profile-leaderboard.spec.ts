@@ -39,8 +39,13 @@ test.describe('Profile leaderboard', () => {
 			timeout: 12_000
 		});
 		// each row fans out to a seeded user card; assert on visible seeded usernames
-		await expect(page.getByText(/@author/i).first()).toBeVisible({ timeout: 15_000 });
-		await expect(page.getByText(/@host/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/@author/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByText(/@host/i).filter({ visible: true }).first()).toBeVisible();
 	});
 
 	test('article (journey) leaderboard renders streak rows', async ({
@@ -65,7 +70,12 @@ test.describe('Profile leaderboard', () => {
 		await expect(page.getByRole('heading', { name: /articles leaderboard/i })).toBeVisible({
 			timeout: 12_000
 		});
-		await expect(page.getByText(/@author/i).first()).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page
+				.getByText(/@author/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
 	});
 
 	test('invalid metric falls back to the loading state', async ({ page, gotoHydrated, asUser }) => {

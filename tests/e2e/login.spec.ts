@@ -27,7 +27,12 @@ test.describe('Login page (anonymous)', () => {
 
 	test('exposes a forgot-password affordance', async ({ page, gotoHydrated }) => {
 		await gotoHydrated('/login');
-		await expect(page.getByText(/forgot your password/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/forgot your password/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 	});
 
 	test('surfaces an OAuth provider error from the query param', async ({ page, gotoHydrated }) => {

@@ -351,7 +351,12 @@ test.describe('Layout quality at phone width (mobile)', () => {
 		await asUser({ username: 'layoutquests' });
 
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
-		await expect(page.getByText(/daily explorer/i).first()).toBeVisible({ timeout: 15000 });
+		await expect(
+			page
+				.getByText(/daily explorer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15000 });
 
 		await auditSurface(page, 'quests list (/tabs/quests)');
 	});
@@ -371,7 +376,12 @@ test.describe('Layout quality at phone width (mobile)', () => {
 		const user = await asUser({ username: 'layoutprofile' });
 
 		await gotoTab(page, gotoHydrated, `/tabs/profile/${user.id}`);
-		await expect(page.getByText(new RegExp(user.username as string, 'i')).first()).toBeVisible({
+		await expect(
+			page
+				.getByText(new RegExp(user.username as string, 'i'))
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({
 			timeout: 15000
 		});
 
@@ -393,7 +403,12 @@ test.describe('Layout quality at phone width (mobile)', () => {
 		await asUser({ username: 'layoutdownloads' });
 
 		await gotoTab(page, gotoHydrated, '/tabs/downloads');
-		await expect(page.getByText(/downloads/i).first()).toBeVisible({ timeout: 15000 });
+		await expect(
+			page
+				.getByText(/downloads/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15000 });
 
 		await auditSurface(page, 'downloads (/tabs/downloads)');
 	});

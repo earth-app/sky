@@ -11,7 +11,7 @@ test.describe('Event detail + RSVP', () => {
 
 		await expect(page.locator('#event-profile-card')).toBeVisible({ timeout: 12_000 });
 		await expect(page.locator('#event-host-card')).toBeVisible();
-		await expect(page.getByText('Event 1').first()).toBeVisible();
+		await expect(page.getByText('Event 1').filter({ visible: true }).first()).toBeVisible();
 	});
 
 	test('signs up and flips the CTA to Leave Event', async ({
@@ -118,8 +118,18 @@ test.describe('Event detail + RSVP', () => {
 		const drawer = page.locator('ion-modal:visible').first();
 		await expect(drawer).toBeVisible({ timeout: 8000 });
 		// the attendees mock returns seeded users; the host is always included
-		await expect(drawer.getByText(/event attendees/i).first()).toBeVisible();
-		await expect(drawer.getByText(/@host|@testuser|@author/i).first()).toBeVisible({
+		await expect(
+			drawer
+				.getByText(/event attendees/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
+		await expect(
+			drawer
+				.getByText(/@host|@testuser|@author/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({
 			timeout: 8000
 		});
 	});

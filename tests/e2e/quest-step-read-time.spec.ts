@@ -35,7 +35,11 @@ test.describe('Quest step: article_read_time (progress)', () => {
 		await gotoQuestStep(page, gotoHydrated, questId, 0);
 
 		await expect(stepModal(page).getByText(/keep reading/i)).toBeVisible({ timeout: 12_000 });
-		await expect(stepModal(page).getByText(/read/i).first()).toBeVisible();
-		await expect(stepModal(page).getByText(/goal/i).first()).toBeVisible();
+		await expect(
+			stepModal(page).getByText(/read/i).filter({ visible: true }).first()
+		).toBeVisible();
+		await expect(
+			stepModal(page).getByText(/goal/i).filter({ visible: true }).first()
+		).toBeVisible();
 	});
 });

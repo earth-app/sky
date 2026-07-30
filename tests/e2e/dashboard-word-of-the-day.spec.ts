@@ -33,8 +33,18 @@ test.describe('Dashboard Word of the Day', () => {
 		// a modal opens hosting the interactive widget, pinned to the tapped word
 		const modal = page.locator('ion-modal:visible').first();
 		await expect(modal).toBeVisible({ timeout: 8000 });
-		await expect(modal.getByText(/word of the day/i).first()).toBeVisible();
-		await expect(modal.getByText(/petrichor/i).first()).toBeVisible();
+		await expect(
+			modal
+				.getByText(/word of the day/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
+		await expect(
+			modal
+				.getByText(/petrichor/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 	});
 
 	test('the Word of the Day button opens the widget modal in pool mode', async ({

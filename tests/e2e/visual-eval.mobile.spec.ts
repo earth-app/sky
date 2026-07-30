@@ -53,7 +53,12 @@ const SCREENS: Screen[] = [
 		name: 'quests',
 		path: '/tabs/quests',
 		ready: async (page) => {
-			await expect(page.getByText(/daily explorer/i).first()).toBeVisible({ timeout: 15000 });
+			await expect(
+				page
+					.getByText(/daily explorer/i)
+					.filter({ visible: true })
+					.first()
+			).toBeVisible({ timeout: 15000 });
 		}
 	},
 	{

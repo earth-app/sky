@@ -34,7 +34,12 @@ test.describe('Settings sub-pages (logged in, empty state)', () => {
 		]);
 
 		await gotoTab(page, gotoHydrated, '/tabs/settings/api-keys');
-		await expect(page.getByText(/API Keys/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/API Keys/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		await expect(page.getByText(/No API Keys Yet/i)).toBeVisible({ timeout: 10_000 });
 	});
 
@@ -53,14 +58,24 @@ test.describe('Settings sub-pages (logged in, empty state)', () => {
 		});
 
 		await gotoTab(page, gotoHydrated, '/tabs/settings/blocked-users');
-		await expect(page.getByText(/Blocked Users/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/Blocked Users/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		await expect(page.getByText(/No blocked users/i)).toBeVisible({ timeout: 10_000 });
 	});
 
 	test('My Words page renders its title and empty state', async ({ page, gotoHydrated }) => {
 		// saved words are device-local (useSavedWords); starts empty, no override needed
 		await gotoTab(page, gotoHydrated, '/tabs/settings/words');
-		await expect(page.getByText(/My Words/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/My Words/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		await expect(page.getByText(/No saved words yet/i)).toBeVisible({ timeout: 10_000 });
 	});
 
@@ -87,7 +102,12 @@ test.describe('Settings sub-pages (logged in, empty state)', () => {
 		});
 
 		await gotoTab(page, gotoHydrated, '/tabs/settings/moderation');
-		await expect(page.getByText(/Moderation Status/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/Moderation Status/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		await expect(page.getByText(/All clear/i)).toBeVisible({ timeout: 10_000 });
 	});
 });

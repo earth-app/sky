@@ -125,7 +125,9 @@ test.describe('Quest submission flow: failure edge cases', () => {
 		await scanAndSubmitBarcode(page);
 
 		// the descriptive, reassuring 5xx copy is shown in-modal
-		await expect(page.getByText(FIVE_XX_COPY).first()).toBeVisible({ timeout: 12_000 });
+		await expect(page.getByText(FIVE_XX_COPY).filter({ visible: true }).first()).toBeVisible({
+			timeout: 12_000
+		});
 		// the celebration/confetti did NOT fire
 		await expect(sparkleCanvas(page)).toHaveCount(0);
 		// the step did NOT advance: the modal is still open (a validated submit auto-closes it)
@@ -156,7 +158,9 @@ test.describe('Quest submission flow: failure edge cases', () => {
 		await scanAndSubmitBarcode(page);
 
 		// the server's short reason is surfaced verbatim...
-		await expect(page.getByText(reason).first()).toBeVisible({ timeout: 12_000 });
+		await expect(page.getByText(reason).filter({ visible: true }).first()).toBeVisible({
+			timeout: 12_000
+		});
 		// ...never a raw "[400] /api/..." string
 		await expect(page.getByText(/^\[400\]/)).toHaveCount(0);
 		await expect(page.getByText(/\/api\/user\/updateQuest/)).toHaveCount(0);

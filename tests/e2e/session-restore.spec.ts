@@ -321,7 +321,9 @@ test.describe('Returning-user session restore (native ios)', () => {
 		expect(after.hasToken).toBe(true);
 		// the offline banner proves offlineMode was active at boot, so isOfflineModePreferred() took
 		// the cached-user path (skipping online validation) - the shell is genuinely offline
-		await expect(page.getByText("You're offline").first()).toBeVisible({ timeout: 12_000 });
+		await expect(page.getByText("You're offline").filter({ visible: true }).first()).toBeVisible({
+			timeout: 12_000
+		});
 	});
 
 	test('a 401 on a mutation after restore surfaces a formatted re-auth toast, never a raw [401]', async ({
@@ -349,7 +351,12 @@ test.describe('Returning-user session restore (native ios)', () => {
 
 		// cold relaunch straight into a prompt detail; the restored session must be usable
 		await gotoHydrated('/tabs/prompts/pmt-1');
-		await expect(page.getByText(/sample prompt 1\?/i).first()).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page
+				.getByText(/sample prompt 1\?/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
 
 		// the response POST is rejected as an expired session mid-flight; the mock returns a human
 		// message which the shared request layer passes through as res.message

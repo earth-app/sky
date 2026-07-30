@@ -180,7 +180,12 @@ test.describe('Session expiry + mid-session 401 handling (native ios)', () => {
 		await asUser();
 
 		await gotoHydrated('/tabs/prompts/pmt-1');
-		await expect(page.getByText(/sample prompt 1\?/i).first()).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page
+				.getByText(/sample prompt 1\?/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
 
 		// the response POST is rejected as an expired session; the mock returns a human message,
 		// which is what the shared request layer passes through as `res.message`
@@ -232,7 +237,12 @@ test.describe('Session expiry + mid-session 401 handling (native ios)', () => {
 		});
 
 		await gotoHydrated('/tabs/profile/editor');
-		await expect(page.getByText(/Edit Profile/i).first()).toBeVisible({ timeout: 15_000 });
+		await expect(
+			page
+				.getByText(/Edit Profile/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
 
 		// still on the editor, no crash, and nothing leaked a raw transport code into a toast
 		await expect(page).toHaveURL(/\/tabs\/profile\/editor/);

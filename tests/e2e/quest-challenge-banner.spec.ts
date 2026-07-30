@@ -35,7 +35,12 @@ test.describe('Quest challenge banner', () => {
 		await gotoHydrated('/tabs/quests/q-1');
 
 		await expect(page.locator('#quest-challenge-banner')).toBeVisible({ timeout: 12_000 });
-		await expect(page.getByText(/challenged you to this quest/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/challenged you to this quest/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 		await expect(page.getByRole('button', { name: /accept/i }).first()).toBeVisible();
 	});
 });

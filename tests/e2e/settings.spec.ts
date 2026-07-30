@@ -57,6 +57,11 @@ test.describe('Settings page (logged in)', () => {
 		await expect(apiKeysBtn).toBeVisible({ timeout: 12_000 });
 		await apiKeysBtn.click();
 		await page.waitForURL(/\/tabs\/settings\/api-keys/, { timeout: 8000 });
-		await expect(page.getByText(/API Keys/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/API Keys/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 	});
 });

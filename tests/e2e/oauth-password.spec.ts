@@ -94,7 +94,12 @@ function pwModal(page: Page) {
 }
 
 async function openChangePasswordModal(page: Page): Promise<void> {
-	await expect(page.getByText(/Edit Profile/i).first()).toBeVisible({ timeout: 15_000 });
+	await expect(
+		page
+			.getByText(/Edit Profile/i)
+			.filter({ visible: true })
+			.first()
+	).toBeVisible({ timeout: 15_000 });
 	await page.locator('#password-change ion-button').first().click();
 	await expect(
 		page.locator('input[placeholder="New Password"]:not(.cloned-input)').first()
@@ -273,7 +278,12 @@ test.describe('OAuth login -> change password -> re-login journey (native ios)',
 		await expectNativeToast(page, /old password incorrect/i);
 		await expectNoRawApiToast(page);
 		// the inline error echoes the reason and the modal stays open so the user can retry
-		await expect(page.getByText(/old password incorrect/i).first()).toBeVisible({ timeout: 8_000 });
+		await expect(
+			page
+				.getByText(/old password incorrect/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 8_000 });
 		await expect(
 			page.locator('input[placeholder="New Password"]:not(.cloned-input)').first()
 		).toBeVisible();
@@ -303,7 +313,12 @@ test.describe('OAuth login -> change password -> re-login journey (native ios)',
 			.getByRole('button', { name: /Change Password/i })
 			.click();
 
-		await expect(page.getByText(/do not match/i).first()).toBeVisible({ timeout: 8_000 });
+		await expect(
+			page
+				.getByText(/do not match/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 8_000 });
 		// the guard is purely client-side: nothing hit the network and the modal stayed open
 		await page.waitForTimeout(800);
 		expect(changeRequests, 'a validation failure must not POST to change_password').toBe(0);

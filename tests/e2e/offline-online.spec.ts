@@ -111,7 +111,9 @@ test.describe('Detail pages fall back to the unavailable-offline branch', () => 
 		// non-downloaded id: the event page reads isOffline in onMounted and short-circuits
 		await pushRoute(page, '/tabs/events/evt-never-downloaded');
 
-		await expect(page.getByText('Event unavailable offline').first()).toBeVisible({
+		await expect(
+			page.getByText('Event unavailable offline').filter({ visible: true }).first()
+		).toBeVisible({
 			timeout: 12_000
 		});
 		// no VISIBLE crescent spinner (hidden dashboard page stays mounted in the outlet,
@@ -137,7 +139,9 @@ test.describe('Detail pages fall back to the unavailable-offline branch', () => 
 		// downloaded -> unavailableOffline, no network fetch
 		await pushRoute(page, '/tabs/activities/act-never-downloaded');
 
-		await expect(page.getByText('Activity unavailable offline').first()).toBeVisible({
+		await expect(
+			page.getByText('Activity unavailable offline').filter({ visible: true }).first()
+		).toBeVisible({
 			timeout: 12_000
 		});
 		await expect

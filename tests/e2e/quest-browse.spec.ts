@@ -9,15 +9,30 @@ test.describe('Quest browse', () => {
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
 
 		// the default catalog seeds Daily Explorer + Trail Blazer (+ Every Step Type)
-		await expect(page.getByText(/daily explorer/i).first()).toBeVisible({ timeout: 12_000 });
-		await expect(page.getByText(/trail blazer/i).first()).toBeVisible();
+		await expect(
+			page
+				.getByText(/daily explorer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/trail blazer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
 	});
 
 	test('search filters the catalog client-side', async ({ page, gotoHydrated, asUser }) => {
 		skipIfIntegration('depends on seeded quest data + mock backend');
 		await asUser();
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
-		await expect(page.getByText(/daily explorer/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/daily explorer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 
 		await searchIn(page, 'quest-search', 'Trail');
 
@@ -53,7 +68,12 @@ test.describe('Quest browse', () => {
 		});
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
 
-		await expect(page.getByText(/no quests yet/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/no quests yet/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 	});
 
 	// regression: a malformed catalog entry with no `id` made the search filter throw on
@@ -96,7 +116,12 @@ test.describe('Quest browse', () => {
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
 
 		// the valid quest still renders (the malformed one is dropped, not fatal)
-		await expect(page.getByText(/solid quest/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/solid quest/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 		// exercise the search filter that used to throw
 		await searchIn(page, 'quest-search', 'Solid');
 		await expect(page.getByRole('heading', { name: /solid quest/i }).first()).toBeVisible({
@@ -109,7 +134,12 @@ test.describe('Quest browse', () => {
 		skipIfIntegration('depends on seeded quest data + mock backend');
 		await asUser();
 		await gotoTab(page, gotoHydrated, '/tabs/quests');
-		await expect(page.getByText(/daily explorer/i).first()).toBeVisible({ timeout: 12_000 });
+		await expect(
+			page
+				.getByText(/daily explorer/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 12_000 });
 
 		let historyFetches = 0;
 		page.on('request', (r) => {

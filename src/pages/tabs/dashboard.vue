@@ -700,6 +700,11 @@ async function dismissResumeTour() {
 	await Preferences.remove({ key: WELCOME_TOUR_RESUME_KEY }).catch(() => {});
 }
 
+// 8s of budget, matching the prompt's own user wait; the old 2s silently skipped the step on a
+// starved runner
+const PROMPT_REF_POLL_TRIES = 80;
+const PROMPT_REF_POLL_MS = 100;
+
 let onboardingChainStarted = false;
 async function startOnboardingChain() {
 	if (onboardingChainStarted || !user.value) return;
@@ -708,11 +713,18 @@ async function startOnboardingChain() {
 	// the prompt lives in a <ClientOnly> that can mount late on native/webkit, so poll
 	// for the ref instead of a fixed delay; a null ref at a fixed timeout silently skips it
 	await nextTick();
-	for (let i = 0; i < 20 && !usernamePromptRef.value; i++) {
-		await new Promise((resolve) => setTimeout(resolve, 100));
+	for (let i = 0; i < PROMPT_REF_POLL_TRIES && !usernamePromptRef.value; i++) {
+		await new Promise((resolve) => setTimeout(resolve, PROMPT_REF_POLL_MS));
 	}
-	if (!user.value) return;
-	usernamePromptRef.value?.maybeOpen();
+	if (!usernamePromptRef.value) {
+		// release the latch: bailing while holding it dropped the whole chain permanently, and a
+		// starved runner really does take longer than the old 2s budget to mount the prompt
+		onboardingChainStarted = false;
+		return;
+	}
+	// no user check here on purpose; maybeOpen waits out the transient null currentUser that
+	// follows an oauth hydrate, and re-checking it here is what dropped the step
+	usernamePromptRef.value.maybeOpen();
 }
 
 watch(
