@@ -104,6 +104,22 @@
 			</span>
 		</div>
 
+		<div
+			v-if="motionBlocked"
+			role="alert"
+			class="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs! leading-relaxed"
+		>
+			<UIcon
+				name="mdi:run-fast"
+				class="size-5 shrink-0 text-warning"
+			/>
+			<span>
+				Motion access is turned off, so this step can't measure your distance or be completed. Turn
+				on Motion &amp; Fitness for The Earth App in your device Settings, then tap Start Tracking
+				again.
+			</span>
+		</div>
+
 		<div class="flex flex-col gap-2">
 			<IonButton
 				v-if="!completed && !goalReached"
@@ -204,7 +220,7 @@ const emit = defineEmits<{
 
 const EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
 
-const { prime: primePermission } = useQuestPermissions();
+const { prime: primePermission, isMotionBlocked } = useQuestPermissions();
 const { impactLight, impactMedium } = useAppHaptics();
 const { formatDistance } = useUnits();
 const { healthKitGranted } = useHealthKit();
@@ -289,6 +305,16 @@ const expiryWarning = computed(() => {
 	return '';
 });
 
+// a refused motion permission only raised a one-shot native alert, then the ui dropped back to
+// "Ready to Move" as if nothing had happened - so the step looked available while being impossible
+// to complete. this keeps the refusal on screen with the way out of it
+const motionBlocked = ref(false);
+
+async function syncMotionBlocked() {
+	if (!Capacitor.isNativePlatform()) return;
+	motionBlocked.value = await isMotionBlocked();
+}
+
 async function toggleTracking() {
 	if (busy.value) return;
 	void impactMedium();
@@ -299,6 +325,9 @@ async function toggleTracking() {
 		else if (!props.disabled) await tracker.start();
 	} finally {
 		busy.value = false;
+		// tracking never started means the permission is the likeliest reason; re-read it rather
+		// than inferring, so a grant made in Settings clears the banner on the next tap
+		await syncMotionBlocked();
 	}
 }
 
@@ -401,6 +430,10 @@ onMounted(async () => {
 	nowTimer = setInterval(() => {
 		now.value = Date.now();
 	}, 30_000);
+
+	// checkPermissions never prompts, so reading it here costs nothing and lets a step that
+	// cannot be completed say so on open rather than after a tap that appears to do nothing
+	void syncMotionBlocked();
 
 	if (Capacitor.isNativePlatform() && !completed.value) {
 		// prime the OS permission prompts on step open so they appear up front

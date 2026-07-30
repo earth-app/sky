@@ -63,7 +63,7 @@
 			variant="subtle"
 			icon="mdi:map-marker-alert-outline"
 			title="Location Needed"
-			:description="error"
+			:description="locationHelp"
 			:actions="[
 				{
 					label: 'Re-check Location',
@@ -121,7 +121,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 import type { Trailmark } from 'types/trailmarks';
 
 const { nearby, loading, fetchNearby } = useTrailmarks();
-const { lat, lng, error, ready, fetchLocation } = useMGeolocation();
+const { lat, lng, error, ready, fetchLocation, isLocationBlocked } = useMGeolocation();
 const { impactLight } = useAppHaptics();
 const { startTourIfNew } = useSiteTour();
 
@@ -174,17 +174,33 @@ async function load(force = false) {
 	await fetchNearby({ lat: lat.value, lng: lng.value, radius: radius.value }, force);
 }
 
+// once refused, nothing in-app can re-prompt, so say where to change it rather than leaving a
+// retry button that silently does nothing
+const locationBlocked = ref(false);
+
+const locationHelp = computed(() =>
+	locationBlocked.value
+		? 'Location is turned off for The Earth App. Turn it on in your device Settings, then tap Re-check Location.'
+		: error.value
+);
+
 // re-attempt a fix; ensureLocationGranted (inside fetchLocation) re-reads the native
 // permission, so a grant made in Settings recovers here without an app restart
+async function refreshLocation() {
+	await fetchLocation();
+	locationBlocked.value = await isLocationBlocked();
+}
+
+// the tap-driven variant; the silent resume path uses refreshLocation so it does not buzz
 async function recheckLocation() {
 	void impactLight();
-	await fetchLocation();
+	await refreshLocation();
 }
 
 // back from Settings (app resume) or tab re-shown: if we still have no fix, re-check so
 // a just-granted permission takes effect (native has no live Permissions-API signal)
 function onResume() {
-	if (!ready.value) void fetchLocation();
+	if (!ready.value) void refreshLocation();
 }
 
 function onVisibility() {
@@ -201,7 +217,7 @@ watch(radius, () => void load(true));
 let appStateListener: PluginListenerHandle | null = null;
 
 onMounted(async () => {
-	await fetchLocation();
+	await refreshLocation();
 	appStateListener = await App.addListener('appStateChange', (state: AppState) => {
 		if (state.isActive) onResume();
 	});
