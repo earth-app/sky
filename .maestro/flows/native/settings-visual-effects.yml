@@ -84,8 +84,9 @@ tags:
     text: Automatic \(.*\)
 - waitForAnimationToEnd:
     timeout: 5000
+# closed again, so the name is "<label>, <value>" rather than the bare option text above
 - assertVisible:
-    text: Automatic \(.*\)
+    text: .*Automatic \(.*\).*
     label: Back on the measured default
 
 # a destructive settings action confirms through a native @capacitor/dialog alert; cancelling

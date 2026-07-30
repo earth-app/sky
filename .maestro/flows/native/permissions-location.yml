@@ -21,16 +21,15 @@ tags:
     when:
       platform: Android
     commands:
-      - setPermissions:
-          appId: com.earthapp.sky
-          permissions:
-            location: deny
-      # android force-stops a process whose runtime permissions change, so without this the
-      # flow carries on against the launcher. clearState stays off to keep the session
+      # android force-stops a process whose runtime permissions change, and launchApp grants
+      # everything unless this map says otherwise, so the state and the relaunch are one step.
+      # clearState stays off to keep the session
       - launchApp:
           appId: com.earthapp.sky
           clearState: false
-          label: Relaunch after the permission change killed the app
+          permissions:
+            location: deny
+          label: Relaunch with location denied
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000
@@ -84,14 +83,12 @@ tags:
     when:
       platform: Android
     commands:
-      - setPermissions:
-          appId: com.earthapp.sky
-          permissions:
-            location: allow
       - launchApp:
           appId: com.earthapp.sky
           clearState: false
-          label: Relaunch after the permission change killed the app
+          permissions:
+            location: allow
+          label: Relaunch with location granted
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000

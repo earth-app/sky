@@ -17,13 +17,17 @@ tags:
 - runFlow:
     file: ../_shared/sign-in.yml
 
-- setPermissions:
-    appId: com.earthapp.sky
-    permissions:
-      photos: allow
-      medialibrary: allow
-# android force-stops a process whose runtime permissions change, so relaunch before touching
-# the app again. clearState stays off to keep the session
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setPermissions:
+          appId: com.earthapp.sky
+          permissions:
+            photos: allow
+            medialibrary: allow
+# android force-stops a process whose runtime permissions change, and launchApp grants everything
+# unless this map says otherwise, so the state and the relaunch are one step
 - runFlow:
     when:
       platform: Android
@@ -31,7 +35,10 @@ tags:
       - launchApp:
           appId: com.earthapp.sky
           clearState: false
-          label: Relaunch after the permission change killed the app
+          permissions:
+            photos: allow
+            medialibrary: allow
+          label: Relaunch with media access granted
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000

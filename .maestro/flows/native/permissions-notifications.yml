@@ -16,9 +16,13 @@ tags:
 
 - stopApp:
     appId: com.earthapp.sky
+# the map is required, not decorative: launchApp grants everything unless told otherwise, so
+# without it the revoke above is undone and this "denied" launch runs fully granted
 - launchApp:
     appId: com.earthapp.sky
     clearState: false
+    permissions:
+      notifications: deny
     label: Cold launch with push registration guaranteed to fail
 
 - extendedWaitUntil:
@@ -56,6 +60,8 @@ tags:
 - launchApp:
     appId: com.earthapp.sky
     clearState: false
+    permissions:
+      notifications: allow
     label: Cold launch with push granted
 - extendedWaitUntil:
     visible: Open Your Profile

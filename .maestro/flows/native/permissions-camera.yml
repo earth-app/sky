@@ -7,15 +7,19 @@ tags:
     file: ../_shared/sign-in.yml
 
 # camera plus both photo-library service names; each platform ignores the keys it does not own
-- setPermissions:
-    appId: com.earthapp.sky
-    permissions:
-      camera: deny
-      photos: deny
-      medialibrary: deny
-    label: Revoke every @capacitor/camera-backed permission
-# android force-stops a process whose runtime permissions change, so relaunch before touching
-# the app again. clearState stays off to keep the session
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - setPermissions:
+          appId: com.earthapp.sky
+          permissions:
+            camera: deny
+            photos: deny
+            medialibrary: deny
+          label: Revoke every @capacitor/camera-backed permission
+# android force-stops a process whose runtime permissions change, and launchApp grants everything
+# unless this map says otherwise, so the state and the relaunch are one step
 - runFlow:
     when:
       platform: Android
@@ -23,7 +27,11 @@ tags:
       - launchApp:
           appId: com.earthapp.sky
           clearState: false
-          label: Relaunch after the permission change killed the app
+          permissions:
+            camera: deny
+            photos: deny
+            medialibrary: deny
+          label: Relaunch with every camera-backed permission revoked
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000
@@ -74,23 +82,33 @@ tags:
 - assertVisible:
     text: Create Event
 
-- setPermissions:
-    appId: com.earthapp.sky
-    permissions:
-      camera: allow
-      photos: allow
-      medialibrary: allow
 # ios re-grants in place, so the open form is still there. android force-stops the process on a
 # permission change and takes the modal with it, so walk back to the same control rather than
 # dropping the assertion; both platforms end on the identical check below
 - runFlow:
     when:
+      platform: iOS
+    commands:
+      - setPermissions:
+          appId: com.earthapp.sky
+          permissions:
+            camera: allow
+            photos: allow
+            medialibrary: allow
+- runFlow:
+    when:
       platform: Android
     commands:
+      # stated explicitly rather than leaning on launchApp's grant-everything default, so the
+      # intent survives a maestro change and reads the same as the revoke above
       - launchApp:
           appId: com.earthapp.sky
           clearState: false
-          label: Relaunch after the permission change killed the app
+          permissions:
+            camera: allow
+            photos: allow
+            medialibrary: allow
+          label: Relaunch with camera-backed permissions re-granted
       - extendedWaitUntil:
           visible: Open Your Profile
           timeout: 40000
