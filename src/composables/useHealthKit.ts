@@ -697,7 +697,18 @@ async function syncFromBackground(opts: { manual?: boolean } = {}): Promise<numb
 
 		const healthkit = await readHealthKitDistance();
 		const pedHistory = await readPedometerHistory();
-		const candidate = Math.max(healthkit ?? 0, pedHistory ?? 0);
+		// max, never a sum: healthkit and the pedometer measure the SAME movement, so adding them
+		// would double-count a walk that both sources saw
+		const merged = Math.max(healthkit ?? 0, pedHistory ?? 0);
+		// ...and then bound it. the live path clamps every delta to 20mph but this one used to
+		// trust the sensors outright, so a single absurd reading could jump straight to the goal
+		// and complete the step. scoped to the session so a real watch workout still lands whole
+		const candidate = acceptSyncedDistance({
+			candidateMeters: merged,
+			currentMeters: progress.value,
+			baseMeters: windowBaseM,
+			elapsedMs: Date.now() - (startedAt.value ?? Date.now())
+		});
 		const healthkitDrove = (healthkit ?? 0) >= (pedHistory ?? 0) && (healthkit ?? 0) > before;
 		if (candidate > progress.value) {
 			progress.value = Math.min(activeTarget.value, candidate);
