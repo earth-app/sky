@@ -92,6 +92,7 @@ test.describe('Discover tab', () => {
 		gotoHydrated,
 		asUser
 	}) => {
+		skipIfIntegration('paging needs a seeded catalog; a fresh mantle2 renders zero activity cards');
 		await asUser();
 		await gotoTab(page, gotoHydrated, '/tabs/discover?tab=activity');
 		await expect(page.locator('#discover-segments')).toBeVisible({ timeout: 12_000 });
