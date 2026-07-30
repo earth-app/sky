@@ -11,13 +11,14 @@ Sky is the mobile shell for The Earth App. It extends the shared frontend packag
 - **Framework**: Nuxt 4 with Vue 3
 - **Mobile Shell**: Ionic Vue + Capacitor
 - **State Management**: Pinia via `@pinia/nuxt`
-- **Styling**: Tailwind CSS, `@nuxt/ui`, and Ionic CSS variables
+- **Styling**: Tailwind CSS v4, `@nuxt/ui`, and unlayered Ionic CSS variables
 - **Icons**: `@nuxt/icon` with Iconify sets
 - **Internationalization**: `@nuxtjs/i18n`
 - **Responsive Behavior**: `nuxt-viewport`
 - **Shared Frontend Base**: `@earth-app/crust`
 - **Shared Protocol/Types**: `@earth-app/ocean`
-- **Native APIs**: Capacitor App, Browser, Camera, Filesystem, Geolocation, Haptics, Network, Preferences, Push Notifications, Share, Splash Screen, Toast, and related plugins
+- **Testing**: Vitest (unit), Playwright (e2e, chromium + mobile-chromium + webkit), Maestro (native device flows)
+- **Native APIs**: Capacitor App, Barcode Scanner, Browser, Camera, Dialog, Filesystem, Geolocation, Haptics, Keyboard, Local Notifications, Motion, Network, Preferences, Push Notifications, Share, Splash Screen, Toast; plus `@capgo` pedometer, audio recorder, watch, and native purchases, and `@capacitor-community/apple-sign-in`
 
 ### Application Structure
 
@@ -124,7 +125,8 @@ The main content areas are:
 - Articles
 - Events
 - Prompts
-- Quests
+- Quests, including timed, quiz, photo, audio, and distance step types
+- Trails, Trailmarks, and Shared Gardens
 - User profiles, badges, journeys, and notifications
 
 Feature folders under [`src/components`](src/components) follow the same split:
@@ -133,9 +135,40 @@ Feature folders under [`src/components`](src/components) follow the same split:
 - `article/`
 - `event/`
 - `prompt/`
+- `trail/`
+- `trailmark/`
 - `user/`
 
-### 8. **Native Build and Deployment Workflow**
+### 8. **Memberships and In-App Purchases**
+
+Paid tiers are sold through the platform stores and entitlement is granted server-side; the client never grants a tier on its own.
+
+- `useIapPurchase()` wraps `@capgo/native-purchases` for StoreKit and Google Play
+- Purchases are verified through `/v2/subscriptions/iap/{apple,google}/verify` before any tier applies
+- Three paid tiers (Pro, Writer, Organizer) with per-platform product IDs
+- [`src/pages/tabs/settings/subscription.vue`](src/pages/tabs/settings/subscription.vue) shows plan, status, renewal, provider, and refund eligibility, and handles cancel plus code redemption
+- Restore Purchases re-verifies a prior transaction
+
+### 9. **Distance, Motion, and Health**
+
+Distance quest steps read real movement rather than trusting a single source.
+
+- Pedometer and accelerometer input via `@capgo/capacitor-pedometer` and `@capacitor/motion`
+- Apple Health and Apple Watch workout distance on iOS, merged with `max()` so the same movement is never counted twice
+- Synced distance is bounded by what the session could physically cover, so an implausible sensor reading cannot complete a step
+- Nature Minutes credit outdoor time toward a weekly goal
+- An iOS Live Activity surfaces quest progress on the Lock Screen
+
+### 10. **Design System**
+
+Sky has a token layer rather than per-component styling. Four knobs move the whole app; see [`CLAUDE.md`](CLAUDE.md) for the full contract.
+
+- `ui.colors` in [`src/app.config.ts`](src/app.config.ts), the `--color-gray-*` aliases, `--ui-radius`, and the default transition tokens
+- **Every `--ion-*` override is unlayered on `:root:root`** because Ionic declares its own unlayered `:root`; a layered override silently loses
+- A 44px minimum tap target (Apple HIG) enforced by an e2e gate
+- Ambient generative scenes and an adaptive translucency tier that measures the device instead of trusting its reported specs
+
+### 11. **Native Build and Deployment Workflow**
 
 Sky ships as both a web app and native Capacitor builds.
 
@@ -144,7 +177,7 @@ Sky ships as both a web app and native Capacitor builds.
 - `build:ios` and `build:android` chain build, sync, and platform-specific native builds
 - Capacitor settings control plugin behavior such as cookies, HTTP, push notifications, and splash screen display
 
-### 9. **Developer Experience**
+### 12. **Developer Experience**
 
 #### Code Quality
 
@@ -155,21 +188,34 @@ Sky ships as both a web app and native Capacitor builds.
 
 #### Scripts
 
-```json
-{
-	"dev": "bunx nuxi dev --dotenv .config/local.env --no-restart --public --port 3001",
-	"dev:remote": "bunx nuxi dev --dotenv .config/production.env --dotenv .env --no-restart --public --port 3001",
-	"generate": "nuxt build",
-	"generate:ios": "nuxt build --dotenv .env.ios",
-	"generate:android": "nuxt build --dotenv .env.android",
-	"build:ios": "bun run generate:ios && bunx cap sync ios && bunx cap build ios",
-	"build:android": "bun run generate:android && bunx cap sync android && bunx cap build android",
-	"sync": "bunx cap sync",
-	"prettier": "bunx prettier --write .",
-	"prettier:check": "bunx prettier --check .",
-	"postinstall": "nuxt prepare"
-}
-```
+Development and native builds:
+
+| script                                  | purpose                                                        |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `dev` / `dev:remote`                    | local dev server; `:remote` points at production-like backends |
+| `dev:ios` / `dev:android`               | dev server with platform-specific env                          |
+| `generate:ios` / `generate:android`     | build the web output for each platform                         |
+| `build:ios` / `build:android`           | generate, `cap sync`, then the native build                    |
+| `sync` / `sync:assets` / `sync:version` | Capacitor sync, icon/splash regeneration, version propagation  |
+| `typecheck`                             | `vue-tsc --noEmit` plus the tests tsconfig                     |
+| `prettier` / `prettier:check`           | format and verify                                              |
+
+Testing:
+
+| script                                                 | purpose                                                         |
+| ------------------------------------------------------ | --------------------------------------------------------------- |
+| `test:unit` / `test:unit:watch` / `test:unit:coverage` | Vitest unit lane                                                |
+| `build:e2e`                                            | build the bundle for the **mocked** e2e lane (ports 8788/9899)  |
+| `build:test`                                           | build the bundle for the **integration** lane (ports 8787/9898) |
+| `test:e2e` / `test:e2e:coverage`                       | Playwright against the mocked backends                          |
+| `test:e2e:webkit`                                      | the same suite on WebKit, the closest engine to iOS             |
+| `test:e2e:integration`                                 | Playwright against a real mantle2 + cloud                       |
+| `test:e2e:report`                                      | open the last Playwright report                                 |
+| `maestro:ios` / `maestro:android`                      | native device flows against mock backends                       |
+| `maestro:eval` / `test:visual-eval`                    | screenshot-producing lanes for visual review                    |
+| `test:mock-server`                                     | run the mock backends standalone                                |
+
+> `ssr: false` bakes the API base URLs into the bundle at **build** time, so the build script must match the run script. Using `build:test` with `test:e2e` (or vice versa) points the app at ports with nothing behind them, and every test in the file fails. Always invoke Playwright through the `test:e2e*` scripts rather than `playwright test` directly, and pass a spec path as an argument.
 
 #### Environment Configuration
 
@@ -233,6 +279,16 @@ NUXT_PUBLIC_MAPS_API_KEY=<public-key>
 - **Share**: Native share sheet integration
 - **Splash Screen**: Launch screen control
 - **Toast**: Native notification surfaces
+- **Dialog**: Native confirm/alert prompts for destructive and permission-blocked actions
+- **Local Notifications**: Goal and quest-step reminders scheduled on device
+- **Motion**: Accelerometer input for the distance tracker
+- **Keyboard**: Native keyboard behavior inside the webview
+- **Barcode Scanner**: QR and code scanning
+- **`@capgo/capacitor-pedometer`**: Step and distance measurement
+- **`@capgo/capacitor-audio-recorder`**: Audio quest steps (m4a/AAC)
+- **`@capgo/capacitor-watch`**: Apple Watch surface
+- **`@capgo/native-purchases`**: StoreKit and Google Play subscriptions
+- **`@capacitor-community/apple-sign-in`**: Sign in with Apple
 
 ### Icon Collections
 
@@ -253,11 +309,13 @@ Sky is configured for a static Nuxt output with a client-side app shell and nati
 
 ### CI Workflow
 
-The repository includes GitHub Actions for build validation, formatting checks, and releases.
+- `build.yml` is the main lane. On push and pull request it runs `build-ios`, `build-android`, `unit`, then `test` (chromium + mobile-chromium, **4 shards**, with coverage) and `webkit` (**4 shards**). Write shard denominators as `--shard=${{ matrix.shard }}/${{ strategy.job-total }}` — a hardcoded number that disagrees with the matrix makes a shard silently never run while the job still passes.
+- `native-ios` and `native-android` live in the same workflow but run **nightly and on manual dispatch only**, not on every commit. GitHub's hosted iOS simulators render in software and time the job out ([actions/runner-images#3239](https://github.com/actions/runner-images/issues/3239)), and Maestro has open iOS driver-hang bugs ([#2628](https://github.com/mobile-dev-inc/maestro/issues/2628), [#2906](https://github.com/mobile-dev-inc/maestro/issues/2906), [#1585](https://github.com/mobile-dev-inc/maestro/issues/1585)), so gating merges on that lane blocks them on upstream defects. The lane is still worth running: it is the only one that can see OS-level behavior, and it caught both an incorrect app name in system permission dialogs and a permission re-prompt loop.
+- `e2e.yml` runs the integration lane against a real mantle2 + cloud.
+- `prettier.yml` checks formatting on push and pull requests.
+- `release.yml` handles manual release publishing and changelog creation.
 
-- `build.yml` runs iOS and Android generation jobs
-- `prettier.yml` checks formatting on push and pull requests
-- `release.yml` handles manual release publishing and changelog creation
+CI runners are 2-core, so Playwright `workers` stays at 2; throughput comes from more shards, never from more workers and never from running fewer tests.
 
 ## 🔐 Security Features
 
@@ -297,6 +355,35 @@ bun run prettier
 bun run prettier:check
 ```
 
+### Testing
+
+Three layers, each with a different budget:
+
+```bash
+# unit - deterministic, fast, runs on every commit
+bun run test:unit
+
+# e2e against mocked backends (build first; the ports are baked in)
+bun run build:e2e && bun run test:e2e
+
+# a single spec
+bun run test:e2e tests/e2e/quest-step-distance.mobile.spec.ts --workers=1 --retries=0
+
+# WebKit, the closest engine to the iOS WKWebView
+bun run build:e2e && bun run test:e2e:webkit
+
+# native device flows (needs a booted simulator/emulator, Java 17+, and Maestro)
+bun run maestro:ios
+bun run maestro:android
+```
+
+Notes that save time:
+
+- Playwright specs use `data-testid`; **Maestro flows must use `aria-label` or visible text**, because `data-testid` is not exposed to the accessibility tree at all. Maestro matches on literal equality **or a full regex, never a substring**, and Android folds adjacent content (a required-field `*`, an icon beside a title) into one text node — so `Create Event` will not match `" Create Event"`.
+- A system dialog or an open `ion-modal` owns the entire Android accessibility tree, so anything behind it reads as "not visible" even when a screenshot clearly shows it.
+- `tests/unit/maestro/*.spec.ts` enforce the flow contract (selector backing, lane tags, shard coverage) in about two seconds, so a broken selector fails there instead of in a 20-minute device lane.
+- Distinguish flaky from broken before reporting either: re-run failures with `--workers=1 --retries=0`. Playwright reporting "N flaky, 0 failed" is a pass.
+
 ### Environment Setup
 
 Local development uses runtime environment files rather than hard-coded values. Keep public OAuth IDs and maps keys in the local environment files referenced by the scripts, and avoid placing secrets in the checked-in source tree.
@@ -317,6 +404,7 @@ Local development uses runtime environment files rather than hard-coded values. 
 - Microsoft
 - GitHub
 - Discord
+- Apple
 - Facebook
 
 These providers are driven by public client IDs in runtime config and used by the mobile OAuth flow.
