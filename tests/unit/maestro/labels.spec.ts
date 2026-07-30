@@ -102,6 +102,15 @@ const DERIVED = new Map<
 			alsoMatches: ['Visual Effects, Reduced']
 		}
 	],
+	[
+		'.*Automatic \\(.*\\).*',
+		{
+			file: 'src/pages/tabs/settings/index.vue',
+			source: 'Automatic (${measuredTierLabel.value})',
+			sample: 'Automatic (Reduced - Light Blur)',
+			alsoMatches: ['Visual Effects, Automatic (Reduced - Light Blur)']
+		}
+	],
 	// a bare `?` makes the preceding character optional and leaves the rendered one unconsumed, so
 	// any literal question mark in a selector has to be escaped
 	[

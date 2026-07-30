@@ -180,6 +180,24 @@ describe('maestro flow files', () => {
 		}
 	});
 
+	it('never lets a launchApp reset a permission the flow just set', () => {
+		for (const flow of flows) {
+			let sawSetPermissions = false;
+			const offenders: string[] = [];
+			for (const { name, payload } of eachCommand(flow.commands)) {
+				if (name === 'setPermissions') sawSetPermissions = true;
+				if (name === 'launchApp') {
+					const hasMap = Boolean((payload as { permissions?: unknown } | null)?.permissions);
+					if (sawSetPermissions && !hasMap) offenders.push(name);
+				}
+			}
+			expect(
+				offenders,
+				`${flow.rel}: a launchApp after a setPermissions needs its own permissions map`
+			).toEqual([]);
+		}
+	});
+
 	it('uses only real maestro commands', () => {
 		for (const { name, flow } of everyCommand) {
 			expect(KNOWN_COMMANDS.has(name), `${flow.rel}: "${name}" is not a maestro command`).toBe(
