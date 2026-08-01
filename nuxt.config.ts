@@ -199,7 +199,7 @@ export default defineNuxtConfig({
 			'@codecov/nuxt-plugin',
 			{
 				enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
-				bundleName: 'sky',
+				bundleName: process.env.NUXT_MODE === 'ios' ? 'sky-ios' : 'sky-android',
 				uploadToken: process.env.CODECOV_TOKEN
 			}
 		]
