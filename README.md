@@ -16,7 +16,6 @@ Sky is the mobile shell for The Earth App. It extends the shared frontend packag
 - **Internationalization**: `@nuxtjs/i18n`
 - **Responsive Behavior**: `nuxt-viewport`
 - **Shared Frontend Base**: `@earth-app/crust`
-- **Shared Protocol/Types**: `@earth-app/ocean`
 - **Testing**: Vitest (unit), Playwright (e2e, chromium + mobile-chromium + webkit), Maestro (native device flows)
 - **Native APIs**: Capacitor App, Barcode Scanner, Browser, Camera, Dialog, Filesystem, Geolocation, Haptics, Keyboard, Local Notifications, Motion, Network, Preferences, Push Notifications, Share, Splash Screen, Toast; plus `@capgo` pedometer, audio recorder, watch, and native purchases, and `@capacitor-community/apple-sign-in`
 
@@ -246,8 +245,7 @@ NUXT_PUBLIC_MAPS_API_KEY=<public-key>
 
 ### Core Dependencies
 
-- **`@earth-app/crust`**: Shared upstream frontend package
-- **`@earth-app/ocean`**: Shared types and contracts
+- **`@earth-app/crust`**: Shared upstream frontend package (types, stores, composables, components)
 - **`nuxt`**: Application framework
 - **`vue`**: UI runtime
 - **`@ionic/vue`** and **`@ionic/vue-router`**: Mobile UI framework and routing

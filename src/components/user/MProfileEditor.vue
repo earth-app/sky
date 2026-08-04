@@ -54,10 +54,10 @@
 					>
 						<IonSelectOption
 							v-for="option in visibilityOptions"
-							:key="option.ordinal"
-							:value="option.name"
+							:key="option"
+							:value="option"
 						>
-							{{ capitalizeFully(option.name) }}
+							{{ capitalizeFully(option) }}
 						</IonSelectOption>
 					</IonSelect>
 				</IonItem>
@@ -141,7 +141,7 @@
 					>
 						<IonSelectOption
 							v-for="country in countries"
-							:key="country.ordinal"
+							:key="country.name"
 							:value="country.code"
 						>
 							{{ country.flagEmoji }} {{ country.countryName }}
@@ -204,10 +204,10 @@
 					>
 						<IonSelectOption
 							v-for="option in privacyOptions"
-							:key="`${item.key}-${option.ordinal}`"
-							:value="option.name"
+							:key="`${item.key}-${option}`"
+							:value="option"
 						>
-							{{ capitalizeFully(option.name) }}
+							{{ capitalizeFully(option) }}
 						</IonSelectOption>
 					</IonSelect>
 				</IonItem>
@@ -687,9 +687,9 @@
 <script setup lang="ts">
 import { Dialog } from '@capacitor/dialog';
 import { Toast } from '@capacitor/toast';
-import { com } from '@earth-app/ocean';
 import type { IonModal } from '@ionic/vue';
 import type { Activity } from 'types/activity';
+import { COUNTRIES, PRIVACY, VISIBILITY } from 'types/enums';
 import { OAUTH_PROVIDERS, type AvatarCosmetic, type OAuthProvider, type User } from 'types/user';
 import { capitalizeFully } from 'utils';
 import { USERNAME_NO_SPACES_MESSAGE, usernameHasWhitespace } from '~/utils/username';
@@ -731,9 +731,9 @@ const avatarOverride = ref<string | null>(null);
 
 const avatar = computed(() => avatarOverride.value || oldAvatar.value || undefined);
 
-const visibilityOptions = com.earthapp.Visibility.values();
-const privacyOptions = com.earthapp.account.Privacy.values();
-const countries = com.earthapp.account.Country.values();
+const visibilityOptions = VISIBILITY;
+const privacyOptions = PRIVACY;
+const countries = COUNTRIES;
 
 type AccountState = Partial<User['account']>;
 type FieldPrivacyKey =

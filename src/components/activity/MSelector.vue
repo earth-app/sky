@@ -93,8 +93,8 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { com } from '@earth-app/ocean';
 import type { Activity } from 'types/activity';
+import { ACTIVITY_TYPE } from 'types/enums';
 import { capitalizeFully } from 'utils';
 import { type ActivitySelectorItem, filterActivityItems } from '~/utils/activitySelector';
 
@@ -143,9 +143,9 @@ onMounted(() => {
 const activityTypes = computed<ActivityItem[]>(() => {
 	if (!props.includeActivityTypes) return [];
 
-	return com.earthapp.activity.ActivityType.values().map((type) => ({
-		label: capitalizeFully(type.name.toString().replace(/_/g, ' ')),
-		value: type.name.toString(),
+	return ACTIVITY_TYPE.map((type) => ({
+		label: capitalizeFully(type.replace(/_/g, ' ')),
+		value: type,
 		icon: 'mdi:tag-outline',
 		isActivityType: true
 	}));

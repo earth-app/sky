@@ -123,7 +123,6 @@ export default defineNuxtConfig({
 				'@capgo/capacitor-pedometer',
 				'@capgo/capacitor-audio-recorder',
 				'@capgo/capacitor-watch',
-				'@earth-app/ocean',
 				'@internationalized/date',
 				'@ionic/pwa-elements/loader',
 				'@ionic/vue',
@@ -152,8 +151,6 @@ export default defineNuxtConfig({
 	},
 	ionic: {
 		css: {
-			// basic is off so main.css can re-import normalize/structure/typography into
-			// @layer ionic; unlayered `h1-h6{font-size}` is what forced ~250 `!` classes
 			basic: false,
 			utilities: true
 		},

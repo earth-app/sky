@@ -34,10 +34,10 @@
 					>
 						<IonSelectOption
 							v-for="option in visibilityOptions"
-							:key="option.ordinal"
-							:value="option.name"
+							:key="option"
+							:value="option"
 						>
-							{{ capitalizeFully(option.name) }}
+							{{ capitalizeFully(option) }}
 						</IonSelectOption>
 					</IonSelect>
 				</IonItem>
@@ -105,7 +105,8 @@
 
 <script setup lang="ts">
 import { Toast } from '@capacitor/toast';
-import { com } from '@earth-app/ocean';
+import { toVisibility, VISIBILITY } from 'types/enums';
+import type { Visibility } from 'types/user';
 import { capitalizeFully } from 'utils';
 
 const emit = defineEmits<{
@@ -147,15 +148,15 @@ onMounted(async () => {
 const loading = ref(false);
 
 // single reactive state so draft autosave snapshots prompt + visibility together
-const state = reactive<{ prompt: string; visibility: string }>({
+const state = reactive<{ prompt: string; visibility: Visibility }>({
 	prompt: '',
-	visibility: com.earthapp.Visibility.PUBLIC.name
+	visibility: 'PUBLIC'
 });
 
 // individual refs preserved for v-model bindings below
 const prompt = toRef(state, 'prompt');
-const visibility = toRef(state, 'visibility') as Ref<typeof com.earthapp.Visibility.prototype.name>;
-const visibilityOptions = com.earthapp.Visibility.values();
+const visibility = toRef(state, 'visibility');
+const visibilityOptions = VISIBILITY;
 
 const error = ref('');
 
@@ -197,10 +198,7 @@ async function newPrompt() {
 		loading.value = true;
 
 		const promptStore = usePromptStore();
-		const res = await promptStore.createPrompt(
-			text,
-			com.earthapp.Visibility.valueOf(visibility.value)
-		);
+		const res = await promptStore.createPrompt(text, toVisibility(visibility.value));
 
 		if (valid(res)) {
 			notifySuccess();
