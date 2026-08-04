@@ -13,6 +13,9 @@ export default defineNuxtConfig({
 				'https://app.earth-app.com',
 			apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'https://api.earth-app.com',
 			crustBaseUrl: process.env.NUXT_PUBLIC_CRUST_BASE_URL || 'https://app.earth-app.com',
+			// only read by the health preflight; feature calls still reach cloud through crust's
+			// nitro routes, so this is a reachability probe and not a new data path
+			cloudBaseUrl: process.env.NUXT_PUBLIC_CLOUD_BASE_URL || 'https://cloud.earth-app.com',
 			// oauth client ids
 			googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || '',
 			microsoftClientId: process.env.NUXT_PUBLIC_MICROSOFT_CLIENT_ID || '',

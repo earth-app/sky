@@ -1,5 +1,23 @@
 <template>
 	<IonApp>
+		<!-- cloud carries optional features only, so this warns without ever blocking -->
+		<div
+			v-if="cloudDegraded && !isOffline"
+			class="fixed top-[calc(var(--m-safe-top)+0.5rem)] left-1/2 -translate-x-1/2 z-(--m-z-banner) pointer-events-none"
+			role="status"
+			aria-live="polite"
+		>
+			<div
+				id="cloud-degraded-banner"
+				class="flex items-center gap-2 px-4 py-2 rounded-full bg-warning-700 text-white shadow-lg"
+			>
+				<UIcon
+					name="mdi:cloud-alert-outline"
+					class="size-5"
+				/>
+				<span class="font-medium text-sm">Some Features are Unavailable</span>
+			</div>
+		</div>
 		<div
 			v-if="isOffline || pendingMutationCount > 0"
 			class="fixed top-[calc(var(--m-safe-top)+0.5rem)] left-1/2 -translate-x-1/2 z-(--m-z-banner) pointer-events-none"
@@ -93,6 +111,7 @@ import { Network, type ConnectionStatus } from '@capacitor/network';
 import { Preferences } from '@capacitor/preferences';
 import { Share } from '@capacitor/share';
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
+import { useBackendStore } from 'stores/backend';
 import slide from './animations/slide';
 import { initQuestCelebrationListener } from './composables/useHaptics';
 import { logWarn } from './composables/useLogger';
@@ -111,6 +130,10 @@ if (import.meta.client) {
 
 const config = useAppConfig();
 const runtimeConfig = useRuntimeConfig();
+
+const backend = useBackendStore();
+// cloud is optional, so this only ever warns; index.vue owns the blocking gate for mantle
+const cloudDegraded = computed(() => backend.isDegraded);
 const { fetchUser, user } = useAuth();
 const authStore = useAuthStore();
 const { resolveDeepLink } = useDeepLinkRouting();

@@ -17,8 +17,9 @@
 					Find your Novelty, Try New Things, Discover the World
 				</h2>
 				<div class="mt-8 px-8 max-w-md">
+					<MBackendGate v-if="backendBlocked" />
 					<div
-						v-if="offlineAuthBlocked"
+						v-else-if="offlineAuthBlocked"
 						class="space-y-3 text-center"
 					>
 						<p class="text-sm text-muted">
@@ -115,6 +116,7 @@
 import { Preferences } from '@capacitor/preferences';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { onIonViewWillEnter } from '@ionic/vue';
+import { useBackendStore } from 'stores/backend';
 import { OAUTH_PROVIDERS } from 'types/user';
 import slide from '~/animations/slide';
 import { theme } from '~/composables/useSettings';
@@ -126,10 +128,16 @@ const { fetchState: fetchOnboardingState } = useOnboarding();
 
 const offlineAuthBlocked = ref(false);
 
+const backend = useBackendStore();
+// only once the check has answered, so a healthy launch never flashes the gate
+const backendBlocked = computed(() => backend.hasChecked && backend.isBlocked);
+
 // hydration latch; keep the loader spinning until we know whether the user is
 // authed or anon. Prevents the login/signup CTA flash before user resolves.
 const bootResolved = ref(false);
-const showAuthCta = computed(() => bootResolved.value && user.value === null);
+const showAuthCta = computed(
+	() => bootResolved.value && user.value === null && !backendBlocked.value
+);
 
 function isOfflineEntryMode() {
 	if (appSettings.value.offlineMode) return true;
@@ -166,6 +174,9 @@ onMounted(async () => {
 		await SplashScreen.hide().catch(() => {});
 		return;
 	}
+
+	// the answer decides whether we may enter the tab shell at all, so it has to land first
+	await backend.preflight();
 
 	// wait at most 5s for hydration before showing UI
 	await waitForUserResolution(5_000);
@@ -223,6 +234,11 @@ const router = useRouter();
 
 let navigatingHome = false;
 async function navigateHome(): Promise<boolean> {
+	/* the tab shell immediately fans out into content fetches, so entering it against a dead or
+	   closed backend gives a wall of empty tabs with no explanation. stay on index, where the gate
+	   says what is actually wrong */
+	if (backend.isBlocked) return false;
+
 	// another attempt owns the latch; report not-landed rather than claiming this call did it
 	if (navigatingHome) return false;
 	navigatingHome = true;
