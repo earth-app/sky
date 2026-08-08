@@ -872,8 +872,8 @@ async function runAction(item: ActionSettingItem) {
 }
 
 async function logout() {
-	const logout = useLogout();
-	logout(Capacitor.getPlatform());
+	const appLogout = useAppLogout();
+	await appLogout(Capacitor.getPlatform());
 	router.navigate('/login', 'root', 'replace');
 }
 

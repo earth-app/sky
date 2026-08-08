@@ -47,6 +47,29 @@ export async function saveCachedUser(user: any) {
 	}
 }
 
+/**
+ * Erase the offline identity cache.
+ *
+ * Must run on logout. `getValidCachedUser()` only gates on a session EXISTING, not on it matching
+ * the cached user, so a stale entry is served to whoever signs in next until their own write
+ * replaces it - i.e. account B briefly sees account A. Both the file and the localStorage fallback
+ * are cleared, because `saveCachedUser` writes to whichever one works.
+ *
+ * @since 0.6.1
+ */
+export async function clearCachedUser(): Promise<void> {
+	try {
+		await Filesystem.deleteFile({ path: AUTH_FILE, directory: Directory.Data });
+	} catch {
+		// no file written on this device, or filesystem unavailable
+	}
+	try {
+		if (typeof localStorage !== 'undefined') localStorage.removeItem('offline_user');
+	} catch {
+		// ignore
+	}
+}
+
 export async function getCachedUser(): Promise<any | null> {
 	try {
 		const file = await Filesystem.readFile({
