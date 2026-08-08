@@ -71,10 +71,10 @@
 		"@capgo/capacitor-watch": "^8.1.2",
 		"@capgo/native-purchases": "^8.6.5",
 		"@codecov/nuxt-plugin": "^2.0.1",
-		"@earth-app/crust": "0.6.1-e7287ff",
+		"@earth-app/crust": "0.6.1",
 		"@ionic/pwa-elements": "^3.4.0",
-		"@ionic/vue": "8.8.13",
-		"@ionic/vue-router": "8.8.13",
+		"@ionic/vue": "8.8.17",
+		"@ionic/vue-router": "8.8.17",
 		"@nuxt/icon": "^2.4.1",
 		"@nuxt/image": "^2.1.0",
 		"@nuxt/ui": "^4.10.0",
@@ -97,9 +97,9 @@
 		"vue": "^3.5.40"
 	},
 	"overrides": {
-		"@ionic/core": "8.8.13",
-		"@ionic/vue": "8.8.13",
-		"@ionic/vue-router": "8.8.13",
+		"@ionic/core": "8.8.17",
+		"@ionic/vue": "8.8.17",
+		"@ionic/vue-router": "8.8.17",
 		"sharp": "^0.35.3"
 	},
 	"patchedDependencies": {
@@ -107,7 +107,7 @@
 		"@capgo/capacitor-pedometer@8.0.32": "patches/@capgo%2Fcapacitor-pedometer@8.0.32.patch"
 	},
 	"devDependencies": {
-		"@capacitor/cli": "8.4.2",
+		"@capacitor/cli": "8.5.0",
 		"@iconify-json/line-md": "^1.2.16",
 		"@iconify-json/logos": "^1.2.12",
 		"@ionic/cli": "^7.2.1",
