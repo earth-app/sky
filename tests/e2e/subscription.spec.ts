@@ -1,5 +1,5 @@
 import type { BrowserContext } from '@playwright/test';
-import { expect, skipIfIntegration, test } from './utils/fixtures';
+import { expect, integrationMode, skipIfIntegration, test } from './utils/fixtures';
 import { expectNativeToast, gotoTab } from './utils/journey-helpers';
 import { installNativeMock } from './utils/native-mock';
 
@@ -74,7 +74,8 @@ test.describe('Subscription pages (logged in, web)', () => {
 				.filter({ visible: true })
 				.first()
 		).toBeVisible();
-		// .first() because the tab outlet keeps a mounted duplicate page in the DOM
+		// .first() because the tab outlet keeps a mounted duplicate page in the DOM.
+		// this is the WEB context (no native mock), where code redemption is allowed
 		await expect(
 			page
 				.getByText(/Redeem a Code/i)
@@ -116,6 +117,78 @@ test.describe('Subscription pages (logged in, web)', () => {
 		).toBeVisible();
 	});
 
+	// guideline 3.1.2(c): the purchase flow itself must state the subscription title, its length,
+	// its price per unit, and carry working links to the Terms of Use (EULA) and the privacy policy.
+	// the 1.0.3 submission was rejected for the missing EULA link, so this is a regression guard
+	test('Memberships page discloses length, price per unit and both legal links', async ({
+		page,
+		gotoHydrated,
+		mockApi
+	}) => {
+		skipIfIntegration('mock plans override');
+		await mockApi.set({
+			method: 'GET',
+			path: '/v2/subscriptions/plans',
+			body: PLANS_BODY,
+			once: false
+		});
+
+		await gotoTab(page, gotoHydrated, '/tabs/upgrade');
+
+		// title + price per unit + explicit length, all in one line per paid plan
+		await expect(
+			page
+				.getByText(/Pro - \$5\.99 per month \(1 month auto-renewing subscription\)/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
+
+		// the free tier is not a subscription and must not be listed as one that renews
+		await expect(page.getByText(/Free - .* auto-renewing/i)).toHaveCount(0);
+
+		await expect(
+			page
+				.getByRole('button', { name: /Terms of Use \(EULA\)/i })
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
+		await expect(
+			page
+				.getByRole('button', { name: /Privacy Policy/i })
+				.filter({ visible: true })
+				.first()
+		).toBeVisible();
+	});
+
+	test('the subscription disclosure reflects whatever the live plans endpoint returns', async ({
+		page,
+		gotoHydrated,
+		mockApi
+	}) => {
+		// the mocked lane has no plans unless we supply them; the integration lane deliberately gets
+		// none of this, so it renders whatever real mantle2 serves - which is the point of the test
+		if (!integrationMode) {
+			await mockApi.set({
+				method: 'GET',
+				path: '/v2/subscriptions/plans',
+				body: PLANS_BODY,
+				once: false
+			});
+		}
+
+		await gotoTab(page, gotoHydrated, '/tabs/upgrade');
+
+		const details = page
+			.getByText(/auto-renewing subscription\)/i)
+			.filter({ visible: true })
+			.first();
+		await expect(details).toBeVisible({ timeout: 20_000 });
+
+		// "<name> - <price> per <interval> (<length> auto-renewing subscription)"
+		const line = (await details.textContent()) ?? '';
+		expect(line).toMatch(/\S+\s+-\s+\S+\s+per\s+\w+\s+\(1 (month|year|week) auto-renewing/i);
+	});
+
 	test('Memberships (upgrade) page renders the plans', async ({ page, gotoHydrated, mockApi }) => {
 		skipIfIntegration('mock plans override');
 		await mockApi.set({
@@ -139,6 +212,41 @@ test.describe('Subscription pages (logged in, web)', () => {
 				.filter({ visible: true })
 				.first()
 		).toBeVisible();
+	});
+});
+
+// guideline 3.1.1: the 1.0.3 submission was rejected because a code could unlock a paid
+// subscription inside the store build. redemption must not exist on a native platform at all
+test.describe('Subscription code redemption (store compliance)', () => {
+	test.beforeEach(async ({ context }) => {
+		await installNativeMock(context, { platform: 'ios' });
+	});
+
+	test('a native build offers no way to redeem a code for a paid plan', async ({
+		page,
+		gotoHydrated,
+		asUser,
+		mockApi
+	}) => {
+		skipIfIntegration('native bridge + mock subscription status');
+		await asUser();
+		await mockApi.setMany([
+			{ method: 'GET', path: '/v2/users/current/subscription', body: STATUS_NONE, once: false },
+			{ method: 'GET', path: '/v2/subscriptions/plans', body: PLANS_BODY, once: false }
+		]);
+
+		await gotoTab(page, gotoHydrated, '/tabs/settings/subscription');
+		// the page itself still loads; only the redemption affordance is gone
+		await expect(
+			page
+				.getByText(/Subscription/i)
+				.filter({ visible: true })
+				.first()
+		).toBeVisible({ timeout: 15_000 });
+
+		await expect(page.getByText(/Redeem a Code/i)).toHaveCount(0);
+		await expect(page.getByRole('button', { name: /Redeem Code/i })).toHaveCount(0);
+		await expect(page.getByPlaceholder(/EARTH-/i)).toHaveCount(0);
 	});
 });
 
