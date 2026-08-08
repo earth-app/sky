@@ -165,6 +165,14 @@
 				</IonItem>
 			</IonList>
 
+			<IonButton
+				color="warning"
+				shape="round"
+				router-link="/tabs/upgrade"
+				class="w-full mt-2"
+				>Upgrade</IonButton
+			>
+
 			<h2 class="text-lg! mt-6 mb-2 text-center font-semibold!">Email Verification</h2>
 			<IonList class="w-full max-w-md p-2! rounded-xl border-2 border-default">
 				<IonItem>

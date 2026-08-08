@@ -59,6 +59,13 @@
 							</div>
 						</div>
 
+						<IonButton
+							color="warning"
+							router-link="/tabs/upgrade"
+							class="mb-4"
+							>Upgrade</IonButton
+						>
+
 						<!-- app review 3.1.1: a code may not unlock paid functionality inside a store build -->
 						<div
 							v-if="!Capacitor.isNativePlatform()"

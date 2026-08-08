@@ -34,8 +34,18 @@
 						shape="round"
 						router-link="/tabs/profile/editor"
 						size="small"
-						class="my-2"
+						class="my-1"
 						>Edit Profile</IonButton
+					>
+
+					<IonButton
+						v-if="isCurrentUser"
+						color="warning"
+						shape="round"
+						router-link="/tabs/upgrade"
+						size="small"
+						class="my-1"
+						>Upgrade</IonButton
 					>
 				</div>
 				<div class="flex items-center px-2">
