@@ -12,8 +12,11 @@
 		<IonContent :scroll-y="true">
 			<div class="flex flex-col w-full px-4 pb-8 max-w-3xl mx-auto">
 				<p class="text-sm opacity-80 text-center mt-4 mb-4">
-					View your current plan, redeem a code, and manage your subscription. You can cancel at any
-					time.
+					{{
+						Capacitor.isNativePlatform()
+							? 'View your current plan and manage your subscription. You can cancel at any time.'
+							: 'View your current plan, redeem a code, and manage your subscription. You can cancel at any time.'
+					}}
 				</p>
 
 				<MEmptyState
@@ -56,7 +59,11 @@
 							</div>
 						</div>
 
-						<div class="w-full rounded-xl border border-default p-4 mb-4 flex flex-col gap-3">
+						<!-- app review 3.1.1: a code may not unlock paid functionality inside a store build -->
+						<div
+							v-if="!Capacitor.isNativePlatform()"
+							class="w-full rounded-xl border border-default p-4 mb-4 flex flex-col gap-3"
+						>
 							<div class="text-sm font-medium">Redeem a Code</div>
 							<IonItem>
 								<IonInput
@@ -111,6 +118,7 @@
 
 <script setup lang="ts">
 import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 import { Dialog } from '@capacitor/dialog';
 import { capitalizeFully } from 'utils';
 import { showErrorToast, showInfoToast } from '~/composables/useNotify';
