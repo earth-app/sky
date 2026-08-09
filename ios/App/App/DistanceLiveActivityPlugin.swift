@@ -1,17 +1,15 @@
 import ActivityKit
 import Capacitor
 import Foundation
+import SkyKit
 
 @objc(DistanceLiveActivityPlugin)
 public class DistanceLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
-    public let identifier = "DistanceLiveActivityPlugin"
-    public let jsName = "DistanceLiveActivity"
-    public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "update", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "end", returnType: CAPPluginReturnPromise)
-    ]
+    static let contract = SkyPluginContracts.distanceLiveActivity
+
+    public let identifier = contract.identifier
+    public let jsName = contract.jsName
+    public let pluginMethods: [CAPPluginMethod] = contract.capacitorMethods
 
     @objc func isSupported(_ call: CAPPluginCall) {
         if #available(iOS 16.1, *) {
@@ -31,11 +29,11 @@ public class DistanceLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let questId = call.getString("questId") ?? ""
-        let state = contentState(from: call)
+        let content = LiveActivityContent(options: PluginCallOptions(call: call))
+        let state = Self.contentState(from: content)
         Task {
             await self.endAllActivities()
-            let attributes = DistanceActivityAttributes(questId: questId)
+            let attributes = DistanceActivityAttributes(questId: content.questId)
             do {
                 let activity = try Activity.request(
                     attributes: attributes,
@@ -54,7 +52,7 @@ public class DistanceLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             call.resolve()
             return
         }
-        let state = contentState(from: call)
+        let state = Self.contentState(from: LiveActivityContent(options: PluginCallOptions(call: call)))
         Task {
             for activity in Activity<DistanceActivityAttributes>.activities {
                 await activity.update(using: state)
@@ -75,20 +73,20 @@ public class DistanceLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @available(iOS 16.1, *)
-    private func contentState(from call: CAPPluginCall) -> DistanceActivityAttributes.ContentState {
+    static func contentState(from content: LiveActivityContent) -> DistanceActivityAttributes.ContentState {
         DistanceActivityAttributes.ContentState(
-            questName: call.getString("questName") ?? "Quest",
-            rarity: call.getString("rarity") ?? "normal",
-            stepIndex: call.getInt("stepIndex") ?? 0,
-            totalSteps: call.getInt("totalSteps") ?? 0,
-            stepLabel: call.getString("stepLabel") ?? "",
-            stepSymbol: call.getString("stepSymbol") ?? "flag.checkered",
-            stepDescription: call.getString("stepDescription") ?? "",
-            progress: call.getDouble("progress") ?? -1,
-            unlockAtMs: call.getDouble("unlockAtMs") ?? 0,
-            ctaText: call.getString("ctaText") ?? "",
-            ctaURL: call.getString("ctaURL") ?? "",
-            tapURL: call.getString("tapURL") ?? ""
+            questName: content.questName,
+            rarity: content.rarity,
+            stepIndex: content.stepIndex,
+            totalSteps: content.totalSteps,
+            stepLabel: content.stepLabel,
+            stepSymbol: content.stepSymbol,
+            stepDescription: content.stepDescription,
+            progress: content.progress,
+            unlockAtMs: content.unlockAtMs,
+            ctaText: content.ctaText,
+            ctaURL: content.ctaURL,
+            tapURL: content.tapURL
         )
     }
 

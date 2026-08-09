@@ -20,6 +20,21 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    testOptions {
+        unitTests {
+            // robolectric needs the merged manifest, resources and assets; without this it sees
+            // neither strings.xml nor the intent filters the manifest merger produced
+            includeAndroidResources = true
+            // deliberately NOT returnDefaultValues: it makes the stub android.jar hand back
+            // null/0 instead of throwing, which turns org.json failures into silently wrong answers
+            all {
+                testLogging {
+                    events 'passed', 'skipped', 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
 }
 
 repositories {
@@ -40,8 +55,15 @@ dependencies {
     // a paired Wear OS device when a Wear app module is present.
     implementation 'com.google.android.gms:play-services-wearable:20.0.1'
     testImplementation "junit:junit:$junitVersion"
+    testImplementation "org.robolectric:robolectric:$robolectricVersion"
+    testImplementation "androidx.test:core:$androidxTestVersion"
+    testImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test:core:$androidxTestVersion"
+    androidTestImplementation "androidx.test:rules:$androidxTestVersion"
+    androidTestImplementation "androidx.test:runner:$androidxTestRunnerVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    androidTestImplementation "androidx.test.uiautomator:uiautomator:$androidxUiAutomatorVersion"
     implementation project(':capacitor-cordova-android-plugins')
 }
 

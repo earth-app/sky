@@ -10,42 +10,39 @@ import android.webkit.WebView;
 
 import com.earthapp.sky.plugins.WearNotificationBridgePlugin;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.Plugin;
 import com.getcapacitor.WebViewListener;
+
+import java.util.Collections;
+import java.util.List;
 
 public class MainActivity extends BridgeActivity {
 
-    // Match --ion-background-color in src/assets/css/main.css so the webview's own
-    // background never flashes a contrasting color during scroll/transition. There's
-    // no static backgroundColor in capacitor.config.ts on purpose (it would flash),
-    // so we set it here, adaptively.
-    private static final int BG_LIGHT = 0xFFF3F2F9;
-    private static final int BG_DARK = 0xFF1C1B22;
+    // local capacitor plugins, registered before super.onCreate so the bridge picks them up at init
+    // time. exposed so PluginContractTest can assert registration without launching the activity
+    static final List<Class<? extends Plugin>> LOCAL_PLUGINS = Collections.singletonList(
+        WearNotificationBridgePlugin.class
+    );
 
-    // Guard against a render-process crash loop recreating the activity forever.
-    private long lastRecreateAt = 0L;
+    private final WebViewRecovery recovery = new WebViewRecovery();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        // Local Capacitor plugins live in com.earthapp.sky.plugins and need to be
-        // registered before super.onCreate so the Bridge picks them up at init time.
-        registerPlugin(WearNotificationBridgePlugin.class);
+        for (Class<? extends Plugin> plugin : LOCAL_PLUGINS) {
+            registerPlugin(plugin);
+        }
         super.onCreate(savedInstanceState);
 
         applyAdaptiveBackground();
 
-        // Capacitor doesn't recover the WebView when Android kills its render process
-        // (OOM) ; without this the app shows a blank, dead screen until a full
-        // restart. Rebuild the activity so a fresh WebView is created.
         getBridge()
             .addWebViewListener(
                 new WebViewListener() {
                     @Override
                     public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-                        long now = SystemClock.elapsedRealtime();
-                        if (now - lastRecreateAt < 5_000) {
+                        if (!recovery.shouldRecover(SystemClock.elapsedRealtime())) {
                             return false; // crash loop ; let the OS handle it
                         }
-                        lastRecreateAt = now;
                         runOnUiThread(MainActivity.this::recreate);
                         return true; // handled ; don't let Android kill the app
                     }
@@ -53,26 +50,34 @@ public class MainActivity extends BridgeActivity {
             );
     }
 
+    // androidx SplashScreen swaps back to the post-splash theme when the splash exits, and that
+    // re-applies the theme's windowBackground over ours; measured as #FAFAFA winning on device
+    @Override
+    public void onResume() {
+        super.onResume();
+        applyAdaptiveBackground();
+    }
+
+    // uiMode is in the activity's configChanges, so a device dark-mode toggle never recreates us
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        applyAdaptiveBackground(newConfig.uiMode);
+    }
+
     private void applyAdaptiveBackground() {
-        int color = isDarkTheme() ? BG_DARK : BG_LIGHT;
+        applyAdaptiveBackground(getResources().getConfiguration().uiMode);
+    }
+
+    private void applyAdaptiveBackground(int uiMode) {
+        SharedPreferences prefs = getSharedPreferences(ThemeResolver.PREFERENCES_STORE, MODE_PRIVATE);
+        String stored = prefs.getString(ThemeResolver.THEME_PREFERENCE_KEY, null);
+        int color = ThemeResolver.backgroundColor(stored, uiMode);
+
         WebView webView = getBridge().getWebView();
         if (webView != null) {
             webView.setBackgroundColor(color);
         }
         getWindow().setBackgroundDrawable(new ColorDrawable(color));
-    }
-
-    // Prefer the in-app theme (Capacitor Preferences), falling back to the device
-    // night-mode setting when the app is on "system".
-    private boolean isDarkTheme() {
-        SharedPreferences prefs = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
-        String stored = prefs.getString("app.setting.theme", null);
-        if (stored != null) {
-            String theme = stored.replace("\"", "");
-            if ("dark".equals(theme)) return true;
-            if ("light".equals(theme)) return false;
-        }
-        int mode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-        return mode == Configuration.UI_MODE_NIGHT_YES;
     }
 }

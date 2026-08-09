@@ -1,4 +1,5 @@
 import Capacitor
+import SkyKit
 import UIKit
 import WebKit
 
@@ -33,7 +34,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         applyInterfaceStyleFromSettings()
-        if hasActivatedOnce {
+        if WebViewRecoveryPolicy.shouldRecover(hasActivatedBefore: hasActivatedOnce) {
             recoverWebViewIfTerminated()
         }
         hasActivatedOnce = true
@@ -56,14 +57,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     private func applyInterfaceStyleFromSettings() {
         guard let window = window else { return }
-        // Capacitor Preferences stores values JSON-encoded under a "CapacitorStorage." prefix
-        let raw = UserDefaults.standard.string(forKey: "CapacitorStorage.app.setting.theme")
-        let theme = raw?.replacingOccurrences(of: "\"", with: "")
-        switch theme {
-        case "light": window.overrideUserInterfaceStyle = .light
-        case "dark": window.overrideUserInterfaceStyle = .dark
-        default: window.overrideUserInterfaceStyle = .unspecified
-        }
+        let raw = UserDefaults.standard.string(forKey: ThemePreference.storageKey)
+        window.overrideUserInterfaceStyle = ThemePreference.parse(raw).interfaceStyle
     }
 
     private func recoverWebViewIfTerminated() {
@@ -71,16 +66,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
               let webView = vc.webView,
               let baseURL = vc.bridge?.config.serverURL else { return }
 
-        let current = webView.url?.absoluteString
-        if current == nil || current?.isEmpty == true || current?.hasPrefix("about:") == true {
+        switch WebViewRecoveryPolicy.decide(currentURL: webView.url?.absoluteString) {
+        case .reloadNow:
             webView.load(URLRequest(url: baseURL))
-            return
-        }
-
-        // url looks valid but the web-content process may be dead; a failing ping is our cue to reboot
-        webView.evaluateJavaScript("1") { _, error in
-            if error != nil {
-                webView.load(URLRequest(url: baseURL))
+        case .probeThenReload:
+            webView.evaluateJavaScript("1") { _, error in
+                if WebViewRecoveryPolicy.shouldReloadAfterProbe(error: error) {
+                    webView.load(URLRequest(url: baseURL))
+                }
             }
         }
     }

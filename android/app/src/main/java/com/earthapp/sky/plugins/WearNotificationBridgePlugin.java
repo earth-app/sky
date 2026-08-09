@@ -11,8 +11,6 @@ import com.google.android.gms.wearable.MessageClient;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
-import java.nio.charset.StandardCharsets;
-
 /**
  * Local Capacitor plugin that delivers notifications to a paired Wear OS watch
  * via Google's Wearable Data Layer. Counterpart to the iOS-side
@@ -35,7 +33,6 @@ import java.nio.charset.StandardCharsets;
  */
 @CapacitorPlugin(name = "WearNotificationBridge")
 public class WearNotificationBridgePlugin extends Plugin {
-    private static final String NOTIFICATION_PATH = "/notification/deliver";
 
     @PluginMethod
     public void isAvailable(PluginCall call) {
@@ -58,17 +55,18 @@ public class WearNotificationBridgePlugin extends Plugin {
     @PluginMethod
     public void sendNotification(PluginCall call) {
         Context context = getContext();
-        JSObject payload = new JSObject();
-        payload.put("id", nonNull(call.getString("id"), ""));
-        payload.put("title", nonNull(call.getString("title"), ""));
-        payload.put("body", nonNull(call.getString("body"), ""));
-        payload.put("type", nonNull(call.getString("type"), "info"));
-        payload.put("source", nonNull(call.getString("source"), "system"));
-        payload.put("link", nonNull(call.getString("link"), ""));
-        Long createdAt = call.getLong("createdAt");
-        payload.put("createdAt", createdAt != null ? createdAt : System.currentTimeMillis() / 1000L);
+        JSObject payload = WearPayload.build(
+            call.getString("id"),
+            call.getString("title"),
+            call.getString("body"),
+            call.getString("type"),
+            call.getString("source"),
+            call.getString("link"),
+            call.getLong("createdAt"),
+            System.currentTimeMillis() / 1000L
+        );
 
-        byte[] bytes = payload.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = WearPayload.encode(payload);
         MessageClient messageClient = Wearable.getMessageClient(context);
 
         Wearable.getNodeClient(context).getConnectedNodes()
@@ -86,7 +84,7 @@ public class WearNotificationBridgePlugin extends Plugin {
                 final int[] completed = {0};
                 final Object lock = new Object();
                 for (Node node : nodes) {
-                    messageClient.sendMessage(node.getId(), NOTIFICATION_PATH, bytes)
+                    messageClient.sendMessage(node.getId(), WearPayload.NOTIFICATION_PATH, bytes)
                         .addOnSuccessListener(idr -> {
                             synchronized (lock) {
                                 delivered[0]++;
@@ -117,9 +115,5 @@ public class WearNotificationBridgePlugin extends Plugin {
                 result.put("error", e.getMessage());
                 call.resolve(result);
             });
-    }
-
-    private static String nonNull(String s, String fallback) {
-        return (s == null || s.isEmpty()) ? fallback : s;
     }
 }

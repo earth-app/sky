@@ -11,3 +11,8 @@ capacitor-cordova-ios-plugins
 # Generated Config files
 App/App/capacitor.config.json
 App/App/config.xml
+
+# SkyKit swift package build output
+App/SkyKit/.build
+App/SkyKit/.swiftpm
+App/SkyKit/Package.resolved
