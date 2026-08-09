@@ -30,7 +30,7 @@ export default defineNuxtConfig({
 			appStoreReviewUrl: process.env.NUXT_PUBLIC_APP_STORE_REVIEW_URL || '',
 			// gates test-only pages (__test__/*) + the client-moderation e2e signature hook
 			testBuild: process.env.NUXT_PUBLIC_TEST_BUILD === '1',
-			// maestro lanes only. an emulator's software renderer cannot sustain the ambient canvas
+			// native device lanes only. an emulator/simulator software renderer cannot sustain the ambient canvas
 			// (30fps) or backdrop-filter: it loses gralloc handles, logs "Failed to find
 			// ColorBuffer", and stops painting. deliberately NOT keyed off testBuild, so the
 			// playwright visual-eval lane still measures the real visuals
@@ -70,7 +70,7 @@ export default defineNuxtConfig({
 	compatibilityDate: '2025-12-09',
 	nitro: {
 		preset: 'static',
-		// every lane (test / e2e / maestro-ios / maestro-android) used to build into the same
+		// every lane (test / e2e / native-ios / native-android) used to build into the same
 		// .output, so two concurrent builds clobbered each other and a running static server
 		// silently started serving the other lane's baked base urls
 		...(process.env.NITRO_OUTPUT_DIR ? { output: { dir: process.env.NITRO_OUTPUT_DIR } } : {}),
