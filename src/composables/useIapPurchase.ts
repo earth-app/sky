@@ -58,6 +58,20 @@ interface NativePurchasesPlugin {
 	}): Promise<IapTransaction>;
 	restorePurchases(): Promise<void>;
 	getPurchases(options?: { productType?: string }): Promise<{ purchases: IapTransaction[] }>;
+	getPluginVersion(): Promise<{ version: string }>;
+	isBillingSupported(): Promise<{ isBillingSupported: boolean }>;
+	getStorefront(): Promise<{ countryCode: string; storefrontId?: string }>;
+	getAppTransaction(): Promise<{ appTransaction: IapAppTransaction }>;
+}
+
+// storekit's AppTransaction, which is the only thing that reports which store the running
+// binary is actually talking to
+export interface IapAppTransaction {
+	bundleId?: string;
+	environment?: string;
+	originalAppVersion?: string;
+	originalPurchaseDate?: string;
+	appVersion?: string;
 }
 
 // mirrors @capgo/native-purchases PURCHASE_TYPE.SUBS
@@ -99,6 +113,7 @@ export interface IapSubscriptionStatus {
 
 export type IapPurchaseReason =
 	| 'unavailable'
+	| 'product_unavailable'
 	| 'cancelled'
 	| 'purchase_failed'
 	| 'restore_failed'
@@ -113,7 +128,98 @@ export interface IapPurchaseResult {
 	code?: number;
 }
 
+/** everything the store told us about itself, captured in one pass */
+export interface IapDiagnostics {
+	platform: string;
+	native: boolean;
+	pluginVersion: string | null;
+	billingSupported: boolean | null;
+	storefront: string | null;
+	environment: string | null;
+	bundleId: string | null;
+	requestedProductIds: string[];
+	availableProductIds: string[];
+	missingProductIds: string[];
+	errors: Record<string, string>;
+}
+
+export type IapAvailabilityVerdict =
+	| 'ok'
+	| 'not_native'
+	| 'billing_unsupported'
+	| 'local_storekit_config'
+	| 'no_storefront'
+	| 'all_products_missing'
+	| 'some_products_missing';
+
 // ---- pure helpers (unit-testable; no plugin / no I/O) ---------------------
+
+export function summarizeAvailability(
+	requested: string[],
+	products: IapProduct[]
+): { available: string[]; missing: string[] } {
+	const returned = new Set((products ?? []).map((product) => product?.identifier).filter(Boolean));
+	return {
+		available: requested.filter((id) => returned.has(id)),
+		missing: requested.filter((id) => !returned.has(id))
+	};
+}
+
+export function classifyAvailability(diagnostics: IapDiagnostics): IapAvailabilityVerdict {
+	if (!diagnostics.native) return 'not_native';
+	if (diagnostics.billingSupported === false) return 'billing_unsupported';
+	// 'Xcode' means a local .storekit file is serving products, so app store connect is not
+	// being consulted at all and nothing here reflects the real catalogue
+	if (diagnostics.environment === 'Xcode') return 'local_storekit_config';
+	if (diagnostics.missingProductIds.length === 0) return 'ok';
+	if (!diagnostics.storefront) return 'no_storefront';
+	return diagnostics.missingProductIds.length === diagnostics.requestedProductIds.length
+		? 'all_products_missing'
+		: 'some_products_missing';
+}
+
+/** the developer-facing next step for a verdict; shown in the copyable report, never in a toast */
+export function explainAvailability(verdict: IapAvailabilityVerdict): string {
+	switch (verdict) {
+		case 'ok':
+			return 'Every product resolved.';
+		case 'not_native':
+			return 'Not running on iOS or Android, so there is no store to query.';
+		case 'billing_unsupported':
+			return 'The platform reported that billing is unavailable on this device.';
+		case 'local_storekit_config':
+			return 'A local StoreKit configuration file is serving products, so App Store Connect is not being consulted. Clear the scheme StoreKit configuration to test the real catalogue.';
+		case 'no_storefront':
+			return 'No storefront resolved, so the device is not signed in to an account that can serve products. On iOS check Settings > Developer > Sandbox Apple Account.';
+		case 'all_products_missing':
+			return 'The store answered but dropped every identifier. That is an account-level cause, not a per-product one: check that the Paid Applications agreement is Active (bank and tax complete) and that the bundle id below owns these products.';
+		case 'some_products_missing':
+			return 'The store served some identifiers and dropped others, so the missing ones are individually unavailable. Check each for Missing Metadata in App Store Connect.';
+	}
+}
+
+/** a copyable report; there is no telemetry on this path, so the text is the delivery mechanism */
+export function formatIapDiagnostics(diagnostics: IapDiagnostics): string {
+	const verdict = classifyAvailability(diagnostics);
+	const lines = [
+		`verdict: ${verdict}`,
+		explainAvailability(verdict),
+		'',
+		`platform: ${diagnostics.platform}${diagnostics.native ? '' : ' (not native)'}`,
+		`plugin: ${diagnostics.pluginVersion ?? 'unknown'}`,
+		`billing supported: ${diagnostics.billingSupported ?? 'unknown'}`,
+		`storefront: ${diagnostics.storefront || 'none'}`,
+		`environment: ${diagnostics.environment ?? 'unknown'}`,
+		`bundle id: ${diagnostics.bundleId ?? 'unknown'}`,
+		`requested: ${diagnostics.requestedProductIds.join(', ') || 'none'}`,
+		`available: ${diagnostics.availableProductIds.join(', ') || 'none'}`,
+		`missing: ${diagnostics.missingProductIds.join(', ') || 'none'}`
+	];
+	for (const [key, message] of Object.entries(diagnostics.errors)) {
+		lines.push(`error (${key}): ${message}`);
+	}
+	return lines.join('\n');
+}
 
 function normalizeTier(tier: AccountType | string): string {
 	return String(tier).toUpperCase();
@@ -164,8 +270,13 @@ export function mapTransactionToVerifyBody(
 	};
 }
 
-// distinguish a user-cancelled purchase (silent) from a real failure (toast)
-export function mapPurchaseError(err: unknown): { cancelled: boolean; message: string } {
+// distinguish a user-cancelled purchase (silent) from a real failure (toast), and from the
+// store simply not knowing the identifier, which needs its own copy
+export function mapPurchaseError(err: unknown): {
+	cancelled: boolean;
+	productMissing: boolean;
+	message: string;
+} {
 	const message =
 		err instanceof Error
 			? err.message
@@ -175,11 +286,19 @@ export function mapPurchaseError(err: unknown): { cancelled: boolean; message: s
 	const code = String((err as { code?: unknown } | null)?.code ?? '');
 	// storekit userCancelled = 2; play BILLING_RESPONSE_RESULT_USER_CANCELED / message text
 	const cancelled = /cancel/i.test(message) || /cancel/i.test(code) || code === '2';
+	// the plugin rejects an unknown identifier with a developer string that names the product id
+	const productMissing =
+		!cancelled && /cannot find product|product not found|item_unavailable/i.test(message);
 	return {
 		cancelled,
+		productMissing,
 		message: cancelled ? 'Purchase canceled.' : message || 'The purchase could not be completed.'
 	};
 }
+
+/** the one user-facing sentence for "the store has no such product", used by every path */
+export const PRODUCT_UNAVAILABLE_MESSAGE =
+	'This plan is not available from the store right now. Please try again later.';
 
 // pick the purchase to re-verify on restore: prefer an active sub, else the last one seen
 export function pickRestorablePurchase(purchases: IapTransaction[]): IapTransaction | null {
@@ -216,6 +335,14 @@ export function useIapPurchase() {
 		};
 	}
 
+	function unavailableProductResult(): IapPurchaseResult {
+		return {
+			success: false,
+			reason: 'product_unavailable',
+			error: PRODUCT_UNAVAILABLE_MESSAGE
+		};
+	}
+
 	async function verifyTransaction(
 		provider: IapProvider,
 		path: string,
@@ -233,21 +360,83 @@ export function useIapPurchase() {
 		return { success: false, reason: 'verify_failed', error: res.message, code: res.status };
 	}
 
-	async function fetchProducts(): Promise<IapProduct[]> {
+	function catalogueIds(): string[] {
 		const platform = currentPlatform();
 		if (!isNative() || (platform !== 'ios' && platform !== 'android')) return [];
-		const ids = Object.values(IAP_PRODUCT_IDS[platform]).filter(Boolean) as string[];
+		return Object.values(IAP_PRODUCT_IDS[platform]).filter(Boolean) as string[];
+	}
+
+	async function loadProducts(ids: string[]): Promise<IapProduct[]> {
+		if (ids.length === 0) return [];
+		const { products } = await getNativePurchases().getProducts({
+			productIdentifiers: ids,
+			productType: PURCHASE_TYPE_SUBS
+		});
+		return products ?? [];
+	}
+
+	async function fetchProducts(): Promise<IapProduct[]> {
+		const ids = catalogueIds();
 		if (ids.length === 0) return [];
 		try {
-			const { products } = await getNativePurchases().getProducts({
-				productIdentifiers: ids,
-				productType: PURCHASE_TYPE_SUBS
-			});
-			return products ?? [];
+			return await loadProducts(ids);
 		} catch (error) {
 			console.error('[iap] failed to load products:', error);
 			return [];
 		}
+	}
+
+	async function diagnose(): Promise<IapDiagnostics> {
+		const requestedProductIds = catalogueIds();
+		const diagnostics: IapDiagnostics = {
+			platform: currentPlatform(),
+			native: isNative(),
+			pluginVersion: null,
+			billingSupported: null,
+			storefront: null,
+			environment: null,
+			bundleId: null,
+			requestedProductIds,
+			availableProductIds: [],
+			missingProductIds: requestedProductIds,
+			errors: {}
+		};
+		if (!diagnostics.native) return diagnostics;
+
+		const plugin = getNativePurchases();
+		const record = async (key: string, run: () => Promise<void>) => {
+			try {
+				await run();
+			} catch (error) {
+				diagnostics.errors[key] = mapPurchaseError(error).message;
+			}
+		};
+
+		await Promise.all([
+			record('pluginVersion', async () => {
+				diagnostics.pluginVersion = (await plugin.getPluginVersion())?.version ?? null;
+			}),
+			record('billingSupported', async () => {
+				diagnostics.billingSupported =
+					(await plugin.isBillingSupported())?.isBillingSupported ?? null;
+			}),
+			record('storefront', async () => {
+				diagnostics.storefront = (await plugin.getStorefront())?.countryCode || null;
+			}),
+			record('appTransaction', async () => {
+				const { appTransaction } = await plugin.getAppTransaction();
+				diagnostics.environment = appTransaction?.environment ?? null;
+				diagnostics.bundleId = appTransaction?.bundleId ?? null;
+			}),
+			record('products', async () => {
+				const products = await loadProducts(requestedProductIds);
+				const summary = summarizeAvailability(requestedProductIds, products);
+				diagnostics.availableProductIds = summary.available;
+				diagnostics.missingProductIds = summary.missing;
+			})
+		]);
+
+		return diagnostics;
 	}
 
 	async function purchase(tier: AccountType | string): Promise<IapPurchaseResult> {
@@ -265,6 +454,18 @@ export function useIapPurchase() {
 			};
 		}
 
+		// preflight: the plugin's own miss is a raw developer string ("Cannot find product for id
+		// com.earthapp.sky.pro.monthly") that must never reach a toast, and the store drops
+		// unknown ids silently, so ask first and own the message
+		try {
+			const products = await loadProducts([productId]);
+			if (summarizeAvailability([productId], products).missing.length > 0) {
+				return unavailableProductResult();
+			}
+		} catch (error) {
+			console.error('[iap] product preflight failed:', error);
+		}
+
 		let tx: IapTransaction;
 		try {
 			tx = await getNativePurchases().purchaseProduct({
@@ -273,6 +474,7 @@ export function useIapPurchase() {
 			});
 		} catch (error) {
 			const mapped = mapPurchaseError(error);
+			if (mapped.productMissing) return unavailableProductResult();
 			return {
 				success: false,
 				reason: mapped.cancelled ? 'cancelled' : 'purchase_failed',
@@ -317,7 +519,9 @@ export function useIapPurchase() {
 		isNative,
 		currentPlatform,
 		canPurchase,
+		catalogueIds,
 		fetchProducts,
+		diagnose,
 		purchase,
 		restore
 	};

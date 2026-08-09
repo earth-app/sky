@@ -1,36 +1,97 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // the composable binds the native 'NativePurchases' plugin through @capacitor/core's
 // registerPlugin (the @capgo/native-purchases native impl arrives via `cap sync`), so the
 // plugin boundary is mocked here at registerPlugin. the pure helpers under test need neither.
-vi.mock('@capacitor/core', () => {
-	const nativePurchases = {
-		getProducts: vi.fn(async () => ({ products: [] })),
+const mocks = vi.hoisted(() => ({
+	platform: 'web',
+	native: false,
+	plugin: {
+		getProducts: vi.fn(async () => ({ products: [] as { identifier: string }[] })),
 		purchaseProduct: vi.fn(async () => ({ transactionId: 't1' })),
 		restorePurchases: vi.fn(async () => {}),
-		getPurchases: vi.fn(async () => ({ purchases: [] }))
-	};
-	return {
-		Capacitor: {
-			isNativePlatform: () => false,
-			getPlatform: () => 'web'
-		},
-		registerPlugin: () => nativePurchases
-	};
-});
+		getPurchases: vi.fn(async () => ({ purchases: [] })),
+		getPluginVersion: vi.fn(async () => ({ version: '8.6.5' })),
+		isBillingSupported: vi.fn(async () => ({ isBillingSupported: true })),
+		getStorefront: vi.fn(async () => ({ countryCode: 'USA' })),
+		getAppTransaction: vi.fn(async () => ({
+			appTransaction: { bundleId: 'com.earthapp.sky', environment: 'Sandbox' }
+		}))
+	}
+}));
+
+vi.mock('@capacitor/core', () => ({
+	Capacitor: {
+		isNativePlatform: () => mocks.native,
+		getPlatform: () => mocks.platform
+	},
+	registerPlugin: () => mocks.plugin
+}));
+
+// partial: crust's websocket plugin pulls makeServerRequest from the same module on a timer
+vi.mock('utils', async (importOriginal) => ({
+	...(await importOriginal<typeof import('utils')>()),
+	makeClientAPIRequest: vi.fn(async () => ({ success: true, data: { tier: 'PRO' } }))
+}));
+
+const useAuthStore = vi.fn(() => ({ sessionToken: 'token' }));
+vi.stubGlobal('useAuthStore', useAuthStore);
 
 import {
 	ANDROID_PACKAGE_NAME,
+	classifyAvailability,
+	formatIapDiagnostics,
 	IAP_PRODUCT_IDS,
+	type IapDiagnostics,
 	type IapTransaction,
 	mapPurchaseError,
 	mapTransactionToVerifyBody,
 	pickRestorablePurchase,
+	PRODUCT_UNAVAILABLE_MESSAGE,
 	productIdForTier,
 	providerForPlatform,
+	summarizeAvailability,
 	tierForProductId,
+	useIapPurchase,
 	verifyPathForPlatform
 } from '~/composables/useIapPurchase';
+
+const IOS_IDS = [
+	'com.earthapp.sky.pro.monthly',
+	'com.earthapp.sky.writer.monthly',
+	'com.earthapp.sky.organizer.monthly'
+];
+
+function baseDiagnostics(overrides: Partial<IapDiagnostics> = {}): IapDiagnostics {
+	return {
+		platform: 'ios',
+		native: true,
+		pluginVersion: '8.6.5',
+		billingSupported: true,
+		storefront: 'USA',
+		environment: 'Sandbox',
+		bundleId: 'com.earthapp.sky',
+		requestedProductIds: IOS_IDS,
+		availableProductIds: IOS_IDS,
+		missingProductIds: [],
+		errors: {},
+		...overrides
+	};
+}
+
+beforeEach(() => {
+	mocks.platform = 'web';
+	mocks.native = false;
+	vi.clearAllMocks();
+	mocks.plugin.getProducts.mockResolvedValue({ products: [] });
+	mocks.plugin.purchaseProduct.mockResolvedValue({ transactionId: 't1' });
+	mocks.plugin.getPluginVersion.mockResolvedValue({ version: '8.6.5' });
+	mocks.plugin.isBillingSupported.mockResolvedValue({ isBillingSupported: true });
+	mocks.plugin.getStorefront.mockResolvedValue({ countryCode: 'USA' });
+	mocks.plugin.getAppTransaction.mockResolvedValue({
+		appTransaction: { bundleId: 'com.earthapp.sky', environment: 'Sandbox' }
+	});
+});
 
 describe('IAP product id map', () => {
 	it('exposes exactly the three paid tiers per platform (no free/administrator)', () => {
@@ -144,6 +205,7 @@ describe('mapPurchaseError (error handling)', () => {
 	it('flags user cancellation from message text', () => {
 		expect(mapPurchaseError(new Error('The user cancelled the request'))).toEqual({
 			cancelled: true,
+			productMissing: false,
 			message: 'Purchase canceled.'
 		});
 	});
@@ -161,6 +223,7 @@ describe('mapPurchaseError (error handling)', () => {
 	it('surfaces a real failure message', () => {
 		expect(mapPurchaseError(new Error('Network unavailable'))).toEqual({
 			cancelled: false,
+			productMissing: false,
 			message: 'Network unavailable'
 		});
 	});
@@ -168,8 +231,245 @@ describe('mapPurchaseError (error handling)', () => {
 	it('falls back to a generic message when the error is empty', () => {
 		expect(mapPurchaseError(undefined)).toEqual({
 			cancelled: false,
+			productMissing: false,
 			message: 'The purchase could not be completed.'
 		});
+	});
+
+	// the plugin names the product id in its reject string, which must never reach a toast
+	it('flags the plugin unknown-product reject', () => {
+		const mapped = mapPurchaseError(
+			new Error('Cannot find product for id com.earthapp.sky.pro.monthly')
+		);
+		expect(mapped.productMissing).toBe(true);
+		expect(mapped.cancelled).toBe(false);
+	});
+
+	it('flags the play unavailable-item code', () => {
+		expect(mapPurchaseError(new Error('ITEM_UNAVAILABLE')).productMissing).toBe(true);
+	});
+
+	it('does not confuse a cancellation with a missing product', () => {
+		expect(mapPurchaseError(new Error('cancelled')).productMissing).toBe(false);
+	});
+});
+
+describe('summarizeAvailability', () => {
+	it('derives the missing set, because the store drops unknown ids silently', () => {
+		expect(summarizeAvailability(IOS_IDS, [{ identifier: IOS_IDS[0] }] as never)).toEqual({
+			available: [IOS_IDS[0]],
+			missing: [IOS_IDS[1], IOS_IDS[2]]
+		});
+	});
+
+	it('reports everything missing for an empty response', () => {
+		expect(summarizeAvailability(IOS_IDS, [])).toEqual({ available: [], missing: IOS_IDS });
+	});
+
+	it('ignores a product the store returned that was never requested', () => {
+		expect(summarizeAvailability([IOS_IDS[0]], [{ identifier: 'other' }] as never)).toEqual({
+			available: [],
+			missing: [IOS_IDS[0]]
+		});
+	});
+});
+
+describe('classifyAvailability', () => {
+	it('passes a healthy catalogue', () => {
+		expect(classifyAvailability(baseDiagnostics())).toBe('ok');
+	});
+
+	it('stays quiet off-device', () => {
+		expect(classifyAvailability(baseDiagnostics({ native: false }))).toBe('not_native');
+	});
+
+	it('reports unsupported billing', () => {
+		expect(classifyAvailability(baseDiagnostics({ billingSupported: false }))).toBe(
+			'billing_unsupported'
+		);
+	});
+
+	// a local .storekit file means app store connect was never consulted, so nothing else is real
+	it('reports a local storekit configuration ahead of any product result', () => {
+		expect(
+			classifyAvailability(
+				baseDiagnostics({
+					environment: 'Xcode',
+					missingProductIds: IOS_IDS,
+					availableProductIds: []
+				})
+			)
+		).toBe('local_storekit_config');
+	});
+
+	it('separates an account-level miss from a per-product one', () => {
+		expect(
+			classifyAvailability(baseDiagnostics({ missingProductIds: IOS_IDS, availableProductIds: [] }))
+		).toBe('all_products_missing');
+		expect(
+			classifyAvailability(
+				baseDiagnostics({
+					missingProductIds: [IOS_IDS[2]],
+					availableProductIds: [IOS_IDS[0], IOS_IDS[1]]
+				})
+			)
+		).toBe('some_products_missing');
+	});
+
+	it('blames the missing storefront before the products', () => {
+		expect(
+			classifyAvailability(
+				baseDiagnostics({ storefront: null, missingProductIds: IOS_IDS, availableProductIds: [] })
+			)
+		).toBe('no_storefront');
+	});
+});
+
+describe('formatIapDiagnostics', () => {
+	it('leads with the verdict and carries every field needed to act on it', () => {
+		const report = formatIapDiagnostics(
+			baseDiagnostics({ missingProductIds: IOS_IDS, availableProductIds: [] })
+		);
+		expect(report.startsWith('verdict: all_products_missing')).toBe(true);
+		expect(report).toContain('bundle id: com.earthapp.sky');
+		expect(report).toContain('environment: Sandbox');
+		expect(report).toContain('storefront: USA');
+		expect(report).toContain(IOS_IDS[0]);
+	});
+
+	it('includes a failed api call rather than dropping it', () => {
+		const report = formatIapDiagnostics(
+			baseDiagnostics({ errors: { appTransaction: 'requires iOS 16.0 or later' } })
+		);
+		expect(report).toContain('error (appTransaction): requires iOS 16.0 or later');
+	});
+
+	it('prints unknowns as unknown instead of inventing a value', () => {
+		const report = formatIapDiagnostics(
+			baseDiagnostics({ environment: null, bundleId: null, storefront: null })
+		);
+		expect(report).toContain('environment: unknown');
+		expect(report).toContain('bundle id: unknown');
+		expect(report).toContain('storefront: none');
+	});
+});
+
+describe('diagnose (plugin boundary)', () => {
+	it('returns a not-native snapshot without touching the plugin', async () => {
+		const { diagnose } = useIapPurchase();
+		const result = await diagnose();
+		expect(result.native).toBe(false);
+		expect(result.requestedProductIds).toEqual([]);
+		expect(mocks.plugin.getProducts).not.toHaveBeenCalled();
+	});
+
+	it('captures every store answer in one pass', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		mocks.plugin.getProducts.mockResolvedValue({
+			products: IOS_IDS.map((identifier) => ({ identifier }))
+		});
+
+		const { diagnose } = useIapPurchase();
+		const result = await diagnose();
+
+		expect(result.pluginVersion).toBe('8.6.5');
+		expect(result.billingSupported).toBe(true);
+		expect(result.storefront).toBe('USA');
+		expect(result.environment).toBe('Sandbox');
+		expect(result.bundleId).toBe('com.earthapp.sky');
+		expect(result.missingProductIds).toEqual([]);
+		expect(classifyAvailability(result)).toBe('ok');
+	});
+
+	// one rejecting api must not blind the other four, or the report loses the cause
+	it('records a failing call and keeps the rest of the snapshot', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		mocks.plugin.getAppTransaction.mockRejectedValue(
+			new Error('App Transaction requires iOS 16.0 or later')
+		);
+
+		const { diagnose } = useIapPurchase();
+		const result = await diagnose();
+
+		expect(result.errors.appTransaction).toContain('iOS 16.0');
+		expect(result.storefront).toBe('USA');
+		expect(result.missingProductIds).toEqual(IOS_IDS);
+		expect(classifyAvailability(result)).toBe('all_products_missing');
+	});
+
+	it('reports every id missing when the store returns nothing', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		const { diagnose } = useIapPurchase();
+		const result = await diagnose();
+		expect(result.availableProductIds).toEqual([]);
+		expect(result.missingProductIds).toEqual(IOS_IDS);
+	});
+});
+
+describe('purchase preflight', () => {
+	it('refuses without calling purchaseProduct when the store has no such product', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+
+		const { purchase } = useIapPurchase();
+		const result = await purchase('PRO');
+
+		expect(result).toEqual({
+			success: false,
+			reason: 'product_unavailable',
+			error: PRODUCT_UNAVAILABLE_MESSAGE
+		});
+		expect(mocks.plugin.purchaseProduct).not.toHaveBeenCalled();
+	});
+
+	it('proceeds once the store resolves the product', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		mocks.plugin.getProducts.mockResolvedValue({
+			products: [{ identifier: 'com.earthapp.sky.pro.monthly' }]
+		});
+
+		const { purchase } = useIapPurchase();
+		const result = await purchase('PRO');
+
+		expect(mocks.plugin.purchaseProduct).toHaveBeenCalledWith({
+			productIdentifier: 'com.earthapp.sky.pro.monthly',
+			productType: 'subs'
+		});
+		expect(result.success).toBe(true);
+	});
+
+	// a preflight that itself fails must not block a purchase that would have worked
+	it('falls through to the purchase when the preflight throws', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		mocks.plugin.getProducts.mockRejectedValue(new Error('network'));
+
+		const { purchase } = useIapPurchase();
+		await purchase('PRO');
+
+		expect(mocks.plugin.purchaseProduct).toHaveBeenCalled();
+	});
+
+	it('maps the plugin unknown-product reject to the human message', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		mocks.plugin.getProducts.mockResolvedValue({
+			products: [{ identifier: 'com.earthapp.sky.pro.monthly' }]
+		});
+		mocks.plugin.purchaseProduct.mockRejectedValue(
+			new Error('Cannot find product for id com.earthapp.sky.pro.monthly')
+		);
+
+		const { purchase } = useIapPurchase();
+		const result = await purchase('PRO');
+
+		expect(result.reason).toBe('product_unavailable');
+		expect(result.error).toBe(PRODUCT_UNAVAILABLE_MESSAGE);
+		expect(result.error).not.toContain('com.earthapp.sky');
 	});
 });
 
