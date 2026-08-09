@@ -225,6 +225,7 @@ let state: BackendState = freshState();
 
 export function resetState() {
 	state = freshState();
+	resetTestEvents();
 }
 
 function json(
@@ -1968,7 +1969,71 @@ const cloudRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }> 
 // Control plane - /__mock__/*
 // ---------------------------------------------------------------------------
 
+/**
+ * Observation bus for the native (XCTest / AndroidX) lanes.
+ *
+ * Those tests run OUTSIDE the webview and cannot read Vue state. Driving them through the
+ * accessibility tree is what made the maestro lanes fragile - an icon folds into a title, a system
+ * dialog blanks the whole tree, and an assertion fails on content the screenshot plainly shows.
+ * Instead the app posts named breadcrumbs here when `nativeTest` is on, and the native test polls
+ * for them over plain HTTP. Assertions become structured JSON instead of flattened UI strings.
+ */
+interface TestEvent {
+	seq: number;
+	name: string;
+	at: number;
+	data: unknown;
+}
+
+const testEvents: TestEvent[] = [];
+let testEventSeq = 0;
+
+/** dropped on reset so one flow cannot observe a previous flow's breadcrumbs */
+export function resetTestEvents(): void {
+	testEvents.length = 0;
+	testEventSeq = 0;
+}
+
 const controlRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }> = [
+	{
+		method: 'POST',
+		pattern: /^\/__test__\/event\/?$/,
+		handler: async (_req, res, ctx) => {
+			const body = (ctx.body ?? {}) as { name?: string; data?: unknown };
+			if (!body.name) return json(res, 400, { message: 'name required' });
+			testEvents.push({
+				seq: ++testEventSeq,
+				name: body.name,
+				at: Date.now(),
+				data: body.data ?? null
+			});
+			// keep the buffer bounded; a long ui run should not grow without limit
+			if (testEvents.length > 500) testEvents.splice(0, testEvents.length - 500);
+			return json(res, 200, { ok: true, seq: testEventSeq });
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/__test__\/events\/?$/,
+		handler: async (_req, res, ctx) => {
+			// `since` lets a native test poll incrementally instead of re-reading the whole buffer
+			const since = Number(ctx.url.searchParams.get('since') ?? '0');
+			const name = ctx.url.searchParams.get('name');
+			const events = testEvents.filter(
+				(event) =>
+					event.seq > (Number.isFinite(since) ? since : 0) && (!name || event.name === name)
+			);
+			return json(res, 200, { events, latest: testEventSeq });
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/__test__\/reset\/?$/,
+		handler: async (_req, res) => {
+			resetTestEvents();
+			return json(res, 200, { ok: true });
+		}
+	},
 	{
 		method: 'POST',
 		pattern: /^\/__mock__\/override\/?$/,
