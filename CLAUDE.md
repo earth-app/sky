@@ -164,6 +164,16 @@ A tappable `IonChip` also needs `role="button"`, `tabindex="0"`, `:aria-pressed`
 - **`makeMServerRequest` (`useServer.ts`) is ONLY for reaching a crust `src/server/api/*` Nitro route** that proxies to cloud with a server-side secret (admin key or another API key). Sky injects it into the composables that take a `serverRequest = makeServerRequest` param for exactly those cloud/secret calls (e.g. `useActivityInfo(makeMServerRequest)`).
 - A composable that only hits mantle2 has no `serverRequest` param — if you find yourself writing a sky-only `useM*` copy just to swap in `makeMServerRequest`, the underlying store is wrongly routing a mantle2 call through a Nitro proxy; fix the store to call mantle2 directly instead. (This is why `useMCircles` was deleted.)
 
+### In-app purchases: the store answers an empty catalogue silently
+
+`Product.products(for:)` (iOS) and `queryProductDetails` (Play) **drop unknown identifiers instead of reporting them**, and only throw on transport faults. So "zero products, no error" is the store's normal answer to a whole family of causes, and it is indistinguishable from an empty catalogue unless you derive the missing set yourself.
+
+- `useIapPurchase().diagnose()` captures the whole picture in one pass — plugin version, `isBillingSupported`, `getStorefront`, `getAppTransaction` (which reports the **environment**: `Sandbox` / `Production` / `Xcode`), and the returned-vs-requested product split. Each call is recorded independently so one rejecting API cannot blind the rest.
+- `classifyAvailability()` turns that into a verdict deterministically. The load-bearing split is **`all_products_missing` (account-level: Paid Apps agreement, bundle id, app record) vs `some_products_missing` (per-product: Missing Metadata)**. `environment === 'Xcode'` means a local `.storekit` file is serving products and App Store Connect was never consulted.
+- `purchase()` **preflights** with `getProducts([id])`. The plugin's own reject is a developer string naming the product id (`Cannot find product for id com.earthapp.sky.pro.monthly`); it must never reach a toast, so both the preflight and `mapPurchaseError().productMissing` map to `PRODUCT_UNAVAILABLE_MESSAGE`.
+- Keep the `.storekit` file in **`AppTests` only**, never the `App` target, and leave the scheme's StoreKit configuration unset — otherwise a device build resolves products locally and silently ignores App Store Connect.
+- `AppTests` is **hosted by `App`** (`TEST_HOST`/`BUNDLE_LOADER`). Without a host there is no app bundle identity and StoreKit, HealthKit, notifications and Keychain all resolve nothing while looking fine.
+
 ## CI, Build, and Release
 
 - CI workflows live in `.github/workflows/`.
