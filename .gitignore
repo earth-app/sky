@@ -60,3 +60,7 @@ resources/android/**/*
 .e2e-serve
 .output-test
 .output-e2e
+
+# per-user xcode state; swiftpm writes this under the SkyKit package too
+*.xcodeproj/xcuserdata/
+**/.swiftpm/xcode/xcuserdata/
