@@ -14,7 +14,49 @@ enum TestBus {
         let seq: Int
         let name: String
         let at: Double?
-        let data: [String: String]?
+        let data: EventData?
+    }
+
+    /// The app posts arbitrary JSON values - `boot.resolved` carries `{ offline: <Bool> }` - and a
+    /// strict `[String: String]` decode throws on the WHOLE page when any single value is not a
+    /// string, which silently blinds every assertion on the bus. Scalars are coerced to their
+    /// string form; anything structural is dropped rather than being allowed to poison the page.
+    struct EventData: Decodable {
+        private let values: [String: String]
+
+        subscript(key: String) -> String? { values[key] }
+
+        private struct Key: CodingKey {
+            let stringValue: String
+            var intValue: Int? { nil }
+            init?(stringValue: String) { self.stringValue = stringValue }
+            init?(intValue: Int) { nil }
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: Key.self)
+            var decoded: [String: String] = [:]
+            for key in container.allKeys {
+                if let value = try? container.decode(String.self, forKey: key) {
+                    decoded[key.stringValue] = value
+                } else if let value = try? container.decode(Bool.self, forKey: key) {
+                    decoded[key.stringValue] = String(value)
+                } else if let value = try? container.decode(Int.self, forKey: key) {
+                    decoded[key.stringValue] = String(value)
+                } else if let value = try? container.decode(Double.self, forKey: key) {
+                    decoded[key.stringValue] = String(value)
+                }
+            }
+            values = decoded
+        }
+    }
+
+    /// `GET /__test__/events` answers `{ events, latest }`, not a bare array. Decoding the
+    /// envelope is what the server actually sends; `latest` is carried so a caller can poll
+    /// incrementally without re-reading the buffer.
+    struct EventPage: Decodable {
+        let events: [Event]
+        let latest: Int
     }
 
     static let baseURL: URL = {
@@ -25,17 +67,24 @@ enum TestBus {
     /// probe once per process; a missing bus is a prerequisite gap, not a product failure
     private static var availability: Bool?
 
+    /// Decodes, rather than just checking the request succeeded. A probe that only asserts
+    /// reachability lets a payload-shape change through and it resurfaces later as an opaque
+    /// `typeMismatch` inside an unrelated assertion, which is exactly how the envelope drift here
+    /// stayed hidden.
     static func isReady() -> Bool {
         if let availability { return availability }
-        let ready = (try? get("/__test__/events?since=0")) != nil
+        let ready = (try? events(since: 0)) != nil
         availability = ready
         return ready
     }
 
+    // covers both failure modes on purpose: the probe decodes, so a payload-shape change skips
+    // here too, and a message that only said "not reachable" would send you to the wrong place
     static let unavailableReason = """
-        the observation bus is not reachable at \(baseURL.absoluteString)/__test__/events. \
-        Start the lane with scripts/native-ios.sh, and make sure mock-server.ts serves \
-        POST /__test__/event, GET /__test__/events and POST /__test__/reset.
+        the observation bus at \(baseURL.absoluteString)/__test__/events is unreachable or is \
+        answering a shape this decoder does not accept. Start the lane with scripts/native-ios.sh, \
+        and make sure mock-server.ts serves POST /__test__/event, POST /__test__/reset and \
+        GET /__test__/events as {"events":[...],"latest":N}.
         """
 
     static func reset() throws {
@@ -44,7 +93,7 @@ enum TestBus {
 
     static func events(since: Int = 0) throws -> [Event] {
         let data = try get("/__test__/events?since=\(since)")
-        return try JSONDecoder().decode([Event].self, from: data)
+        return try JSONDecoder().decode(EventPage.self, from: data).events
     }
 
     /// polls until `predicate` matches or the deadline passes; returns the matching events
