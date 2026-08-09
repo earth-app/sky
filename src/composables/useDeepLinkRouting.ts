@@ -122,12 +122,20 @@ export function useDeepLinkRouting() {
 			return { type: 'internal', target: `/signup?ref=${encodeURIComponent(inviteCode)}` };
 		}
 
-		// OAuth callback completion (universal/app link from the crust callback): extract token and
-		// hand back to the caller so it can populate the auth store and route the user in-app.
+		const routePath = isCustomScheme
+			? normalizePath(`/${host}${pathname === '/' ? '' : pathname}`)
+			: pathname;
+
+		const carriesOAuthToken = Boolean(
+			parsed.searchParams.get('session_token') ||
+			parsed.searchParams.get('sessionToken') ||
+			parsed.searchParams.get('token')
+		);
+
 		if (
-			isCustomScheme ||
-			OAUTH_COMPLETE_PATHS.has(pathname) ||
-			pathname.startsWith('/oauth/complete/')
+			carriesOAuthToken ||
+			OAUTH_COMPLETE_PATHS.has(routePath) ||
+			routePath.startsWith('/oauth/complete/')
 		) {
 			const sessionToken =
 				parsed.searchParams.get('session_token') ||
@@ -176,55 +184,55 @@ export function useDeepLinkRouting() {
 			};
 		}
 
-		if (EXTERNAL_ONLY_PATHS.has(pathname)) {
+		if (EXTERNAL_ONLY_PATHS.has(routePath)) {
 			return { type: 'external', target: parsed.toString() };
 		}
 
-		if (pathname === '/' || pathname === '') {
+		if (routePath === '/' || routePath === '') {
 			return { type: 'internal', target: `/tabs/dashboard${query}${hash}` };
 		}
 
-		if (pathname === '/tabs') {
+		if (routePath === '/tabs') {
 			return { type: 'internal', target: `/tabs/dashboard${query}${hash}` };
 		}
 
-		if (pathname.startsWith('/tabs/')) {
-			if (isKnownTabsPath(pathname)) {
-				return { type: 'internal', target: `${pathname}${query}${hash}` };
+		if (routePath.startsWith('/tabs/')) {
+			if (isKnownTabsPath(routePath)) {
+				return { type: 'internal', target: `${routePath}${query}${hash}` };
 			}
 
 			return { type: 'external', target: parsed.toString() };
 		}
 
-		if (hasPrefix(pathname, TABS_PREFIX_PATHS)) {
-			return { type: 'internal', target: `/tabs${pathname}${query}${hash}` };
+		if (hasPrefix(routePath, TABS_PREFIX_PATHS)) {
+			return { type: 'internal', target: `/tabs${routePath}${query}${hash}` };
 		}
 
-		if (pathname === '/discover') {
+		if (routePath === '/discover') {
 			return { type: 'internal', target: `/tabs/discover${query}${hash}` };
 		}
 
-		if (pathname === '/dashboard') {
+		if (routePath === '/dashboard') {
 			return { type: 'internal', target: `/tabs/dashboard${query}${hash}` };
 		}
 
 		// the challenge notification links to crust's /profile/quests?open=<id>
-		if (pathname === '/profile/quests') {
+		if (routePath === '/profile/quests') {
 			return { type: 'internal', target: `/tabs/quests${query}${hash}` };
 		}
 
-		if (pathname === '/profile' || pathname.startsWith('/profile/')) {
-			return { type: 'internal', target: `${pathname}${query}${hash}` };
+		if (routePath === '/profile' || routePath.startsWith('/profile/')) {
+			return { type: 'internal', target: `${routePath}${query}${hash}` };
 		}
 
 		if (
-			pathname === '/login' ||
-			pathname === '/signup' ||
-			pathname === '/verify-email' ||
-			pathname === '/forgot-password' ||
-			pathname === '/reset-password'
+			routePath === '/login' ||
+			routePath === '/signup' ||
+			routePath === '/verify-email' ||
+			routePath === '/forgot-password' ||
+			routePath === '/reset-password'
 		) {
-			return { type: 'internal', target: `${pathname}${query}${hash}` };
+			return { type: 'internal', target: `${routePath}${query}${hash}` };
 		}
 
 		return { type: 'external', target: parsed.toString() };

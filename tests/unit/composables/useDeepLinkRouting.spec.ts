@@ -166,4 +166,63 @@ describe('useDeepLinkRouting.resolveDeepLink', () => {
 			expect(res).toMatchObject({ type: 'oauth-complete', sessionToken: 'hashtok' });
 		});
 	});
+
+	// a custom-scheme url puts its first segment in `host`, so `//tabs/discover` parses as host
+	// 'tabs' + pathname '/discover'. matching on the bare pathname sent EVERY custom-scheme link
+	// into the oauth branch, where the missing token bounced the user to /login?error=auth_failed.
+	// found by the XCUITest deep-link flow, which is the only lane that opens a real scheme url
+	describe('custom scheme content links', () => {
+		it('routes a tabs link to the tab, not to the sign-in error', () => {
+			expect(resolveDeepLink('com.earthapp.sky://tabs/discover')).toEqual({
+				type: 'internal',
+				target: '/tabs/discover'
+			});
+		});
+
+		it('keeps the first segment when mapping a content link into the tab shell', () => {
+			expect(resolveDeepLink('com.earthapp.sky://articles/abc123')).toEqual({
+				type: 'internal',
+				target: '/tabs/articles/abc123'
+			});
+			expect(resolveDeepLink('com.earthapp.sky://quests/q1')).toEqual({
+				type: 'internal',
+				target: '/tabs/quests/q1'
+			});
+		});
+
+		it('preserves the query and hash', () => {
+			expect(resolveDeepLink('com.earthapp.sky://tabs/discover?q=trees#top')).toEqual({
+				type: 'internal',
+				target: '/tabs/discover?q=trees#top'
+			});
+		});
+
+		it('still routes the bare scheme to the dashboard', () => {
+			expect(resolveDeepLink('com.earthapp.sky://')).toEqual({
+				type: 'internal',
+				target: '/tabs/dashboard'
+			});
+		});
+
+		it('still completes a custom-scheme oauth callback', () => {
+			expect(
+				resolveDeepLink('com.earthapp.sky://oauth/complete?session_token=tok&provider=apple')
+			).toMatchObject({ type: 'oauth-complete', sessionToken: 'tok', provider: 'apple' });
+		});
+
+		it('still reports a custom-scheme oauth callback that carries no token', () => {
+			expect(resolveDeepLink('com.earthapp.sky://auth/callback-mobile?error=denied')).toEqual({
+				type: 'internal',
+				target: '/login?error=denied'
+			});
+		});
+
+		// the token is what makes it a callback, whatever path a provider redirects through
+		it('treats any scheme url carrying a session token as a callback', () => {
+			expect(resolveDeepLink('com.earthapp.sky://weird/path?session_token=tok')).toMatchObject({
+				type: 'oauth-complete',
+				sessionToken: 'tok'
+			});
+		});
+	});
 });
