@@ -72,6 +72,14 @@ final class PluginBridgeTests: XCTestCase {
             DistanceLiveActivityPlugin().jsName,
             SkyPluginContracts.distanceLiveActivity.jsName
         )
+        XCTAssertEqual(
+            StoreKitIdentityPlugin().identifier,
+            SkyPluginContracts.storeKitIdentity.identifier
+        )
+        XCTAssertEqual(
+            StoreKitIdentityPlugin().jsName,
+            SkyPluginContracts.storeKitIdentity.jsName
+        )
     }
 
     // the bridge looks a method up by name and then performs its selector; if the name is in the
@@ -79,7 +87,8 @@ final class PluginBridgeTests: XCTestCase {
     func testEveryDeclaredMethodResolvesToAnImplementedSelector() {
         let plugins: [(CAPPlugin & CAPBridgedPlugin, SkyPluginContract)] = [
             (HealthKitDistancePlugin(), SkyPluginContracts.healthKitDistance),
-            (DistanceLiveActivityPlugin(), SkyPluginContracts.distanceLiveActivity)
+            (DistanceLiveActivityPlugin(), SkyPluginContracts.distanceLiveActivity),
+            (StoreKitIdentityPlugin(), SkyPluginContracts.storeKitIdentity)
         ]
         for (plugin, contract) in plugins {
             XCTAssertEqual(

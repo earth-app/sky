@@ -25,6 +25,20 @@ const mocks = vi.hoisted(() => ({
 			build: '1',
 			version: '1.0.3'
 		}))
+	},
+	identityPlugin: {
+		getAppTransaction: vi.fn(async () => ({
+			bundleId: 'com.earthapp.sky',
+			environment: 'Sandbox',
+			appId: '6771985151',
+			verified: true
+		})),
+		refreshAppTransaction: vi.fn(async () => ({
+			bundleId: 'com.earthapp.sky',
+			environment: 'Sandbox',
+			appId: '6771985151',
+			verified: true
+		}))
 	}
 }));
 
@@ -33,8 +47,13 @@ vi.mock('@capacitor/core', () => ({
 		isNativePlatform: () => mocks.native,
 		getPlatform: () => mocks.platform
 	},
-	// dispatch by name: diagnose() binds @capacitor/app too, to read the binary's own bundle id
-	registerPlugin: (name: string) => (name === 'App' ? mocks.appPlugin : mocks.plugin)
+	// dispatch by name: diagnose() binds @capacitor/app for the binary's own bundle id, and the
+	// sky-owned StoreKitIdentity plugin for the app transaction
+	registerPlugin: (name: string) => {
+		if (name === 'App') return mocks.appPlugin;
+		if (name === 'StoreKitIdentity') return mocks.identityPlugin;
+		return mocks.plugin;
+	}
 }));
 
 // partial: crust's websocket plugin pulls makeServerRequest from the same module on a timer
@@ -81,6 +100,7 @@ function baseDiagnostics(overrides: Partial<IapDiagnostics> = {}): IapDiagnostic
 		environment: 'Sandbox',
 		bundleId: 'com.earthapp.sky',
 		localBundleId: 'com.earthapp.sky',
+		appId: '6771985151',
 		requestedProductIds: IOS_IDS,
 		availableProductIds: IOS_IDS,
 		missingProductIds: [],
@@ -107,6 +127,14 @@ beforeEach(() => {
 		build: '1',
 		version: '1.0.3'
 	});
+	const appTransaction = {
+		bundleId: 'com.earthapp.sky',
+		environment: 'Sandbox',
+		appId: '6771985151',
+		verified: true
+	};
+	mocks.identityPlugin.getAppTransaction.mockResolvedValue(appTransaction);
+	mocks.identityPlugin.refreshAppTransaction.mockResolvedValue(appTransaction);
 });
 
 describe('IAP product id map', () => {
@@ -457,7 +485,7 @@ describe('diagnose (plugin boundary)', () => {
 	it('records a failing call and keeps the rest of the snapshot', async () => {
 		mocks.native = true;
 		mocks.platform = 'ios';
-		mocks.plugin.getAppTransaction.mockRejectedValue(
+		mocks.identityPlugin.getAppTransaction.mockRejectedValue(
 			new Error('App Transaction requires iOS 16.0 or later')
 		);
 
@@ -478,6 +506,45 @@ describe('diagnose (plugin boundary)', () => {
 		const result = await diagnose();
 		expect(result.availableProductIds).toEqual([]);
 		expect(result.missingProductIds).toEqual(IOS_IDS);
+	});
+});
+
+// Apple's documented remedy when AppTransaction.shared throws. it presents a sign-in sheet, so it
+// must stay an explicit user action - the composable never calls it from diagnose()
+describe('refreshAppIdentity', () => {
+	it('refuses off iOS rather than calling a plugin that does not exist there', async () => {
+		mocks.native = true;
+		mocks.platform = 'android';
+		const { refreshAppIdentity } = useIapPurchase();
+		const result = await refreshAppIdentity();
+		expect(result.ok).toBe(false);
+		expect(mocks.identityPlugin.refreshAppTransaction).not.toHaveBeenCalled();
+	});
+
+	it('reports success once the store re-issues the app transaction', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		const { refreshAppIdentity } = useIapPurchase();
+		expect(await refreshAppIdentity()).toEqual({ ok: true });
+	});
+
+	// a cancelled sign-in sheet rejects; that must read as "not fixed", not as a crash
+	it('surfaces the failure instead of throwing', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		mocks.identityPlugin.refreshAppTransaction.mockRejectedValue(new Error('User cancelled'));
+		const { refreshAppIdentity } = useIapPurchase();
+		const result = await refreshAppIdentity();
+		expect(result.ok).toBe(false);
+		expect(result.error).toBeTruthy();
+	});
+
+	it('treats a transaction with no bundle id as unresolved', async () => {
+		mocks.native = true;
+		mocks.platform = 'ios';
+		mocks.identityPlugin.refreshAppTransaction.mockResolvedValue({} as never);
+		const { refreshAppIdentity } = useIapPurchase();
+		expect((await refreshAppIdentity()).ok).toBe(false);
 	});
 });
 

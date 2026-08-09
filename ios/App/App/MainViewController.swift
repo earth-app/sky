@@ -5,5 +5,6 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(HealthKitDistancePlugin())
         bridge?.registerPluginInstance(DistanceLiveActivityPlugin())
+        bridge?.registerPluginInstance(StoreKitIdentityPlugin())
     }
 }

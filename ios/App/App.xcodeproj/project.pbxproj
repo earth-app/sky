@@ -17,6 +17,8 @@
 		2578E1D82FE9D9EF00785078 /* DistanceLiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2578E1D72FE9D9EF00785078 /* DistanceLiveActivityPlugin.swift */; };
 		2578E1DA2FE9D9F700785078 /* HealthKitDistancePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2578E1D92FE9D9F700785078 /* HealthKitDistancePlugin.swift */; };
 		2578E1DE2FEA2F7500785078 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2578E1DD2FEA2F7500785078 /* MainViewController.swift */; };
+		2587F51A30294459006B37D0 /* StoreKitIdentityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2587F51930294459006B37D0 /* StoreKitIdentityPlugin.swift */; };
+		A5C1AA0000000000000000FC /* StoreKitIdentityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2587F51930294459006B37D0 /* StoreKitIdentityPlugin.swift */; };
 		25A5B7C82F9BD000007E5B8F /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 25A5B7C82F9BD000007E5B8E /* GoogleService-Info.plist */; };
 		25EDF8262FCFA5F30021B429 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 25EDF8252FCFA5F30021B429 /* HealthKit.framework */; };
 		25EDF8282FCFA6D60021B429 /* WatchKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 25EDF8272FCFA6D60021B429 /* WatchKit.framework */; };
@@ -110,6 +112,7 @@
 		2578E1D72FE9D9EF00785078 /* DistanceLiveActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DistanceLiveActivityPlugin.swift; sourceTree = "<group>"; };
 		2578E1D92FE9D9F700785078 /* HealthKitDistancePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitDistancePlugin.swift; sourceTree = "<group>"; };
 		2578E1DD2FEA2F7500785078 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		2587F51930294459006B37D0 /* StoreKitIdentityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitIdentityPlugin.swift; sourceTree = "<group>"; };
 		25A5B7C82F9BD000007E5B8E /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		25EDF8252FCFA5F30021B429 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		25EDF8272FCFA6D60021B429 /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.2.sdk/System/Library/Frameworks/WatchKit.framework; sourceTree = DEVELOPER_DIR; };
@@ -265,6 +268,7 @@
 				25A5B7C82F9BD000007E5B8E /* GoogleService-Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				2587F51930294459006B37D0 /* StoreKitIdentityPlugin.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -509,6 +513,7 @@
 				2578E1D52FE9D9E200785078 /* DistanceActivityAttributes.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				5CE1EDE1AA0000000000A001 /* SceneDelegate.swift in Sources */,
+				2587F51A30294459006B37D0 /* StoreKitIdentityPlugin.swift in Sources */,
 				A5C1AA000000000000000002 /* SkyKitBridge.swift in Sources */,
 				2578E1DE2FEA2F7500785078 /* MainViewController.swift in Sources */,
 			);
@@ -522,6 +527,7 @@
 				A5C1AA000000000000000022 /* DistanceLiveActivityPlugin.swift in Sources */,
 				A5C1AA000000000000000023 /* DistanceActivityAttributes.swift in Sources */,
 				A5C1AA000000000000000024 /* SkyKitBridge.swift in Sources */,
+				A5C1AA0000000000000000FC /* StoreKitIdentityPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

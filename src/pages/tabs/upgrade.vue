@@ -25,15 +25,28 @@
 						The App Store is not offering plans on this device right now. Everything in your current
 						plan keeps working.
 					</p>
-					<IonButton
-						fill="outline"
-						size="small"
-						color="medium"
-						aria-label="Copy Diagnostic Info"
-						@click="onCopyDiagnostics"
-					>
-						Copy Diagnostic Info
-					</IonButton>
+					<div class="flex flex-wrap items-center gap-2">
+						<IonButton
+							v-if="canRefreshIdentity"
+							fill="outline"
+							size="small"
+							color="medium"
+							:disabled="refreshingIdentity"
+							aria-label="Refresh App Identity"
+							@click="onRefreshIdentity"
+						>
+							{{ refreshingIdentity ? 'Refreshing...' : 'Refresh App Identity' }}
+						</IonButton>
+						<IonButton
+							fill="outline"
+							size="small"
+							color="medium"
+							aria-label="Copy Diagnostic Info"
+							@click="onCopyDiagnostics"
+						>
+							Copy Diagnostic Info
+						</IonButton>
+					</div>
 				</div>
 
 				<MRanks :highlighted="highlighted" />
@@ -114,10 +127,19 @@ const TERMS_URL = 'https://earth-app.com/tos';
 const PRIVACY_URL = 'https://earth-app.com/privacy-policy';
 
 const route = useRoute();
-const { restore, diagnose, isNative } = useIapPurchase();
+const { restore, diagnose, refreshAppIdentity, isNative, currentPlatform } = useIapPurchase();
 const { plans, fetchPlans } = useSubscription();
 const restoring = ref(false);
+const refreshingIdentity = ref(false);
 const diagnostics = ref<IapDiagnostics | null>(null);
+
+// only offered when the app transaction is what failed; refreshing anything else fixes nothing
+const canRefreshIdentity = computed(
+	() =>
+		currentPlatform() === 'ios' &&
+		diagnostics.value != null &&
+		classifyAvailability(diagnostics.value) === 'no_app_identity'
+);
 
 // 'not_native' is the web preview, which is expected to have no store and must stay quiet
 const purchasesUnavailable = computed(() => {
@@ -167,6 +189,25 @@ async function onRestore() {
 		}
 	} finally {
 		restoring.value = false;
+	}
+}
+
+async function onRefreshIdentity() {
+	if (refreshingIdentity.value) return;
+	refreshingIdentity.value = true;
+	try {
+		const result = await refreshAppIdentity();
+		// re-read either way: a refresh that resolved the identity usually resolves the catalogue
+		diagnostics.value = await diagnose();
+		if (result.ok && !purchasesUnavailable.value) {
+			await showInfoToast('Purchases Are Available Again.');
+		} else {
+			await showErrorToast(result.error, {
+				fallback: 'The App Store could not confirm this app. See the diagnostic info.'
+			});
+		}
+	} finally {
+		refreshingIdentity.value = false;
 	}
 }
 

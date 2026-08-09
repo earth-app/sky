@@ -57,7 +57,19 @@ public enum SkyPluginContracts {
         methods: ["isSupported", "start", "update", "end"]
     )
 
-    public static let all: [SkyPluginContract] = [healthKitDistance, distanceLiveActivity]
+    /// `AppTransaction` is the only thing that reports which app the App Store believes this
+    /// install is, and `@capgo/native-purchases` exposes no way to refresh it after `shared` throws
+    public static let storeKitIdentity = SkyPluginContract(
+        identifier: "StoreKitIdentityPlugin",
+        jsName: "StoreKitIdentity",
+        methods: ["getAppTransaction", "refreshAppTransaction"]
+    )
+
+    public static let all: [SkyPluginContract] = [
+        healthKitDistance,
+        distanceLiveActivity,
+        storeKitIdentity
+    ]
 
     public static func contract(jsName: String) -> SkyPluginContract? {
         all.first { $0.jsName == jsName }

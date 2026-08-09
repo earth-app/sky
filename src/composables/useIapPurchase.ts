@@ -72,6 +72,10 @@ export interface IapAppTransaction {
 	originalAppVersion?: string;
 	originalPurchaseDate?: string;
 	appVersion?: string;
+	/** the App Store's own record id; a bundle-id comparison cannot catch a wrong app record */
+	appId?: string;
+	verified?: boolean;
+	verificationError?: string;
 }
 
 // mirrors @capgo/native-purchases PURCHASE_TYPE.SUBS
@@ -83,6 +87,19 @@ function getNativePurchases(): NativePurchasesPlugin {
 		nativePurchases = registerPlugin<NativePurchasesPlugin>('NativePurchases');
 	}
 	return nativePurchases;
+}
+
+interface StoreKitIdentityPlugin {
+	getAppTransaction(): Promise<IapAppTransaction>;
+	refreshAppTransaction(): Promise<IapAppTransaction>;
+}
+
+let storeKitIdentity: StoreKitIdentityPlugin | null = null;
+function getStoreKitIdentity(): StoreKitIdentityPlugin {
+	if (!storeKitIdentity) {
+		storeKitIdentity = registerPlugin<StoreKitIdentityPlugin>('StoreKitIdentity');
+	}
+	return storeKitIdentity;
 }
 
 interface AppInfoPlugin {
@@ -152,6 +169,8 @@ export interface IapDiagnostics {
 	bundleId: string | null;
 	/** what the binary says it is, read locally so it survives an app-transaction failure */
 	localBundleId: string | null;
+	/** the App Store's record id for this app, when the app transaction resolves */
+	appId: string | null;
 	requestedProductIds: string[];
 	availableProductIds: string[];
 	missingProductIds: string[];
@@ -212,7 +231,11 @@ export function explainAvailability(verdict: IapAvailabilityVerdict): string {
 		case 'no_storefront':
 			return 'No storefront resolved, so the device is not signed in to an account that can serve products. On iOS check Settings > Developer > Sandbox Apple Account.';
 		case 'no_app_identity':
-			return 'The storefront resolved but the app transaction did not, so StoreKit reached the App Store and could not establish which app this install is. Apple documents that as the AppTransaction being unavailable or the account not being authenticated with the App Store, and an install it cannot identify has every product identifier dropped. This is what a build the App Store never delivered looks like: sign in under Settings > Developer > Sandbox Apple Account and relaunch, or install the same build from TestFlight, which resolves both automatically. App Store Connect is not the thing to change.';
+			return [
+				'The storefront resolved but the app transaction did not, so StoreKit reached the App Store and could not establish which app this install is. An install it cannot identify has every product identifier dropped, which is why all of them are missing at once.',
+				'Apple TN3186 lists the causes, and they are signing/account level rather than catalogue level: the bundle id is not registered in App Store Connect or is DISABLED for the In-App Purchase capability in Certificates, Identifiers & Profiles; the app is signed with a wildcard App ID or an invalid certificate or provisioning profile; or the Apple Developer Program account is inactive, which includes the case where a newer Program License Agreement is published and unsigned (that is a separate agreement from Paid Apps).',
+				'Product metadata is not the cause when the app transaction itself fails, so check those before editing anything in App Store Connect. A development-signed build IS supported for sandbox testing and does not need uploading first.'
+			].join(' ');
 		case 'all_products_missing':
 			return 'The store identified the app and still dropped every identifier. That is account-level rather than per-product: confirm the bundle id below owns these products in App Store Connect.';
 		case 'some_products_missing':
@@ -234,6 +257,7 @@ export function formatIapDiagnostics(diagnostics: IapDiagnostics): string {
 		`environment: ${diagnostics.environment ?? 'unknown'}`,
 		`bundle id (app store): ${diagnostics.bundleId ?? 'unknown'}`,
 		`bundle id (binary): ${diagnostics.localBundleId ?? 'unknown'}`,
+		`app store app id: ${diagnostics.appId ?? 'unknown'}`,
 		`requested: ${diagnostics.requestedProductIds.join(', ') || 'none'}`,
 		`available: ${diagnostics.availableProductIds.join(', ') || 'none'}`,
 		`missing: ${diagnostics.missingProductIds.join(', ') || 'none'}`
@@ -317,6 +341,16 @@ export function mapPurchaseError(err: unknown): {
 		productMissing,
 		message: cancelled ? 'Purchase canceled.' : message || 'The purchase could not be completed.'
 	};
+}
+
+/** copy an app transaction onto a snapshot; shared by the initial read and by a refresh */
+export function applyAppTransaction(
+	diagnostics: IapDiagnostics,
+	appTransaction: IapAppTransaction | undefined | null
+): void {
+	diagnostics.environment = appTransaction?.environment ?? null;
+	diagnostics.bundleId = appTransaction?.bundleId ?? null;
+	diagnostics.appId = appTransaction?.appId ?? null;
 }
 
 /** the one user-facing sentence for "the store has no such product", used by every path */
@@ -420,6 +454,7 @@ export function useIapPurchase() {
 			environment: null,
 			bundleId: null,
 			localBundleId: null,
+			appId: null,
 			requestedProductIds,
 			availableProductIds: [],
 			missingProductIds: requestedProductIds,
@@ -448,9 +483,13 @@ export function useIapPurchase() {
 				diagnostics.storefront = (await plugin.getStorefront())?.countryCode || null;
 			}),
 			record('appTransaction', async () => {
-				const { appTransaction } = await plugin.getAppTransaction();
-				diagnostics.environment = appTransaction?.environment ?? null;
-				diagnostics.bundleId = appTransaction?.bundleId ?? null;
+				// the sky-owned plugin on ios, which also reports appId; capgo's is the fallback and
+				// is all android has (there is no app transaction there, so it simply records)
+				const appTransaction =
+					diagnostics.platform === 'ios'
+						? await getStoreKitIdentity().getAppTransaction()
+						: (await plugin.getAppTransaction())?.appTransaction;
+				applyAppTransaction(diagnostics, appTransaction);
 			}),
 			record('products', async () => {
 				const products = await loadProducts(requestedProductIds);
@@ -544,6 +583,18 @@ export function useIapPurchase() {
 		return await verifyTransaction(provider, path, productId, tx);
 	}
 
+	async function refreshAppIdentity(): Promise<{ ok: boolean; error?: string }> {
+		if (!isNative() || currentPlatform() !== 'ios') {
+			return { ok: false, error: 'The app transaction is only available on iOS.' };
+		}
+		try {
+			const appTransaction = await getStoreKitIdentity().refreshAppTransaction();
+			return { ok: Boolean(appTransaction?.bundleId) };
+		} catch (error) {
+			return { ok: false, error: mapPurchaseError(error).message };
+		}
+	}
+
 	return {
 		isNative,
 		currentPlatform,
@@ -551,6 +602,7 @@ export function useIapPurchase() {
 		catalogueIds,
 		fetchProducts,
 		diagnose,
+		refreshAppIdentity,
 		purchase,
 		restore
 	};
