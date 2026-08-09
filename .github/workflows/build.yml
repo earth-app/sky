@@ -137,6 +137,61 @@ jobs:
           path: coverage/
           retention-days: 14
 
+  native-logic-ios:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    needs: unit
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run Swift Logic Tests
+        run: bash scripts/native-ios.sh logic
+
+  native-unit-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: unit
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 'latest'
+          registries: |
+            https://registry.npmjs.org/
+            @earth-app:https://npm.pkg.github.com|$GITHUB_TOKEN
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      # the script runs `cap update android` itself when the gitignored capacitor gradle modules
+      # are missing, which needs the node deps present first
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Run Android JVM Tests
+        run: bash scripts/native-android.sh unit
+      - name: Archive Android Test Reports
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-android-unit-reports-${{ github.run_id }}
+          path: android/app/build/reports/tests/
+          retention-days: 7
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -258,8 +313,8 @@ jobs:
     timeout-minutes: 60
     needs: [unit, build-ios]
     # nightly + manual only. github's hosted ios simulators render in software and time the job out
-    # (actions/runner-images#3239), and maestro has open ios driver-hang bugs (#2628, #2906, #1585),
-    # so gating every commit on this lane blocks merges on upstream defects we cannot fix
+    # (actions/runner-images#3239) at 3 vCPU / 7 GB, so gating every commit on a device lane blocks
+    # merges on a hardware limit. the no-device tiers (native-logic-ios, native-unit-android) gate
     if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
@@ -287,12 +342,6 @@ jobs:
           bun run postinstall
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - name: Install Maestro
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-        env:
-          MAESTRO_VERSION: '2.7.0'
       - name: Build Project
         run: bun run generate:ios
       - name: Sync Capacitor iOS Project
@@ -333,21 +382,23 @@ jobs:
         with:
           subject-name: sky-compile-ios-${{ github.run_id }}
           subject-digest: sha256:${{ steps.archive.outputs.artifact-digest }}
-      - name: Run Maestro Gate Flows (iOS Simulator)
-        timeout-minutes: 50
-        run: bun run maestro:ios
+      - name: Run Native Bridge Tests (Simulator)
+        timeout-minutes: 20
+        run: bash scripts/native-ios.sh unit
         env:
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: '60000'
           MAESTRO_DERIVED_DATA: ${{ runner.temp }}/derived-data-ios
-      - name: Archive Maestro Artifacts
+      - name: Run Native UI Tests (Simulator)
+        timeout-minutes: 40
+        run: bash scripts/native-ios.sh ui
+        env:
+          MAESTRO_DERIVED_DATA: ${{ runner.temp }}/derived-data-ios
+      - name: Archive Native Test Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: maestro-ios-${{ github.run_id }}
+          name: native-ios-${{ github.run_id }}
           path: |
-            /tmp/sky-maestro/ios/report.xml
-            /tmp/sky-maestro/ios/artifacts
-            /tmp/sky-maestro/mock-server.log
+            /tmp/sky-native
           retention-days: 7
 
   native-android:
@@ -388,12 +439,6 @@ jobs:
           bun run postinstall
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - name: Install Maestro
-        run: |
-          curl -Ls https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-        env:
-          MAESTRO_VERSION: '2.7.0'
       - name: Build Project
         run: bun run generate:android
       - name: Sync Capacitor Android Project
@@ -435,13 +480,10 @@ jobs:
           done
           echo "::warning::could not pre-download the emulator package; the runner action will try once more"
           exit 0
-      - name: Run Maestro Gate Flows (Android Emulator)
+      - name: Run Native Instrumented Tests (Android Emulator)
         uses: reactivecircus/android-emulator-runner@v2
         env:
-          # 60s, not 300s: at 300s a driver that fails to start burns five minutes and reports NO
-          # assertion error, which is exactly how 8 android flows looked identical at ~4m41s. a
-          # short budget surfaces the driver's own error instead of hiding it behind a long wait
-          MAESTRO_DRIVER_STARTUP_TIMEOUT: '60000'
+          NATIVE_SKIP_BUILD: '1'
         with:
           api-level: 35
           target: google_apis
@@ -449,14 +491,14 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -feature -Vulkan -noaudio -no-boot-anim -no-snapshot -camera-back none -camera-front none -memory 4096
-          script: bun run maestro:android
-      - name: Archive Maestro Artifacts
+          script: bash scripts/native-android.sh instrumented
+      - name: Archive Native Test Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: maestro-android-${{ github.run_id }}
+          name: native-android-${{ github.run_id }}
           path: |
-            /tmp/sky-maestro/android/report.xml
-            /tmp/sky-maestro/android/artifacts
-            /tmp/sky-maestro/mock-server.log
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+            /tmp/sky-native
           retention-days: 7
