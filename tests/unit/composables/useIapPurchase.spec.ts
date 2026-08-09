@@ -17,6 +17,14 @@ const mocks = vi.hoisted(() => ({
 		getAppTransaction: vi.fn(async () => ({
 			appTransaction: { bundleId: 'com.earthapp.sky', environment: 'Sandbox' }
 		}))
+	},
+	appPlugin: {
+		getInfo: vi.fn(async () => ({
+			id: 'com.earthapp.sky',
+			name: 'The Earth App',
+			build: '1',
+			version: '1.0.3'
+		}))
 	}
 }));
 
@@ -25,7 +33,8 @@ vi.mock('@capacitor/core', () => ({
 		isNativePlatform: () => mocks.native,
 		getPlatform: () => mocks.platform
 	},
-	registerPlugin: () => mocks.plugin
+	// dispatch by name: diagnose() binds @capacitor/app too, to read the binary's own bundle id
+	registerPlugin: (name: string) => (name === 'App' ? mocks.appPlugin : mocks.plugin)
 }));
 
 // partial: crust's websocket plugin pulls makeServerRequest from the same module on a timer
@@ -71,6 +80,7 @@ function baseDiagnostics(overrides: Partial<IapDiagnostics> = {}): IapDiagnostic
 		storefront: 'USA',
 		environment: 'Sandbox',
 		bundleId: 'com.earthapp.sky',
+		localBundleId: 'com.earthapp.sky',
 		requestedProductIds: IOS_IDS,
 		availableProductIds: IOS_IDS,
 		missingProductIds: [],
@@ -90,6 +100,12 @@ beforeEach(() => {
 	mocks.plugin.getStorefront.mockResolvedValue({ countryCode: 'USA' });
 	mocks.plugin.getAppTransaction.mockResolvedValue({
 		appTransaction: { bundleId: 'com.earthapp.sky', environment: 'Sandbox' }
+	});
+	mocks.appPlugin.getInfo.mockResolvedValue({
+		id: 'com.earthapp.sky',
+		name: 'The Earth App',
+		build: '1',
+		version: '1.0.3'
 	});
 });
 
@@ -316,6 +332,41 @@ describe('classifyAvailability', () => {
 		).toBe('some_products_missing');
 	});
 
+	// the shipped v1.0.3 diagnostic: storefront USA, billing supported, all three dropped, and a
+	// failed app transaction. blaming App Store Connect there sends you to the wrong system
+	it('blames the app identity, not the account, when the app transaction failed', () => {
+		expect(
+			classifyAvailability(
+				baseDiagnostics({
+					environment: null,
+					bundleId: null,
+					missingProductIds: IOS_IDS,
+					availableProductIds: [],
+					errors: { appTransaction: 'Failed to get app transaction: Unable to Complete Request' }
+				})
+			)
+		).toBe('no_app_identity');
+	});
+
+	it('still reads account-level when the app transaction succeeded', () => {
+		expect(
+			classifyAvailability(baseDiagnostics({ missingProductIds: IOS_IDS, availableProductIds: [] }))
+		).toBe('all_products_missing');
+	});
+
+	// an unrelated api failing must not hijack the verdict
+	it('ignores a failure in a different call', () => {
+		expect(
+			classifyAvailability(
+				baseDiagnostics({
+					missingProductIds: IOS_IDS,
+					availableProductIds: [],
+					errors: { pluginVersion: 'boom' }
+				})
+			)
+		).toBe('all_products_missing');
+	});
+
 	it('blames the missing storefront before the products', () => {
 		expect(
 			classifyAvailability(
@@ -331,7 +382,8 @@ describe('formatIapDiagnostics', () => {
 			baseDiagnostics({ missingProductIds: IOS_IDS, availableProductIds: [] })
 		);
 		expect(report.startsWith('verdict: all_products_missing')).toBe(true);
-		expect(report).toContain('bundle id: com.earthapp.sky');
+		expect(report).toContain('bundle id (app store): com.earthapp.sky');
+		expect(report).toContain('bundle id (binary): com.earthapp.sky');
 		expect(report).toContain('environment: Sandbox');
 		expect(report).toContain('storefront: USA');
 		expect(report).toContain(IOS_IDS[0]);
@@ -346,11 +398,29 @@ describe('formatIapDiagnostics', () => {
 
 	it('prints unknowns as unknown instead of inventing a value', () => {
 		const report = formatIapDiagnostics(
-			baseDiagnostics({ environment: null, bundleId: null, storefront: null })
+			baseDiagnostics({
+				environment: null,
+				bundleId: null,
+				localBundleId: null,
+				storefront: null
+			})
 		);
 		expect(report).toContain('environment: unknown');
-		expect(report).toContain('bundle id: unknown');
+		expect(report).toContain('bundle id (app store): unknown');
 		expect(report).toContain('storefront: none');
+	});
+
+	// the app-store bundle id dies with the app transaction; the binary's own must survive it
+	it('keeps the binary bundle id when the app transaction failed', () => {
+		const report = formatIapDiagnostics(
+			baseDiagnostics({
+				environment: null,
+				bundleId: null,
+				errors: { appTransaction: 'Unable to Complete Request' }
+			})
+		);
+		expect(report).toContain('bundle id (app store): unknown');
+		expect(report).toContain('bundle id (binary): com.earthapp.sky');
 	});
 });
 
@@ -378,6 +448,7 @@ describe('diagnose (plugin boundary)', () => {
 		expect(result.storefront).toBe('USA');
 		expect(result.environment).toBe('Sandbox');
 		expect(result.bundleId).toBe('com.earthapp.sky');
+		expect(result.localBundleId).toBe('com.earthapp.sky');
 		expect(result.missingProductIds).toEqual([]);
 		expect(classifyAvailability(result)).toBe('ok');
 	});
@@ -395,8 +466,9 @@ describe('diagnose (plugin boundary)', () => {
 
 		expect(result.errors.appTransaction).toContain('iOS 16.0');
 		expect(result.storefront).toBe('USA');
+		expect(result.localBundleId).toBe('com.earthapp.sky');
 		expect(result.missingProductIds).toEqual(IOS_IDS);
-		expect(classifyAvailability(result)).toBe('all_products_missing');
+		expect(classifyAvailability(result)).toBe('no_app_identity');
 	});
 
 	it('reports every id missing when the store returns nothing', async () => {

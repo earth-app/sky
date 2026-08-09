@@ -85,6 +85,18 @@ function getNativePurchases(): NativePurchasesPlugin {
 	return nativePurchases;
 }
 
+interface AppInfoPlugin {
+	getInfo(): Promise<{ id: string; name: string; build: string; version: string }>;
+}
+
+let appPlugin: AppInfoPlugin | null = null;
+function getAppPlugin(): AppInfoPlugin {
+	if (!appPlugin) {
+		appPlugin = registerPlugin<AppInfoPlugin>('App');
+	}
+	return appPlugin;
+}
+
 export interface AppleVerifyBody {
 	transaction_id: string;
 	product_id: string;
@@ -136,7 +148,10 @@ export interface IapDiagnostics {
 	billingSupported: boolean | null;
 	storefront: string | null;
 	environment: string | null;
+	/** what the App Store thinks this install is; null whenever the app transaction fails */
 	bundleId: string | null;
+	/** what the binary says it is, read locally so it survives an app-transaction failure */
+	localBundleId: string | null;
 	requestedProductIds: string[];
 	availableProductIds: string[];
 	missingProductIds: string[];
@@ -149,6 +164,7 @@ export type IapAvailabilityVerdict =
 	| 'billing_unsupported'
 	| 'local_storekit_config'
 	| 'no_storefront'
+	| 'no_app_identity'
 	| 'all_products_missing'
 	| 'some_products_missing';
 
@@ -173,6 +189,10 @@ export function classifyAvailability(diagnostics: IapDiagnostics): IapAvailabili
 	if (diagnostics.environment === 'Xcode') return 'local_storekit_config';
 	if (diagnostics.missingProductIds.length === 0) return 'ok';
 	if (!diagnostics.storefront) return 'no_storefront';
+	// a failed AppTransaction means storekit could not establish WHICH app this is, and an install
+	// it cannot identify gets every product identifier dropped. same root, both symptoms - so this
+	// outranks the account-level reading, which would otherwise send you to App Store Connect
+	if (diagnostics.errors.appTransaction) return 'no_app_identity';
 	return diagnostics.missingProductIds.length === diagnostics.requestedProductIds.length
 		? 'all_products_missing'
 		: 'some_products_missing';
@@ -191,8 +211,10 @@ export function explainAvailability(verdict: IapAvailabilityVerdict): string {
 			return 'A local StoreKit configuration file is serving products, so App Store Connect is not being consulted. Clear the scheme StoreKit configuration to test the real catalogue.';
 		case 'no_storefront':
 			return 'No storefront resolved, so the device is not signed in to an account that can serve products. On iOS check Settings > Developer > Sandbox Apple Account.';
+		case 'no_app_identity':
+			return 'The storefront resolved but the app transaction did not, so StoreKit reached the App Store and could not establish which app this install is. Apple documents that as the AppTransaction being unavailable or the account not being authenticated with the App Store, and an install it cannot identify has every product identifier dropped. This is what a build the App Store never delivered looks like: sign in under Settings > Developer > Sandbox Apple Account and relaunch, or install the same build from TestFlight, which resolves both automatically. App Store Connect is not the thing to change.';
 		case 'all_products_missing':
-			return 'The store answered but dropped every identifier. That is an account-level cause, not a per-product one: check that the Paid Applications agreement is Active (bank and tax complete) and that the bundle id below owns these products.';
+			return 'The store identified the app and still dropped every identifier. That is account-level rather than per-product: confirm the bundle id below owns these products in App Store Connect.';
 		case 'some_products_missing':
 			return 'The store served some identifiers and dropped others, so the missing ones are individually unavailable. Check each for Missing Metadata in App Store Connect.';
 	}
@@ -210,7 +232,8 @@ export function formatIapDiagnostics(diagnostics: IapDiagnostics): string {
 		`billing supported: ${diagnostics.billingSupported ?? 'unknown'}`,
 		`storefront: ${diagnostics.storefront || 'none'}`,
 		`environment: ${diagnostics.environment ?? 'unknown'}`,
-		`bundle id: ${diagnostics.bundleId ?? 'unknown'}`,
+		`bundle id (app store): ${diagnostics.bundleId ?? 'unknown'}`,
+		`bundle id (binary): ${diagnostics.localBundleId ?? 'unknown'}`,
 		`requested: ${diagnostics.requestedProductIds.join(', ') || 'none'}`,
 		`available: ${diagnostics.availableProductIds.join(', ') || 'none'}`,
 		`missing: ${diagnostics.missingProductIds.join(', ') || 'none'}`
@@ -396,6 +419,7 @@ export function useIapPurchase() {
 			storefront: null,
 			environment: null,
 			bundleId: null,
+			localBundleId: null,
 			requestedProductIds,
 			availableProductIds: [],
 			missingProductIds: requestedProductIds,
@@ -433,6 +457,11 @@ export function useIapPurchase() {
 				const summary = summarizeAvailability(requestedProductIds, products);
 				diagnostics.availableProductIds = summary.available;
 				diagnostics.missingProductIds = summary.missing;
+			}),
+			// bound by name for the same reason as the purchases plugin, and read separately from
+			// the app transaction so a bundle-id mismatch stays visible when that call fails
+			record('localBundleId', async () => {
+				diagnostics.localBundleId = (await getAppPlugin().getInfo())?.id ?? null;
 			})
 		]);
 
