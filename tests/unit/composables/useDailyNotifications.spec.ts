@@ -105,7 +105,7 @@ describe('natureMinutesToday', () => {
 	it('sums only sources credited today', () => {
 		const value = nm({
 			sources: [
-				{ kind: 'trail_step', minutes: 15, at: todayISO },
+				{ kind: 'trail', minutes: 15, at: todayISO },
 				{ kind: 'healthkit', minutes: 20, at: todayISO },
 				{ kind: 'manual', minutes: 99, at: twoDaysAgoISO }
 			]
