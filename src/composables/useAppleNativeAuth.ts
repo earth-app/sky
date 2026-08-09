@@ -38,9 +38,7 @@ function isCancelError(error: unknown): boolean {
 
 export function isAppleNativeUnavailableError(error: unknown): boolean {
 	const message = (error as { message?: string })?.message?.toLowerCase() || '';
-	// Capacitor throws this when the JS shim loads but the native plugin is
-	// missing from the iOS binary (i.e. `npx cap sync ios` was never run after
-	// the package was added to Package.swift, or the app wasn't rebuilt).
+
 	return (
 		message.includes('not implemented') ||
 		message.includes('not available') ||
@@ -48,9 +46,6 @@ export function isAppleNativeUnavailableError(error: unknown): boolean {
 	);
 }
 
-// True when the user dismissed the native Apple sheet. `startAppleNativeAuth` tags the
-// cancellation error so callers can distinguish "user backed out" (do nothing) from a real
-// failure (which should fall back to the browser flow).
 export function isAppleSignInCancelled(error: unknown): boolean {
 	return (
 		Boolean((error as { appleCancelled?: boolean } | null)?.appleCancelled) || isCancelError(error)

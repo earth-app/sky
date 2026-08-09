@@ -24,6 +24,7 @@ import type { OAuthProvider } from 'types/user';
 import { capitalizeFully } from 'utils';
 import {
 	isAppleNativeAvailable,
+	isAppleNativeUnavailableError,
 	isAppleSignInCancelled,
 	startAppleNativeAuth
 } from '~/composables/useAppleNativeAuth';
@@ -106,7 +107,15 @@ async function startOauth() {
 					return;
 				}
 
-				console.warn('[oauth] native Apple Sign In failed; falling back to browser flow:', error);
+				// only fall back when the NATIVE path cannot run at all
+				if (!isAppleNativeUnavailableError(error)) {
+					throw error;
+				}
+
+				console.warn(
+					'[oauth] native Apple Sign In unavailable; falling back to browser flow:',
+					error
+				);
 			}
 		}
 
