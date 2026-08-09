@@ -15,6 +15,27 @@
 					and can be canceled anytime from Settings.
 				</p>
 
+				<div
+					v-if="purchasesUnavailable"
+					id="iap-unavailable"
+					class="mb-4 rounded-xl border border-default p-4 flex flex-col gap-3"
+				>
+					<div class="text-sm font-semibold">Purchases Are Unavailable</div>
+					<p class="text-xs! opacity-80 leading-relaxed">
+						The App Store is not offering plans on this device right now. Everything in your current
+						plan keeps working.
+					</p>
+					<IonButton
+						fill="outline"
+						size="small"
+						color="medium"
+						aria-label="Copy Diagnostic Info"
+						@click="onCopyDiagnostics"
+					>
+						Copy Diagnostic Info
+					</IonButton>
+				</div>
+
 				<MRanks :highlighted="highlighted" />
 
 				<div class="flex flex-col items-center gap-1 mt-6">
@@ -84,6 +105,8 @@
 
 <script setup lang="ts">
 import { Browser } from '@capacitor/browser';
+import type { IapDiagnostics } from '~/composables/useIapPurchase';
+import { classifyAvailability, formatIapDiagnostics } from '~/composables/useIapPurchase';
 import { showErrorToast, showInfoToast } from '~/composables/useNotify';
 
 /** guideline 3.1.2(c) requires BOTH of these reachable from the purchase flow itself */
@@ -91,9 +114,17 @@ const TERMS_URL = 'https://earth-app.com/tos';
 const PRIVACY_URL = 'https://earth-app.com/privacy-policy';
 
 const route = useRoute();
-const { restore } = useIapPurchase();
+const { restore, diagnose, isNative } = useIapPurchase();
 const { plans, fetchPlans } = useSubscription();
 const restoring = ref(false);
+const diagnostics = ref<IapDiagnostics | null>(null);
+
+// 'not_native' is the web preview, which is expected to have no store and must stay quiet
+const purchasesUnavailable = computed(() => {
+	if (!diagnostics.value) return false;
+	const verdict = classifyAvailability(diagnostics.value);
+	return verdict !== 'ok' && verdict !== 'not_native';
+});
 
 const highlighted = computed<'FREE' | 'PRO' | 'WRITER' | 'ORGANIZER' | undefined>(() => {
 	const raw = String(route.query.plan ?? '').toUpperCase();
@@ -139,7 +170,27 @@ async function onRestore() {
 	}
 }
 
+async function onCopyDiagnostics() {
+	const report = diagnostics.value ? formatIapDiagnostics(diagnostics.value) : '';
+	if (!report) return;
+	try {
+		await navigator.clipboard.writeText(report);
+		await showInfoToast('Diagnostic Info Copied.');
+	} catch (error) {
+		await showErrorToast(error, { fallback: 'Could not copy the diagnostic info.' });
+	}
+}
+
 onMounted(async () => {
-	await fetchPlans();
+	await Promise.all([
+		fetchPlans(),
+		(async () => {
+			if (!isNative()) return;
+			diagnostics.value = await diagnose();
+			if (purchasesUnavailable.value) {
+				console.warn(`[iap] ${formatIapDiagnostics(diagnostics.value)}`);
+			}
+		})()
+	]);
 });
 </script>
