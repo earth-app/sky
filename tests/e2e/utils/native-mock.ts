@@ -16,6 +16,9 @@ export interface NativeMockOptions {
 	// when true, geolocation permission is denied and getCurrentPosition rejects (tests the
 	// "Location Needed" fallback in the trailmark surfaces)
 	geoDenied?: boolean;
+	// when true, NativePurchases.getProducts returns nothing, which is how a real store answers an
+	// unavailable catalogue: an empty array and no error
+	iapCatalogueEmpty?: boolean;
 }
 
 export async function installNativeMock(
@@ -37,6 +40,7 @@ export async function installNativeMock(
 	const dialogConfirm = options.dialogConfirm ?? true;
 	const geo = options.geo ?? { latitude: 40.785091, longitude: -73.968285 };
 	const geoDenied = options.geoDenied ?? false;
+	const iapCatalogueEmpty = options.iapCatalogueEmpty ?? false;
 
 	await context.addInitScript(
 		({
@@ -46,7 +50,8 @@ export async function installNativeMock(
 			barcodeResult,
 			dialogConfirm,
 			geo,
-			geoDenied
+			geoDenied,
+			iapCatalogueEmpty
 		}) => {
 			const w = window as any;
 
@@ -246,6 +251,42 @@ export async function installNativeMock(
 						w.__toasts.push(text);
 						return Promise.resolve();
 					}
+				},
+				// @capgo/native-purchases. getProducts DROPS unknown ids rather than reporting them,
+				// so the empty-catalogue case is modelled as an empty array, never as a rejection
+				NativePurchases: {
+					getPluginVersion: () => Promise.resolve({ version: '8.6.5-mock' }),
+					isBillingSupported: () => Promise.resolve({ isBillingSupported: true }),
+					getStorefront: () => Promise.resolve({ countryCode: 'USA', storefrontId: 'mock' }),
+					getAppTransaction: () =>
+						Promise.resolve({
+							appTransaction: {
+								bundleId: 'com.earthapp.sky',
+								environment: 'Sandbox',
+								originalAppVersion: '1',
+								appVersion: '1'
+							}
+						}),
+					getProducts: ({ productIdentifiers }: { productIdentifiers: string[] }) =>
+						Promise.resolve({
+							products: iapCatalogueEmpty
+								? []
+								: (productIdentifiers ?? []).map((identifier) => ({
+										identifier,
+										title: identifier,
+										description: identifier,
+										priceString: '$5.99',
+										currencyCode: 'USD'
+									}))
+						}),
+					purchaseProduct: ({ productIdentifier }: { productIdentifier: string }) =>
+						Promise.resolve({
+							transactionId: 'mock-tx',
+							productIdentifier,
+							jwsRepresentation: 'mock.jws.payload'
+						}),
+					restorePurchases: () => Promise.resolve(),
+					getPurchases: () => Promise.resolve({ purchases: [] })
 				},
 				// @capacitor/haptics - harmless no-ops
 				Haptics: { impact: noop, notification: noop, vibrate: noop, selectionStart: noop },
@@ -492,7 +533,8 @@ export async function installNativeMock(
 			barcodeResult,
 			dialogConfirm,
 			geo,
-			geoDenied
+			geoDenied,
+			iapCatalogueEmpty
 		}
 	);
 }

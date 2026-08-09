@@ -260,8 +260,10 @@ test.describe('Subscription IAP (native)', () => {
 			w.__iap = { purchased: [] as string[], restored: 0 };
 			const inject = () => {
 				if (!w.Capacitor || !w.Capacitor.Plugins) return false;
+				// spread over the base mock so getProducts and the diagnostic calls stay healthy;
+				// purchase() preflights the catalogue, so an empty getProducts blocks every buy
 				w.Capacitor.Plugins.NativePurchases = {
-					getProducts: async () => ({ products: [] }),
+					...w.Capacitor.Plugins.NativePurchases,
 					purchaseProduct: async (opts: { productIdentifier?: string }) => {
 						w.__iap.purchased.push(opts?.productIdentifier ?? '');
 						return {
@@ -339,8 +341,10 @@ async function setupIap(
 			});
 			const inject = () => {
 				if (!w.Capacitor || !w.Capacitor.Plugins) return false;
+				// spread over the base mock: purchase() preflights getProducts, so an empty
+				// catalogue would short-circuit before any of these branches could run
 				w.Capacitor.Plugins.NativePurchases = {
-					getProducts: async () => ({ products: [] }),
+					...w.Capacitor.Plugins.NativePurchases,
 					purchaseProduct: async (o: { productIdentifier?: string }) => {
 						if (purchase === 'cancel') throw cancelErr();
 						if (purchase === 'fail') throw failErr();
@@ -560,5 +564,58 @@ test.describe('Subscription IAP variants (native capgo flow)', () => {
 		await page.locator('ion-button:has-text("Restore Purchases")').first().click();
 
 		await expectNativeToast(page, /no previous purchases/i);
+	});
+});
+
+test.describe('Subscription IAP unavailable catalogue', () => {
+	test.beforeEach(async ({ context }) => {
+		await installNativeMock(context, { platform: 'ios', iapCatalogueEmpty: true });
+	});
+
+	test('warns up front instead of letting the user tap into a failure', async ({
+		page,
+		gotoHydrated,
+		mockApi,
+		asUser
+	}) => {
+		skipIfIntegration('mocked empty catalogue');
+		await asUser();
+		await mockApi.set({
+			method: 'GET',
+			path: '/v2/subscriptions/plans',
+			body: PLANS_BODY,
+			once: false
+		});
+
+		await gotoTab(page, gotoHydrated, '/tabs/upgrade');
+
+		const notice = page.locator('#iap-unavailable');
+		await expect(notice).toBeVisible({ timeout: 10_000 });
+		await expect(notice).toContainText('Purchases Are Unavailable');
+		// by text, not [aria-label]: IonButton forwards aria-label onto its inner shadow button
+		await expect(notice.locator('ion-button:has-text("Copy Diagnostic Info")')).toBeVisible();
+	});
+
+	test('a purchase attempt never shows the raw product id', async ({
+		page,
+		gotoHydrated,
+		mockApi,
+		asUser
+	}) => {
+		skipIfIntegration('mocked empty catalogue');
+		await asUser();
+		await mockApi.set({
+			method: 'GET',
+			path: '/v2/subscriptions/plans',
+			body: PLANS_BODY,
+			once: false
+		});
+
+		await gotoTab(page, gotoHydrated, '/tabs/upgrade');
+		await page.locator('#plan-Pro ion-button').first().click();
+
+		await expectNativeToast(page, /not available from the store/i);
+		const toasts = await page.evaluate(() => (window as any).__toasts ?? []);
+		expect(toasts.join(' ')).not.toContain('com.earthapp.sky');
 	});
 });
