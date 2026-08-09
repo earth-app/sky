@@ -261,7 +261,7 @@ describe('ambientScenes + translucency settings', () => {
 	});
 
 	// the emulator's software renderer loses gralloc handles under the 30fps canvas and
-	// backdrop-filter, stops painting, and every maestro flow that reaches the dashboard times out
+	// backdrop-filter, stops painting, and every device flow that reaches the dashboard times out
 	it('forces both off in a native test build without touching the stored preference', () => {
 		const settings = settingsWith({ ambientScenes: true, translucency: true });
 		const cfg = useRuntimeConfig();
