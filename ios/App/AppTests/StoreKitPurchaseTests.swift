@@ -12,7 +12,9 @@ import XCTest
 /// `.storekit` file wired into the *app* scheme makes the app resolve products locally and silently
 /// ignore App Store Connect - which is a real failure mode we diagnosed in production. Keeping it
 /// inside the test bundle means the shipping app can never pick it up.
-@available(iOS 15.0, *)
+/// iOS 17 is the floor because both `setSimulatedError(_:forAPI:)` and `buyProduct(identifier:)`
+/// arrived there, and without the first one the suite silently inherits the config's debug toggles.
+@available(iOS 17.0, *)
 final class StoreKitPurchaseTests: XCTestCase {
 	/// The ids the app asks StoreKit for. These MUST match `IAP_PRODUCT_IDS.ios` in
 	/// `src/composables/useIapPurchase.ts` and the products in App Store Connect; a drift between the
@@ -37,9 +39,72 @@ final class StoreKitPurchaseTests: XCTestCase {
 		return ids
 	}
 
+	/// Buy through `SKTestSession`, NOT `Product.purchase()`.
+	///
+	/// `Product.purchase()` has to present a confirmation sheet, so it needs a connected window
+	/// scene. A hosted unit test has no scene it can present into, and every purchase that must
+	/// actually complete a payment fails with a bare `StoreKitError.unknown` - while `.pending`
+	/// (ask-to-buy) succeeds, because that path never confirms. `buyProduct` is StoreKitTest's own
+	/// entry point for this and hands back the verified transaction directly.
+	@discardableResult
+	private func buy(_ productID: String) async throws -> Transaction {
+		try await session.buyProduct(identifier: productID)
+	}
+
+	/// The signed payload the app posts to `/v2/subscriptions/iap/apple/verify` lives on the
+	/// VerificationResult, not on the Transaction, so it has to be read back.
+	private func signedPayload(for productID: String) async throws -> String {
+		// bind before unwrapping: XCTUnwrap takes an autoclosure, which cannot contain an await
+		let latest = await Transaction.latest(for: productID)
+		return try XCTUnwrap(latest).jwsRepresentation
+	}
+
+	/// StoreKit publishes entitlements asynchronously, so a single read races the store.
+	///
+	/// Both directions are polled deliberately. Waiting only for an entitlement to APPEAR would let
+	/// every revocation test pass vacuously - "not entitled" is also what you observe a millisecond
+	/// after the purchase, before the store has published anything at all.
+	private func waitForEntitlement(
+		_ productID: String,
+		toExist shouldExist: Bool = true,
+		attempts: Int = 40
+	) async -> Bool {
+		for _ in 0 ..< attempts {
+			let entitled = await entitledProductIDs().contains(productID)
+			if entitled == shouldExist { return true }
+			try? await Task.sleep(nanoseconds: 50_000_000)
+		}
+		return false
+	}
+
+	/// The group's own view of what is subscribed, which is what the single-tier account model reads.
+	private func waitForSubscribedCount(
+		_ expected: Int,
+		in subscription: Product.SubscriptionInfo,
+		attempts: Int = 40
+	) async -> [Product.SubscriptionInfo.Status] {
+		var latest: [Product.SubscriptionInfo.Status] = []
+		for _ in 0 ..< attempts {
+			latest = ((try? await subscription.status) ?? []).filter { $0.state == .subscribed }
+			if latest.count == expected { return latest }
+			try? await Task.sleep(nanoseconds: 50_000_000)
+		}
+		return latest
+	}
+
 	override func setUp() async throws {
 		try await super.setUp()
 		session = try SKTestSession(configurationFileNamed: "Subscriptions")
+
+		// a simulator runtime whose StoreKit test daemon refuses sessions (iOS 26.5 under Xcode
+		// 26.6 does) fails every call with SKInternalErrorDomain Code=3 and serves no products,
+		// which reads identically to an empty catalogue. skip loudly instead of emitting 15
+		// assertion failures that all blame the wrong thing. StoreKitEnvironmentTests is the control
+		try XCTSkipIf(
+			session.storefront.isEmpty,
+			"the StoreKit test daemon is unavailable on this simulator runtime; pin a working one with NATIVE_IOS_DEVICE=<udid>"
+		)
+
 		session.resetToDefaultState()
 		session.clearTransactions()
 
@@ -56,20 +121,14 @@ final class StoreKitPurchaseTests: XCTestCase {
 		// Verification, App Transaction and Manage Subscriptions. with Load Products failing,
 		// Product.products(for:) returns nothing and every assertion here dies on an unwrap that has
 		// nothing to do with the code under test
-		// each api is its own type conforming to FailableStoreKitAPI, so this cannot be a loop.
-		// the clearing api itself is iOS 17+; below that the config's toggles cannot be overridden,
-		// so the suite would inherit them - hence the hard skip rather than a silent pass
-		if #available(iOS 17.0, *) {
-			try await session.setSimulatedError(nil, forAPI: .loadProducts)
-			try await session.setSimulatedError(nil, forAPI: .purchase)
-			try await session.setSimulatedError(nil, forAPI: .verification)
-			try await session.setSimulatedError(nil, forAPI: .appTransaction)
-			try await session.setSimulatedError(nil, forAPI: .manageSubscriptions)
-			try await session.setSimulatedError(nil, forAPI: .appStoreSync)
-			try await session.setSimulatedError(nil, forAPI: .subscriptionStatus)
-		} else {
-			throw XCTSkip("clearing simulated StoreKit errors needs iOS 17; run on a newer simulator")
-		}
+		// each api is its own type conforming to FailableStoreKitAPI, so this cannot be a loop
+		try await session.setSimulatedError(nil, forAPI: .loadProducts)
+		try await session.setSimulatedError(nil, forAPI: .purchase)
+		try await session.setSimulatedError(nil, forAPI: .verification)
+		try await session.setSimulatedError(nil, forAPI: .appTransaction)
+		try await session.setSimulatedError(nil, forAPI: .manageSubscriptions)
+		try await session.setSimulatedError(nil, forAPI: .appStoreSync)
+		try await session.setSimulatedError(nil, forAPI: .subscriptionStatus)
 	}
 
 	override func tearDownWithError() throws {
@@ -115,35 +174,26 @@ final class StoreKitPurchaseTests: XCTestCase {
 	// MARK: - the happy path
 
 	func testPurchasingProGrantsAnEntitlement() async throws {
-		let productProducts = try await Product.products(for: [Self.proID])
-		let product = try XCTUnwrap(productProducts.first)
-		let result = try await product.purchase()
-
-		guard case .success(let verification) = result else {
-			return XCTFail("expected a successful purchase, got \(result)")
-		}
-		guard case .verified(let transaction) = verification else {
-			return XCTFail("expected a verified transaction")
-		}
+		let transaction = try await buy(Self.proID)
 
 		XCTAssertEqual(transaction.productID, Self.proID)
 		XCTAssertNil(transaction.revocationDate)
 		await transaction.finish()
 
-		let entitled = await entitledProductIDs()
-		XCTAssertTrue(entitled.contains(Self.proID), "a finished purchase must leave a current entitlement")
+		let entitled = await waitForEntitlement(Self.proID)
+		XCTAssertTrue(entitled, "a finished purchase must leave a current entitlement")
 	}
 
 	/// The server verifies with the JWS, so a purchase that produces no signed payload cannot be
 	/// turned into a tier no matter what the client does.
 	func testAVerifiedPurchaseCarriesASignedPayload() async throws {
-		let productProducts = try await Product.products(for: [Self.proID])
-		let product = try XCTUnwrap(productProducts.first)
-		guard case .success(let verification) = try await product.purchase() else {
-			return XCTFail("expected a successful purchase")
-		}
-		XCTAssertFalse(verification.jwsRepresentation.isEmpty)
-		if case .verified(let transaction) = verification { await transaction.finish() }
+		let transaction = try await buy(Self.proID)
+		let jws = try await signedPayload(for: Self.proID)
+
+		XCTAssertFalse(jws.isEmpty, "the server has nothing to verify without a JWS")
+		// three dot-separated base64url segments; a receipt string would not split this way
+		XCTAssertEqual(jws.split(separator: ".").count, 3)
+		await transaction.finish()
 	}
 
 	// MARK: - edge cases
@@ -213,86 +263,76 @@ final class StoreKitPurchaseTests: XCTestCase {
 			try session.approveAskToBuyTransaction(identifier: transaction.identifier)
 		}
 
-		let entitled = await entitledProductIDs()
-		XCTAssertTrue(entitled.contains(Self.proID), "an approved ask-to-buy purchase must entitle")
+		// currentEntitlements includes unfinished transactions, so approval alone must entitle
+		let entitled = await waitForEntitlement(Self.proID)
+		XCTAssertTrue(entitled, "an approved ask-to-buy purchase must entitle")
 	}
 
 	/// A refund revokes the entitlement. The app reads `refund_eligible` from the server, but the
 	/// device-side truth is that a revoked transaction must stop entitling immediately.
 	func testARefundRevokesTheEntitlement() async throws {
-		let productProducts = try await Product.products(for: [Self.proID])
-		let product = try XCTUnwrap(productProducts.first)
-		guard case .success(let verification) = try await product.purchase(),
-			case .verified(let transaction) = verification
-		else {
-			return XCTFail("expected a verified purchase")
-		}
+		let transaction = try await buy(Self.proID)
 		await transaction.finish()
+		// prove the entitlement existed first, or the assertion below cannot fail
+		let granted = await waitForEntitlement(Self.proID)
+		XCTAssertTrue(granted, "the purchase must entitle before a refund can revoke it")
 
 		try session.refundTransaction(identifier: UInt(transaction.id))
 
-		let entitled = await entitledProductIDs()
-		XCTAssertFalse(entitled.contains(Self.proID), "a refunded purchase must stop entitling")
+		let revoked = await waitForEntitlement(Self.proID, toExist: false)
+		XCTAssertTrue(revoked, "a refunded purchase must stop entitling")
 	}
 
 	func testAnExpiredSubscriptionStopsEntitling() async throws {
 		let productProducts = try await Product.products(for: [Self.proID])
 		let product = try XCTUnwrap(productProducts.first)
-		guard case .success(let verification) = try await product.purchase(),
-			case .verified(let transaction) = verification
-		else {
-			return XCTFail("expected a verified purchase")
-		}
+		let transaction = try await buy(Self.proID)
 		await transaction.finish()
+
+		let subscription = try XCTUnwrap(product.subscription)
+		let beforeExpiry = await waitForSubscribedCount(1, in: subscription)
+		XCTAssertEqual(beforeExpiry.count, 1, "the purchase must read as subscribed before it expires")
 
 		try session.expireSubscription(productIdentifier: Self.proID)
 
-		let subscription = try XCTUnwrap(product.subscription)
-		let status = try await subscription.status
-		let active = status.contains { $0.state == .subscribed }
-		XCTAssertFalse(active, "an expired subscription must not read as subscribed")
+		let afterExpiry = await waitForSubscribedCount(0, in: subscription)
+		XCTAssertTrue(afterExpiry.isEmpty, "an expired subscription must not read as subscribed")
 	}
 
 	/// Upgrading inside one group replaces the tier rather than stacking, which is the behaviour the
 	/// single-tier account model depends on.
+	///
+	/// Asserted through the GROUP's subscription status, not `currentEntitlements`. `buyProduct`
+	/// mints a raw transaction and does not run the App Store's in-group replacement, so two
+	/// transactions genuinely coexist there - `status` is the API that reports what the group as a
+	/// whole is subscribed to, which is the thing the account model reads.
 	func testUpgradingFromProToWriterLeavesOneActiveTier() async throws {
-		let proProducts = try await Product.products(for: [Self.proID])
-		let pro = try XCTUnwrap(proProducts.first)
-		guard case .success(let proVerification) = try await pro.purchase(),
-			case .verified(let proTransaction) = proVerification
-		else {
-			return XCTFail("expected the pro purchase to succeed")
-		}
+		let proTransaction = try await buy(Self.proID)
 		await proTransaction.finish()
+
+		let writerTransaction = try await buy(Self.writerID)
+		await writerTransaction.finish()
 
 		let writerProducts = try await Product.products(for: [Self.writerID])
 		let writer = try XCTUnwrap(writerProducts.first)
-		guard case .success(let writerVerification) = try await writer.purchase(),
-			case .verified(let writerTransaction) = writerVerification
-		else {
-			return XCTFail("expected the writer purchase to succeed")
-		}
-		await writerTransaction.finish()
+		let subscription = try XCTUnwrap(writer.subscription)
+		let subscribed = await waitForSubscribedCount(1, in: subscription)
 
-		let entitledIDs = await entitledProductIDs()
-		XCTAssertTrue(entitledIDs.contains(Self.writerID))
-		XCTAssertEqual(Set(entitledIDs).count, 1, "one group must yield exactly one active tier")
+		XCTAssertEqual(subscribed.count, 1, "one group must yield exactly one active tier")
+		guard case .verified(let current) = try XCTUnwrap(subscribed.first).transaction else {
+			return XCTFail("expected the group's active transaction to verify")
+		}
+		XCTAssertEqual(current.productID, Self.writerID, "the newer tier must be the active one")
 	}
 
 	// MARK: - restore
 
 	func testRestoringFindsAPreviousPurchase() async throws {
-		let productProducts = try await Product.products(for: [Self.proID])
-		let product = try XCTUnwrap(productProducts.first)
-		guard case .success(let verification) = try await product.purchase(),
-			case .verified(let transaction) = verification
-		else {
-			return XCTFail("expected a verified purchase")
-		}
+		let transaction = try await buy(Self.proID)
 		await transaction.finish()
 
-		let restored = await entitledProductIDs()
-		XCTAssertTrue(restored.contains(Self.proID))
+		let restored = await waitForEntitlement(Self.proID)
+		XCTAssertTrue(restored)
 	}
 
 	func testRestoringWithNoPurchasesFindsNothing() async throws {
