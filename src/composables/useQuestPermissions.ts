@@ -26,6 +26,17 @@ type DeviceMotionEventStatic = {
 	requestPermission?: () => Promise<'granted' | 'denied' | 'prompt'>;
 };
 
+export function isCameraCancelError(error: unknown): boolean {
+	if (!error) return false;
+	const code = (error as { code?: string }).code;
+	const message = String((error as { message?: string }).message || error);
+	return (
+		code === 'OS-PLUG-CAMR-0006' ||
+		code === 'OS-PLUG-CAMR-0020' ||
+		/cancel|canceled|cancelled/i.test(message)
+	);
+}
+
 export function useQuestPermissions() {
 	async function ensureCamera(): Promise<boolean> {
 		try {
@@ -118,10 +129,6 @@ export function useQuestPermissions() {
 		healthkit: ensureHealthKit
 	};
 
-	// Same as ensureMotion but skips DeviceMotionEvent.requestPermission(), which
-	// iOS 13+ refuses to fulfill outside of a user gesture. Used to pre-warm the
-	// native CMPedometer prompt on step open; the webview accelerometer grant has
-	// to wait for the actual Start Tracking tap.
 	async function primeMotion(): Promise<boolean> {
 		try {
 			const current = await CapacitorPedometer.checkPermissions();
@@ -142,26 +149,14 @@ export function useQuestPermissions() {
 		healthkit: ensureHealthKit
 	};
 
-	/** Check + request a single permission without surfacing any UI. */
 	async function ensure(permission: QuestPermission): Promise<boolean> {
 		return CHECKS[permission]();
 	}
 
-	/**
-	 * Pre-warm the OS prompt for a permission when a step opens, so the user
-	 * sees the dialog as soon as the step UI mounts instead of after they tap
-	 * the action button. Motion specifically uses a variant that defers the
-	 * iOS DeviceMotionEvent grant (which requires a user gesture) until the
-	 * actual Start Tracking tap.
-	 */
 	async function prime(permission: QuestPermission): Promise<boolean> {
 		return PRIMES[permission]();
 	}
 
-	/**
-	 * Consistent denial UX: a blocking alert that makes clear the quest step cannot
-	 * be completed without the permission and points the user to device settings.
-	 */
 	async function notifyDenied(permission: QuestPermission): Promise<void> {
 		const label = PERMISSION_LABELS[permission];
 		const message = `${label} access is required to ${PERMISSION_REASONS[permission]}. This quest step can't be completed until you allow it in your device settings.`;

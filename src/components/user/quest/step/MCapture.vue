@@ -255,17 +255,6 @@ function photoPreviewSrc(photo: MediaResult): string {
 	return '';
 }
 
-function isCancelError(err: unknown): boolean {
-	if (!err) return false;
-	const code = (err as { code?: string }).code;
-	const message = String((err as { message?: string }).message || err);
-	return (
-		code === 'OS-PLUG-CAMR-0006' ||
-		code === 'OS-PLUG-CAMR-0020' ||
-		/cancel|canceled|cancelled/i.test(message)
-	);
-}
-
 async function photoToFile(photo: MediaResult): Promise<File | null> {
 	const ext = formatExtension(photo.metadata?.format);
 	const filename = `capture-${Date.now()}.${ext}`;
@@ -328,7 +317,7 @@ async function takePhoto() {
 		stage.value = 'preview';
 		emit('photo-taken');
 	} catch (e: unknown) {
-		if (isCancelError(e)) {
+		if (isCameraCancelError(e)) {
 			stage.value = 'permission';
 			return;
 		}
