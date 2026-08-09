@@ -30,9 +30,11 @@ export async function ensureLocalNotificationPermission(): Promise<boolean> {
 	if (!Capacitor.isNativePlatform()) return false;
 	try {
 		const current = await LocalNotifications.checkPermissions();
-		if (current.display === 'granted') return true;
+		if (anyGranted(current.display)) return true;
+		// a refusal is final until settings changes it; re-requesting only re-shows the dialog
+		if (!shouldRequest(current.display)) return false;
 		const requested = await LocalNotifications.requestPermissions();
-		return requested.display === 'granted';
+		return anyGranted(requested.display);
 	} catch (e) {
 		console.error('Local notification permission check failed:', e);
 		return false;

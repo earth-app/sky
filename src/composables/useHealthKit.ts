@@ -400,9 +400,11 @@ async function clearKey(key: string) {
 async function ensureNotificationPermission(): Promise<boolean> {
 	try {
 		const current = await LocalNotifications.checkPermissions();
-		if (current.display === 'granted') return true;
+		if (anyGranted(current.display)) return true;
+		// a refusal is final until settings changes it; re-requesting only re-shows the dialog
+		if (!shouldRequest(current.display)) return false;
 		const requested = await LocalNotifications.requestPermissions();
-		return requested.display === 'granted';
+		return anyGranted(requested.display);
 	} catch (e) {
 		console.error('[tracker] notification permission check failed:', e);
 		return false;
