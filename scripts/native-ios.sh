@@ -65,9 +65,16 @@ usage() {
 usage: scripts/native-ios.sh [logic|unit|ui|all]
 
   logic  SkyKit swift package tests            no simulator, no backend   (~5s)
-  unit   AppTests plugin-bridge bundle         simulator, no app launch   (~2m)
+  unit   AppTests plugin-bridge bundle         simulator + app host       (~2m)
   ui     AppUITests xcuitest bundle            simulator + web build + mocks
   all    every tier in that order
+
+AppTests is hosted by App (StoreKit and the other bundle-scoped frameworks resolve nothing
+without it), so this tier builds and launches the app.
+
+NATIVE_IOS_DEVICE=<udid> pins the simulator. Worth setting: the newest runtime is picked by
+default, and a runtime whose StoreKit test daemon is broken skips the StoreKit suite - see
+StoreKitEnvironmentTests for the control.
 EOF
 }
 
@@ -286,7 +293,7 @@ run_unit() {
 	local udid
 	udid="$(pick_simulator)"
 	boot_simulator "$udid"
-	log 'tier 2a: AppTests plugin-bridge bundle (simulator, no app launch)'
+	log 'tier 2a: AppTests plugin-bridge bundle (simulator, hosted by App)'
 	run_bundle AppTests "$udid"
 }
 
