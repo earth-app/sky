@@ -135,6 +135,12 @@ const backendBlocked = computed(() => backend.hasChecked && backend.isBlocked);
 // hydration latch; keep the loader spinning until we know whether the user is
 // authed or anon. Prevents the login/signup CTA flash before user resolves.
 const bootResolved = ref(false);
+
+// one watcher rather than a call in each branch: boot resolves down several paths (offline cache,
+// blocked backend, normal hydrate) and a missed branch would look like a hang to the native suite
+watch(bootResolved, (resolved) => {
+	if (resolved) emitTestEvent('boot.resolved', { offline: isOfflineEntryMode() });
+});
 const showAuthCta = computed(
 	() => bootResolved.value && user.value === null && !backendBlocked.value
 );

@@ -465,6 +465,7 @@ async function handleIncomingDeepLink(url: string) {
 
 		// if OAuth was started somewhere without an in-outlet `user` watcher,
 		// still attempt a navigation from here
+		emitTestEvent('deeplink.resolved', { target: resolved.target, via: 'oauth' });
 		router.navigate(resolved.target, 'root', 'replace');
 		return;
 	}
@@ -482,6 +483,7 @@ async function handleIncomingDeepLink(url: string) {
 		return;
 	}
 
+	emitTestEvent('deeplink.resolved', { target: resolved.target, via: 'content' });
 	router.navigate(resolved.target, 'root', 'replace');
 }
 
