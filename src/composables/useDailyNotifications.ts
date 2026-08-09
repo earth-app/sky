@@ -343,10 +343,6 @@ async function buildNotifications(): Promise<LocalNotificationSchema[]> {
 	return notifications;
 }
 
-/**
- * Rebuilds the rolling calm-digest schedule from current goal state. Native-only; throttled so
- * repeated foregrounding doesn't hammer the API. Suppresses nudges the user has already acted on.
- */
 export async function scheduleDailyNotifications(force = false): Promise<void> {
 	if (!Capacitor.isNativePlatform()) return;
 	if (scheduling) return;
@@ -355,11 +351,13 @@ export async function scheduleDailyNotifications(force = false): Promise<void> {
 	const authStore = useAuthStore();
 	if (!authStore.sessionToken || !authStore.currentUser) return;
 
-	const granted = await ensureLocalNotificationPermission();
-	if (!granted) return;
-
+	// claim the slot before the first await; the auth watch and the resume listener both land
+	// here on a cold launch, and each would otherwise rebuild the whole window
 	scheduling = true;
 	try {
+		const granted = await ensureLocalNotificationPermission();
+		if (!granted) return;
+
 		await createLocalNotificationChannels();
 		// clear the previous window before laying down the new one
 		await LocalNotifications.cancel({
