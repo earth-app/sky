@@ -21,6 +21,7 @@ const appPlugin = vi.hoisted(() => ({ addListener: vi.fn() }));
 const fetchUserQuest = vi.hoisted(() => vi.fn());
 const fetchNatureMinutes = vi.hoisted(() => vi.fn());
 const fetchExpedition = vi.hoisted(() => vi.fn());
+const getActivityDistance = vi.hoisted(() => vi.fn());
 const trailRuns = vi.hoisted(() => ({ value: new Map<string, unknown>() }));
 const authRef = vi.hoisted(() => ({
 	store: null as null | { sessionToken: string | null; currentUser: { id: string } | null }
@@ -48,6 +49,10 @@ vi.mock('@earth-app/crust/src/stores/trails', async (importOriginal) => ({
 	...(await importOriginal<Record<string, unknown>>()),
 	useTrailsStore: () => ({ runs: trailRuns.value })
 }));
+vi.mock('~/composables/useHealthKit', async (importOriginal) => ({
+	...(await importOriginal<Record<string, unknown>>()),
+	useHealthKit: () => ({ getActivityDistance })
+}));
 vi.mock('@earth-app/crust/src/stores/auth', async () => {
 	const { reactive } = await import('vue');
 	const store = reactive({
@@ -63,9 +68,13 @@ import {
 	buildEveningSlot,
 	buildMiddaySlot,
 	buildMorningSlot,
+	daysSinceOutdoors,
 	DIGEST_SLOTS,
 	hasActedToday,
 	natureMinutesToday,
+	OUTDOOR_MOVED_THRESHOLD_M,
+	OUTDOOR_NUDGE_DECAY_DAYS,
+	outdoorNudgeAllowed,
 	questActedToday,
 	type DigestContext
 } from '~/composables/useDailyNotifications';
@@ -85,6 +94,9 @@ function ctx(overrides: Partial<DigestContext> = {}): DigestContext {
 		expedition: null,
 		contributedToday: false,
 		actedToday: false,
+		recentMovementM: null,
+		daysSinceOutdoors: -1,
+		outdoorOk: true,
 		...overrides
 	};
 }
@@ -164,6 +176,78 @@ describe('hasActedToday', () => {
 	});
 });
 
+describe('the outdoor decision point', () => {
+	it('reports days since the last credited minute', () => {
+		expect(
+			daysSinceOutdoors(nm({ sources: [{ at: todayISO, minutes: 5, source: 'trail' }] }), NOW)
+		).toBe(0);
+		expect(
+			daysSinceOutdoors(nm({ sources: [{ at: twoDaysAgoISO, minutes: 5, source: 'trail' }] }), NOW)
+		).toBe(2);
+	});
+
+	it('reports -1 with nothing on record, and ignores unparseable timestamps', () => {
+		expect(daysSinceOutdoors(null, NOW)).toBe(-1);
+		expect(daysSinceOutdoors(nm(), NOW)).toBe(-1);
+		expect(
+			daysSinceOutdoors(nm({ sources: [{ at: 'nonsense', minutes: 5, source: 'x' }] }), NOW)
+		).toBe(-1);
+	});
+
+	it('takes the most recent source, not the first', () => {
+		const minutes = nm({
+			sources: [
+				{ at: twoDaysAgoISO, minutes: 5, source: 'trail' },
+				{ at: todayISO, minutes: 5, source: 'healthkit' }
+			]
+		});
+		expect(daysSinceOutdoors(minutes, NOW)).toBe(0);
+	});
+
+	it('only fires for today: a slot days out cannot read the state it reacts to', () => {
+		expect(outdoorNudgeAllowed(0, 0, 0)).toBe(true);
+		expect(outdoorNudgeAllowed(0, 0, 1)).toBe(false);
+		expect(outdoorNudgeAllowed(0, 0, 2)).toBe(false);
+	});
+
+	it('stays quiet while the user is already moving', () => {
+		expect(outdoorNudgeAllowed(OUTDOOR_MOVED_THRESHOLD_M - 1, 0, 0)).toBe(true);
+		expect(outdoorNudgeAllowed(OUTDOOR_MOVED_THRESHOLD_M, 0, 0)).toBe(false);
+		expect(outdoorNudgeAllowed(OUTDOOR_MOVED_THRESHOLD_M + 5000, 0, 0)).toBe(false);
+	});
+
+	it('fails open when movement is unknown, so a device without HealthKit keeps its nudges', () => {
+		expect(outdoorNudgeAllowed(null, 0, 0)).toBe(true);
+	});
+
+	it('stops after a fortnight of no outcome, and never on an empty record', () => {
+		expect(outdoorNudgeAllowed(0, OUTDOOR_NUDGE_DECAY_DAYS, 0)).toBe(true);
+		expect(outdoorNudgeAllowed(0, OUTDOOR_NUDGE_DECAY_DAYS + 1, 0)).toBe(false);
+		// -1 is "nothing on record", which is a new account rather than a lapsed one
+		expect(outdoorNudgeAllowed(0, -1, 0)).toBe(true);
+	});
+
+	it('suppresses the outdoor slot rather than the whole digest', () => {
+		const gated = ctx({ outdoorOk: false, natureMinutes: { minutes: 10, target: 120, today: 0 } });
+		expect(buildMorningSlot(gated)).toBeNull();
+		expect(buildMiddaySlot(gated)).toBeNull();
+		// the evening reflection is not an outdoor nudge and still speaks
+		expect(buildEveningSlot(gated)?.route).toBe('/tabs/trailmarks');
+	});
+
+	it('never puts a weekly minute target in the copy', () => {
+		const open = ctx({ outdoorOk: true, natureMinutes: { minutes: 33, target: 120, today: 0 } });
+		for (const slot of [
+			buildMorningSlot(open),
+			buildMiddaySlot(ctx({ ...open, actedToday: false }))
+		]) {
+			expect(slot).not.toBeNull();
+			expect(slot!.body).not.toMatch(/\d+\s*min/i);
+			expect(slot!.body).not.toMatch(/weekly goal|of 120|120/i);
+		}
+	});
+});
+
 describe('buildMorningSlot priority', () => {
 	it('prefers the active quest nudge when its step is ready', () => {
 		const slot = buildMorningSlot(
@@ -181,12 +265,15 @@ describe('buildMorningSlot priority', () => {
 
 	it('falls to nature minutes remaining, then expedition', () => {
 		expect(
-			buildMorningSlot(ctx({ natureMinutes: { minutes: 40, target: 120, today: 0 } }))?.route
+			buildMorningSlot(
+				ctx({ outdoorOk: true, natureMinutes: { minutes: 40, target: 120, today: 0 } })
+			)?.route
 		).toBe('/tabs/trails');
 		expect(
 			buildMorningSlot(
 				ctx({
-					natureMinutes: { minutes: 120, target: 120, today: 0 },
+					actedToday: true,
+					natureMinutes: { minutes: 120, target: 120, today: 40 },
 					expedition: { title: 'Ridge', remaining: 30, unit: 'min', percent: 0.5 }
 				})
 			)?.route
@@ -196,7 +283,9 @@ describe('buildMorningSlot priority', () => {
 	it('is silent when nothing is goal-shaped to say', () => {
 		expect(buildMorningSlot(ctx())).toBeNull();
 		expect(
-			buildMorningSlot(ctx({ natureMinutes: { minutes: 120, target: 120, today: 0 } }))
+			buildMorningSlot(
+				ctx({ actedToday: true, natureMinutes: { minutes: 120, target: 120, today: 40 } })
+			)
 		).toBeNull();
 	});
 });
@@ -225,7 +314,9 @@ describe('buildMiddaySlot suppression', () => {
 
 	it('falls back to a nature nudge, else silence', () => {
 		expect(
-			buildMiddaySlot(ctx({ natureMinutes: { minutes: 10, target: 120, today: 0 } }))?.route
+			buildMiddaySlot(
+				ctx({ outdoorOk: true, natureMinutes: { minutes: 10, target: 120, today: 0 } })
+			)?.route
 		).toBe('/tabs/trails');
 		expect(buildMiddaySlot(ctx())).toBeNull();
 	});
@@ -329,6 +420,7 @@ describe('scheduleDailyNotifications', () => {
 			data: { minutes: 30, target: 120, sources: [] }
 		});
 		fetchExpedition.mockResolvedValue({ success: true, data: null });
+		getActivityDistance.mockResolvedValue({ distance: 0, source: 'test' });
 		trailRuns.value = new Map();
 
 		if (authRef.store) {
@@ -349,13 +441,13 @@ describe('scheduleDailyNotifications', () => {
 		await scheduleDailyNotifications();
 
 		const ids = scheduledNotifications().map((n) => n.id);
+		// the midday slots for day 1 and day 2 are outdoor nudges, and an outdoor nudge is only
+		// laid down for today; tomorrow gets its own fresh decision on the next foreground
 		expect(ids).toEqual([
 			digestId(2, 0),
 			digestId(0, 1),
-			digestId(1, 1),
 			digestId(2, 1),
 			digestId(0, 2),
-			digestId(1, 2),
 			digestId(2, 2)
 		]);
 	});
@@ -367,7 +459,7 @@ describe('scheduleDailyNotifications', () => {
 		const times = scheduledNotifications().map((n) => (n.schedule as { at: Date }).at);
 		expect(times[0]).toEqual(new Date(2026, 7, 10, 19, 0, 0, 0));
 		expect(times[1]).toEqual(new Date(2026, 7, 11, 8, 0, 0, 0));
-		expect(times[2]).toEqual(new Date(2026, 7, 11, 13, 0, 0, 0));
+		expect(times[2]).toEqual(new Date(2026, 7, 11, 19, 0, 0, 0));
 		expect(times.at(-1)).toEqual(new Date(2026, 7, 12, 19, 0, 0, 0));
 	});
 
@@ -526,6 +618,7 @@ describe('initDailyNotifications', () => {
 			data: { minutes: 30, target: 120, sources: [] }
 		});
 		fetchExpedition.mockResolvedValue({ success: true, data: null });
+		getActivityDistance.mockResolvedValue({ distance: 0, source: 'test' });
 		trailRuns.value = new Map();
 		if (authRef.store) {
 			authRef.store.sessionToken = null;

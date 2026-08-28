@@ -46,6 +46,12 @@ export interface DigestContext {
 	contributedToday: boolean;
 	// user already did an outdoor/quest action today -> suppress the redundant "go do it" nudge
 	actedToday: boolean;
+	// metres of tracked movement in the receptivity window; null when HealthKit cannot answer
+	recentMovementM: number | null;
+	// days since any nature minute was credited; -1 with nothing on record
+	daysSinceOutdoors: number;
+	// whether an outdoor prompt is worth firing right now (see outdoorNudgeAllowed)
+	outdoorOk: boolean;
 }
 
 let scheduling = false;
@@ -109,6 +115,46 @@ function isStepDelayActive(progress: UserQuestProgress): boolean {
 	return prevAt + delay * 1000 > Date.now();
 }
 
+// -------- outdoor decision point (deterministic; unit-tested) --------
+
+// Klasnja 2019: a contextually-chosen prompt pays out in the 30-60 min after delivery and the
+// lift is gone by day 28, so an outdoor nudge has to be decided from state rather than the clock
+export const OUTDOOR_RECEPTIVE_WINDOW_MS = 3 * 60 * 60 * 1000;
+export const OUTDOOR_MOVED_THRESHOLD_M = 800;
+export const OUTDOOR_NUDGE_DECAY_DAYS = 14;
+
+export function daysSinceOutdoors(nm: NatureMinutes | null, now: number): number {
+	if (!nm || !Array.isArray(nm.sources)) return -1;
+
+	let latest = 0;
+	for (const s of nm.sources) {
+		const at = Date.parse(s.at);
+		if (Number.isFinite(at) && at > latest) latest = at;
+	}
+	if (!latest) return -1;
+
+	return Math.max(0, Math.floor((now - latest) / 86400000));
+}
+
+export function outdoorNudgeAllowed(
+	recentMovementM: number | null,
+	daysSince: number,
+	dayOffset: number
+): boolean {
+	// a slot laid down days ahead cannot read the state it is meant to react to
+	if (dayOffset !== 0) return false;
+
+	// already moving: the prompt would be redundant rather than well timed. unknown movement
+	// fails open, so a device without HealthKit keeps its nudges
+	if (recentMovementM !== null && recentMovementM >= OUTDOOR_MOVED_THRESHOLD_M) return false;
+
+	// a fortnight with no outcome means this prompt is training dismissal; it returns the moment
+	// any minutes land, and the digest still fires its other content meanwhile
+	if (daysSince > OUTDOOR_NUDGE_DECAY_DAYS) return false;
+
+	return true;
+}
+
 // -------- pure signal helpers (deterministic; unit-tested) --------
 
 // minutes credited from any source today (trail steps + healthkit + manual), for the reflection nudge
@@ -159,16 +205,15 @@ export function buildMorningSlot(ctx: DigestContext): SlotContent | null {
 			channelId: LOCAL_NOTIF_CHANNELS.QUEST_REMINDERS
 		};
 	}
-	if (ctx.natureMinutes) {
-		const left = Math.max(0, ctx.natureMinutes.target - Math.round(ctx.natureMinutes.minutes));
-		if (left > 0) {
-			return {
-				title: 'A Few Minutes Outside',
-				body: `You're ${left} min from your weekly goal. A short walk near green space counts most.`,
-				route: '/tabs/trails',
-				channelId: LOCAL_NOTIF_CHANNELS.DAILY_CONTENT
-			};
-		}
+	// "already out today" replaces the old weekly-target-remaining check: the weekly number is not
+	// a target we state, and today is the state the prompt is actually reacting to
+	if (ctx.outdoorOk && ctx.natureMinutes && !ctx.actedToday) {
+		return {
+			title: 'A Few Minutes Outside',
+			body: 'Even five minutes near green space is associated with feeling calmer. This is a good window.',
+			route: '/tabs/trails',
+			channelId: LOCAL_NOTIF_CHANNELS.DAILY_CONTENT
+		};
 	}
 	if (ctx.expedition && ctx.expedition.remaining > 0) {
 		return {
@@ -193,16 +238,13 @@ export function buildMiddaySlot(ctx: DigestContext): SlotContent | null {
 			channelId: LOCAL_NOTIF_CHANNELS.QUEST_REMINDERS
 		};
 	}
-	if (ctx.natureMinutes) {
-		const left = Math.max(0, ctx.natureMinutes.target - Math.round(ctx.natureMinutes.minutes));
-		if (left > 0) {
-			return {
-				title: 'Step Outside for a Bit',
-				body: `Even a few minutes near green space lifts the day. You're ${left} from your weekly goal.`,
-				route: '/tabs/trails',
-				channelId: LOCAL_NOTIF_CHANNELS.DAILY_CONTENT
-			};
-		}
+	if (ctx.outdoorOk && ctx.natureMinutes) {
+		return {
+			title: 'Step Outside for a Bit',
+			body: 'A few minutes near green space is a good use of the next break.',
+			route: '/tabs/trails',
+			channelId: LOCAL_NOTIF_CHANNELS.DAILY_CONTENT
+		};
 	}
 	return null;
 }
@@ -254,10 +296,14 @@ async function buildDigestContext(): Promise<DigestContext | null> {
 	const circles = useCircles();
 	const trailsStore = useTrailsStore();
 
-	const [activeQuest, nmRes, expRes] = await Promise.all([
+	const { getActivityDistance } = useHealthKit();
+	const receptiveSince = Date.now() - OUTDOOR_RECEPTIVE_WINDOW_MS;
+
+	const [activeQuest, nmRes, expRes, movement] = await Promise.all([
 		safe(() => fetchUserQuest()),
 		safe(() => fetchNatureMinutes()),
-		safe(() => circles.fetchExpedition())
+		safe(() => circles.fetchExpedition()),
+		safe(() => getActivityDistance(receptiveSince, Date.now()))
 	]);
 
 	const now = Date.now();
@@ -300,6 +346,12 @@ async function buildDigestContext(): Promise<DigestContext | null> {
 		);
 	}
 
+	const recentMovementM =
+		typeof movement?.distance === 'number' && Number.isFinite(movement.distance)
+			? movement.distance
+			: null;
+	const daysSince = daysSinceOutdoors(nm, now);
+
 	return {
 		activeQuestTitle,
 		activeQuestRoute,
@@ -308,7 +360,11 @@ async function buildDigestContext(): Promise<DigestContext | null> {
 		natureMinutes,
 		expedition,
 		contributedToday,
-		actedToday: hasActedToday(activeQuest, nm, now)
+		actedToday: hasActedToday(activeQuest, nm, now),
+		recentMovementM,
+		daysSinceOutdoors: daysSince,
+		// per-day value is set in buildNotifications; today is the only day state can be read for
+		outdoorOk: outdoorNudgeAllowed(recentMovementM, daysSince, 0)
 	};
 }
 
@@ -325,7 +381,11 @@ async function buildNotifications(): Promise<LocalNotificationSchema[]> {
 			// skip slots whose time has already passed today (or is essentially now)
 			if (at.getTime() <= now + 30_000) continue;
 
-			const content = buildDigestSlot(slot.key, ctx);
+			const content = buildDigestSlot(slot.key, {
+				...ctx,
+				outdoorOk:
+					ctx.outdoorOk && outdoorNudgeAllowed(ctx.recentMovementM, ctx.daysSinceOutdoors, day)
+			});
 			// calm: a slot with nothing intentional to say stays silent (no filler content)
 			if (!content) continue;
 
