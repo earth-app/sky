@@ -54,8 +54,8 @@ const notificationsTour = computed<SiteTourStep[]>(() => [
 			'This is your current unread count. Opening a notification or tapping it in the list marks it read automatically.',
 		footer:
 			unreadCount.value > 0
-				? `You have ${unreadCount.value} unread. The bell on your profile mirrors this number.`
-				: 'The bell icon on your profile mirrors this number.',
+				? `You have ${unreadCount.value} unread. The bell on your profile shows a dot, not a count.`
+				: 'The bell on your profile shows a dot when something is waiting.',
 		icon: 'mdi:counter',
 		cta:
 			unreadCount.value > 0

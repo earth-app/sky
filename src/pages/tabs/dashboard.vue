@@ -72,10 +72,9 @@
 						/>
 						<span
 							v-if="unreadCount > 0"
-							class="absolute top-0 right-0 min-w-4 rounded-full bg-danger-700 px-1 text-3xs font-semibold text-white tabular-nums"
+							class="absolute top-0 right-0 size-2 rounded-full bg-danger-700"
 							aria-hidden="true"
-							>{{ unreadBadge }}</span
-						>
+						/>
 					</IonButton>
 				</div>
 			</IonToolbar>
@@ -212,6 +211,8 @@
 					</div>
 
 					<MExploreStrip v-if="user" />
+
+					<UserMemoryMCard v-if="user" />
 
 					<MModuleRail
 						v-if="user"
@@ -527,9 +528,10 @@ const greeting = computed(() => (user.value?.username ? `@${user.value.username}
 const profileHref = computed(() =>
 	user.value?.username ? `/tabs/profile/@${user.value.username}` : '/tabs/profile/editor'
 );
-const unreadBadge = computed(() => (unreadCount.value > 9 ? '9+' : String(unreadCount.value)));
+// presence, not a tally: a number on a persistent badge is a count to clear, and the inbox itself
+// is where the count belongs
 const notificationsLabel = computed(() =>
-	unreadCount.value > 0 ? `Notifications, ${unreadCount.value} Unread` : 'Notifications'
+	unreadCount.value > 0 ? 'Notifications, Unread' : 'Notifications'
 );
 const showReopenOnboarding = computed(() => Boolean(user.value) && !onboarding.isComplete.value);
 
