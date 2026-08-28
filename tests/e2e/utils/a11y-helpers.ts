@@ -895,6 +895,9 @@ export async function collectCoherence(
 				if (!/^(hidden|clip|auto|scroll)$/.test(cs.overflowX)) continue;
 				if (el.clientWidth === 0) continue;
 				if (el.scrollWidth <= el.clientWidth + 1) continue;
+				// the sr-only clip technique IS a 1px box with hidden overflow, so every
+				// screen-reader label reads as a sideways scroller; nobody can scroll it
+				if (el.clientWidth <= 1 || el.clientHeight <= 1) continue;
 
 				// a deliberate rail: an author-declared x scroller whose overflow comes from one
 				// wider-than-client track (a single wide child, a nowrap row, or an x snap axis)
