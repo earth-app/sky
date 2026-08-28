@@ -30,6 +30,27 @@
 			</div>
 		</div>
 
+		<IonChip
+			v-if="hasActivities"
+			id="trailmark-shared-filter"
+			:color="sharedOnly ? 'primary' : 'medium'"
+			:outline="!sharedOnly"
+			role="button"
+			tabindex="0"
+			:aria-pressed="sharedOnly"
+			aria-label="Only Notes From People Who Share Your Activities"
+			class="self-start px-2 min-h-11"
+			@click="toggleShared"
+			@keydown.enter.prevent="toggleShared"
+			@keydown.space.prevent="toggleShared"
+		>
+			<UIcon
+				name="mdi:handshake-outline"
+				class="size-4 mr-1"
+			/>
+			<IonLabel class="text-xs font-semibold">Shared Interests</IonLabel>
+		</IonChip>
+
 		<div id="trailmark-composer">
 			<TrailmarkMComposer @created="onCreated" />
 		</div>
@@ -163,6 +184,15 @@ const radiusOptions = [
 	{ label: '2 km', value: 2000 }
 ] as const;
 const radius = ref(500);
+const sharedOnly = ref(false);
+
+const { user } = useAuth();
+const hasActivities = computed(() => (user.value?.activities?.length ?? 0) > 0);
+
+function toggleShared() {
+	void impactLight();
+	sharedOnly.value = !sharedOnly.value;
+}
 
 function distanceOf(mark: Trailmark): number | undefined {
 	if (lat.value === null || lng.value === null) return undefined;
@@ -171,7 +201,16 @@ function distanceOf(mark: Trailmark): number | undefined {
 
 async function load(force = false) {
 	if (lat.value === null || lng.value === null) return;
-	await fetchNearby({ lat: lat.value, lng: lng.value, radius: radius.value }, force);
+	await fetchNearby(
+		{
+			lat: lat.value,
+			lng: lng.value,
+			radius: radius.value,
+			// `shared` ships in crust 0.6.x; widen at the call until the tarball catches up
+			...(sharedOnly.value ? { shared: true } : {})
+		} as Parameters<typeof fetchNearby>[0] & { shared?: boolean },
+		force
+	);
 }
 
 // once refused, nothing in-app can re-prompt, so say where to change it rather than leaving a
@@ -213,6 +252,7 @@ function onCreated() {
 
 watch([lat, lng], () => void load());
 watch(radius, () => void load(true));
+watch(sharedOnly, () => void load(true));
 
 let appStateListener: PluginListenerHandle | null = null;
 

@@ -37,6 +37,23 @@
 			fill="outline"
 		/>
 
+		<IonSelect
+			v-if="activityOptions.length > 1"
+			v-model="activityId"
+			class="mt-1"
+			label="What You Were Doing (Optional)"
+			label-placement="stacked"
+			interface="action-sheet"
+			fill="outline"
+		>
+			<IonSelectOption
+				v-for="option in activityOptions"
+				:key="option.value"
+				:value="option.value"
+				>{{ option.label }}</IonSelectOption
+			>
+		</IonSelect>
+
 		<div class="flex items-center gap-2 mt-3 text-xs">
 			<UIcon
 				:name="ready ? 'mdi:crosshairs-gps' : 'mdi:crosshairs-question'"
@@ -104,9 +121,21 @@ const { leaveNote, maxNote } = useTrailmarks();
 const { lat, lng, error, ready, fetchLocation } = useMGeolocation();
 const { notifySuccess, impactLight } = useAppHaptics();
 
+const { user } = useAuth();
+
 const note = ref('');
 const place = ref('');
+const activityId = ref('');
 const busy = ref(false);
+
+// only the user's own activities, so the id always resolves in the catalog
+const activityOptions = computed(() => [
+	{ label: 'Not Tied to an Activity', value: '' },
+	...(user.value?.activities ?? []).map((activity) => ({
+		label: activity.name,
+		value: activity.id
+	}))
+]);
 
 const canPost = computed(() => !busy.value && !!note.value.trim() && ready.value);
 
@@ -118,13 +147,16 @@ async function post() {
 		const res = await leaveNote({
 			geo: { lat: lat.value, lng: lng.value, ...(placeLabel ? { place_label: placeLabel } : {}) },
 			note: note.value.trim(),
-			...(props.promptId ? { prompt_id: props.promptId } : {})
-		});
+			...(props.promptId ? { prompt_id: props.promptId } : {}),
+			// activity_id ships in crust 0.6.x; sky vendors crust as a tarball, so widen at the call
+			...(activityId.value ? { activity_id: activityId.value } : {})
+		} as Parameters<typeof leaveNote>[0] & { activity_id?: string });
 		if (res.success && res.data) {
 			void notifySuccess();
 			void showInfoToast('Note posted. Thanks for leaving a good one.');
 			note.value = '';
 			place.value = '';
+			activityId.value = '';
 			emit('created', res.data.id);
 		} else {
 			void showErrorToast(res.error ?? 'Could not post your note.', {

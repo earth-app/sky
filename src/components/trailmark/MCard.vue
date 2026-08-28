@@ -9,14 +9,31 @@
 				<p class="text-sm font-semibold m-0! truncate">{{ placeLabel }}</p>
 				<p class="text-2xs opacity-60 m-0!">{{ relativeTime }}</p>
 			</div>
-			<UBadge
-				v-if="distanceLabel"
-				color="neutral"
-				variant="soft"
-				size="sm"
-				>{{ distanceLabel }} Away</UBadge
-			>
+			<div class="flex items-center gap-1 shrink-0">
+				<UBadge
+					v-if="mark.shared_activity"
+					color="primary"
+					variant="subtle"
+					size="sm"
+					icon="mdi:handshake-outline"
+					>Also Yours</UBadge
+				>
+				<UBadge
+					v-if="distanceLabel"
+					color="neutral"
+					variant="soft"
+					size="sm"
+					>{{ distanceLabel }} Away</UBadge
+				>
+			</div>
 		</div>
+
+		<p
+			v-if="activityLabel"
+			class="text-2xs opacity-70 m-0!"
+		>
+			Left while {{ activityLabel }}
+		</p>
 
 		<p class="text-sm whitespace-pre-line wrap-break-word opacity-90">{{ mark.note }}</p>
 
@@ -45,7 +62,11 @@
 import { DateTime } from 'luxon';
 import type { Trailmark } from 'types/trailmarks';
 
-const props = defineProps<{ mark: Trailmark; distanceMeters?: number }>();
+// activity_id / shared_activity ship in crust 0.6.x; sky vendors crust as a tarball, so widen the
+// prop locally until the dep bump lands rather than block the surface on a republish
+type ActivityAwareTrailmark = Trailmark & { activity_id?: string; shared_activity?: boolean };
+
+const props = defineProps<{ mark: ActivityAwareTrailmark; distanceMeters?: number }>();
 
 const { user } = useAuth();
 
@@ -53,6 +74,9 @@ const isMine = computed(() => user.value?.id === props.mark.author_uid);
 const placeLabel = computed(() => props.mark.geo.place_label?.trim() || 'A Spot Nearby');
 const relativeTime = computed(() => DateTime.fromISO(props.mark.created_at).toRelative() ?? '');
 const distanceLabel = computed(() => formatDistanceLabel(props.distanceMeters));
+
+// slug made readable; no fetch, the id is the label
+const activityLabel = computed(() => props.mark.activity_id?.trim().replace(/_/g, ' ') || '');
 const thanksLabel = computed(() => {
 	const n = props.mark.thanks_for_author;
 	return typeof n === 'number' ? `${n} Quiet Thanks` : 'Your Note';

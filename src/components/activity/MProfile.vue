@@ -60,6 +60,11 @@
 				<MTourButton tour-id="activities" />
 			</div>
 		</div>
+		<ActivityMExpeditions
+			v-if="user"
+			:activity="activity"
+		/>
+
 		<div
 			id="activity-description"
 			class="relative flex flex-col items-center gap-3 min-w-85 w-4/5 mt-8"
