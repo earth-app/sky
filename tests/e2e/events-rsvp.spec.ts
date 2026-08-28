@@ -134,3 +134,37 @@ test.describe('Event detail + RSVP', () => {
 		});
 	});
 });
+
+// sky could create an event but never manage one; /tabs/events/:id/manage closes that gap
+test.describe('Event management', () => {
+	test('the host reaches the manage screen from the event header', async ({
+		page,
+		asUser,
+		gotoHydrated
+	}) => {
+		skipIfIntegration('depends on mock event evt-1 being can_edit');
+		await asUser();
+		await gotoHydrated('/tabs/events/evt-1');
+
+		await expect(page.locator('#event-profile-card')).toBeVisible({ timeout: 12_000 });
+		await page
+			.getByRole('button', { name: /manage|settings/i })
+			.first()
+			.click();
+
+		await page.waitForURL(/\/tabs\/events\/evt-1\/manage/, { timeout: 12_000 });
+		await expect(page.getByRole('button', { name: /View Attendees/i })).toBeVisible({
+			timeout: 12_000
+		});
+		await expect(page.getByRole('button', { name: /Cancel Event/i })).toBeVisible();
+		await expect(page.getByRole('button', { name: /Delete Event/i })).toBeVisible();
+	});
+
+	test('a non-host is bounced back to the event', async ({ page, asUser, gotoHydrated }) => {
+		skipIfIntegration('depends on mock event evt-2 not being can_edit');
+		await asUser();
+		await gotoHydrated('/tabs/events/evt-2/manage');
+
+		await page.waitForURL(/\/tabs\/events\/evt-2(\?|#|$)/, { timeout: 12_000 });
+	});
+});

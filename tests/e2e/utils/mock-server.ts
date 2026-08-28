@@ -56,9 +56,17 @@ interface Override {
 	delayMs?: number; // simulate hanging backend
 }
 
+interface PlanRecord {
+	menuIssued: boolean;
+	active: boolean;
+	rehearsed: boolean;
+	expiresAt: number | null;
+}
+
 interface BackendState {
 	users: Record<string, any>;
 	activities: Record<string, any>;
+	surpriseDraws?: number;
 	articles: Record<string, any>;
 	events: Record<string, any>;
 	prompts: Record<string, any>;
@@ -67,6 +75,9 @@ interface BackendState {
 	// active quest progress, keyed by testId so per-test overrides don't bleed; falls
 	// back to the shared default for tests that don't set their own
 	activeQuestByTestId: Record<string, any>;
+	// if-then plan is stateful across menu -> form -> status, so it is keyed by testId to stop
+	// parallel workers bleeding an active plan into each other
+	planByTestId: Record<string, PlanRecord>;
 	currentUserByToken: Record<string, string>; // token -> userId
 	currentUserByTestId: Record<string, string | null>; // testId -> userId (overrides currentUserByToken)
 	onboarding: Record<string, any>; // userId -> OnboardingState
@@ -146,8 +157,15 @@ function freshState(): BackendState {
 			author_id: writer.id
 		})
 	);
+	// evt-1 is the manageable one, so the manage screen has something to open
 	const events = Array.from({ length: 8 }, (_, i) =>
-		makeEvent({ id: `evt-${i + 1}`, name: `Event ${i + 1}`, host, hostId: host.id })
+		makeEvent({
+			id: `evt-${i + 1}`,
+			name: `Event ${i + 1}`,
+			host,
+			hostId: host.id,
+			can_edit: i === 0
+		})
 	);
 	const prompts = Array.from({ length: 15 }, (_, i) =>
 		makePrompt({
@@ -202,6 +220,7 @@ function freshState(): BackendState {
 		// default: no active quest. specs that need one POST /v2/users/<id>/quest (start)
 		// or register an override; activeQuestByTestId holds per-test state.
 		activeQuestByTestId: {},
+		planByTestId: {},
 		currentUserByToken: {
 			[MOCK_SESSION_TOKEN]: testUser.id,
 			[MOCK_ADMIN_TOKEN]: adminUser.id
@@ -219,6 +238,17 @@ function activeQuestFor(ctx: RouteContext): any {
 		return state.activeQuestByTestId[ctx.testId];
 	}
 	return null;
+}
+
+function planLookup(ctx: RouteContext): PlanRecord {
+	const key = ctx.testId ?? 'shared';
+	state.planByTestId[key] ??= {
+		menuIssued: false,
+		active: false,
+		rehearsed: false,
+		expiresAt: null
+	};
+	return state.planByTestId[key]!;
 }
 
 let state: BackendState = freshState();
@@ -1145,6 +1175,133 @@ const mantleRoutes: Array<{ method: string; pattern: RegExp; handler: Handler }>
 			const id = currentUserId(ctx);
 			if (!id) return unauthorized(res);
 			json(res, 200, Object.values(state.activities).slice(0, 4));
+		}
+	},
+
+	// If-then plan: the menu is server-held, so the flow is stateful across three calls
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/plan\/menu\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+
+			planLookup(ctx).menuIssued = true;
+			json(res, 200, {
+				goal: 'spend more time outside',
+				cues: [
+					{ id: 'juncture_0', kind: 'juncture', text: 'I close this app' },
+					{
+						id: 'time_place_0',
+						kind: 'time_place',
+						text: 'I am walking past Sycamore Park after school',
+						place: 'Sycamore Park'
+					}
+				],
+				responses: [
+					{ id: 'response_0', text: 'walk one loop around the block' },
+					{ id: 'activity_hiking', text: 'head outside for hiking', activity_id: 'hiking' }
+				]
+			});
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/plan\/rehearsed\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			if (!planLookup(ctx).active) return json(res, 404, { message: 'No active plan' });
+
+			planLookup(ctx).rehearsed = true;
+			json(res, 200, { rehearsed: true });
+		}
+	},
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/current\/plan\/status\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+
+			json(res, 200, {
+				active: planLookup(ctx).active,
+				expires_at: planLookup(ctx).active ? planLookup(ctx).expiresAt : null,
+				rehearsed: planLookup(ctx).active ? planLookup(ctx).rehearsed : null
+			});
+		}
+	},
+	{
+		method: 'POST',
+		pattern: /^\/v2\/users\/current\/plan\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+			if (!planLookup(ctx).menuIssued) return json(res, 400, { message: 'No plan menu available' });
+			if (planLookup(ctx).active) return json(res, 409, { message: 'A plan is already active' });
+
+			const body = (ctx.body ?? {}) as { cue_id?: string; response_id?: string };
+			if (body.cue_id !== 'juncture_0' && body.cue_id !== 'time_place_0') {
+				return json(res, 400, { message: 'Unknown cue' });
+			}
+
+			planLookup(ctx).active = true;
+			planLookup(ctx).menuIssued = false;
+			planLookup(ctx).expiresAt = Date.now() + 7 * 86400000;
+			json(res, 201, {
+				sentence: 'If I close this app, then I will walk one loop around the block.',
+				expires_at: planLookup(ctx).expiresAt
+			});
+		}
+	},
+
+	// Expeditions gathered around an activity (the shared-interest join surface)
+	{
+		method: 'GET',
+		pattern: /^\/v2\/activities\/([^/]+)\/expeditions\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+
+			// ctx.url is already parsed by the dispatcher; /v2/activities/<id>/expeditions
+			const activityId = decodeURIComponent(ctx.url.pathname.split('/')[3] ?? '');
+			if (activityId === 'act-empty') return json(res, 200, { total: 0, expeditions: [] });
+
+			json(res, 200, {
+				total: 1,
+				expeditions: [
+					{
+						id: 'exp-shared-1',
+						owner_uid: '900',
+						title: 'Dawn Chorus Group',
+						goal: 'nature_minutes',
+						target: 240,
+						progress: 60,
+						contributors: [{ uid: '900', username: 'host', contribution: 60 }],
+						status: 'active',
+						starts_at: new Date().toISOString(),
+						ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+						activity_id: activityId
+					}
+				]
+			});
+		}
+	},
+
+	// One unexpected activity for the current user; rotates so a re-roll is observable
+	{
+		method: 'GET',
+		pattern: /^\/v2\/users\/current\/activities\/surprise\/?$/,
+		handler: (_req, res, ctx) => {
+			const id = currentUserId(ctx);
+			if (!id) return unauthorized(res);
+
+			const pool = Object.values(state.activities);
+			if (pool.length === 0) return json(res, 404, { message: 'No unexpected activity available' });
+
+			state.surpriseDraws = (state.surpriseDraws ?? 0) + 1;
+			const activity = pool[state.surpriseDraws % pool.length];
+			json(res, 200, { activity, unrelated: true, pool: pool.length });
 		}
 	},
 
