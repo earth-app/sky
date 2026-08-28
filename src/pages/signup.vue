@@ -58,6 +58,7 @@ import { Preferences } from '@capacitor/preferences';
 import { Share } from '@capacitor/share';
 import { Toast } from '@capacitor/toast';
 import { OAUTH_PROVIDERS, type User } from 'types/user';
+import { makeClientAPIRequest } from 'utils';
 import slide from '~/animations/slide';
 
 const { user, fetchUser } = useAuth();
@@ -87,8 +88,23 @@ async function bridgeReferralCode() {
 	}
 }
 
+// the denominator of the admin dashboard's signup conversion rate; mantle2 dedupes per client
+// per day, and the session guard keeps a back-and-forth from spending a request each time
+function recordSignupView() {
+	if (user.value) return;
+	try {
+		if (sessionStorage.getItem('signup_view_sent')) return;
+		sessionStorage.setItem('signup_view_sent', '1');
+	} catch {
+		// storage unavailable; counting twice is better than not counting
+	}
+
+	void makeClientAPIRequest('/v2/analytics/signup_view', null, { method: 'POST' });
+}
+
 onMounted(() => {
 	void bridgeReferralCode();
+	recordSignupView();
 	// kick off hydration, but don't await; the watcher below handles redirect.
 	fetchUser();
 });

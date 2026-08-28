@@ -31,16 +31,17 @@ async function waitOnDashboard(page: Page): Promise<void> {
 	await expect(page.locator('#title').first()).toBeVisible({ timeout: WAIT });
 }
 
-// read the "N shown" counter the quests page renders from shownQuests.length; it is plain
-// text (not lazy-hydrated) so it is a robust proxy for what the list actually holds
+// read the quests counter the page renders from shownQuests.length; it is plain text (not
+// lazy-hydrated) so it is a robust proxy for what the list actually holds. the label grows an
+// "of <total>" clause whenever anything is filtered out, so take the FIRST number either way
 async function shownCount(page: Page): Promise<number> {
 	const txt = await page
 		.locator(QUESTS_CONTENT)
-		.getByText(/\d+\s+shown/)
+		.getByText(/\d+(?:\s+of\s+\d+)?\s+shown/)
 		.first()
 		.innerText()
 		.catch(() => '');
-	const m = txt.match(/(\d+)\s+shown/);
+	const m = txt.match(/(\d+)(?:\s+of\s+\d+)?\s+shown/);
 	return m ? Number(m[1]) : -1;
 }
 
@@ -168,6 +169,39 @@ test.describe('Tab re-entry (keep-alive)', () => {
 		// still exactly one card after the re-entry re-fetch (no double-append)
 		await expect(card).toHaveCount(1, { timeout: WAIT });
 		await expect(page.locator(QUESTS_CONTENT).getByText('Solo Active Quest')).toHaveCount(1);
+	});
+
+	test('a catalog quest that is active renders once, not in All Quests too', async ({
+		page,
+		gotoHydrated,
+		asUser,
+		mockApi
+	}) => {
+		skipIfIntegration('depends on seeded active quest progress');
+		await asUser({ username: 'catalogdupe' });
+
+		// "Daily Explorer" IS in the seeded catalog, so before the All-Quests exclusion it rendered
+		// twice: once under Current Quest and again directly below in the list
+		const activeQuest = makeQuest({ id: 'q-1', title: 'Daily Explorer' });
+		await mockApi.setActiveQuest(makeUserQuestProgress(activeQuest));
+
+		await gotoTab(page, gotoHydrated, '/tabs/quests');
+		await waitOnQuests(page);
+
+		await expect(page.getByRole('heading', { name: /current quest/i }).first()).toBeVisible({
+			timeout: WAIT
+		});
+		await expect
+			.poll(
+				async () =>
+					page
+						.locator(QUESTS_CONTENT)
+						.locator('ion-card')
+						.filter({ hasText: 'Daily Explorer' })
+						.count(),
+				{ timeout: WAIT }
+			)
+			.toBe(1);
 	});
 
 	test('opening a quest detail then round-tripping tabs returns to an intact list', async ({

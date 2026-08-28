@@ -249,7 +249,7 @@ const welcomeTour = computed<SiteTourStep[]>(() => [
 	{
 		title: 'Welcome to The Earth App',
 		description:
-			'Discover hobbies, read short articles, answer creative prompts, complete quests, and meet people who share your interests.\n\nThis is a quick 30-second tour. Skip it any time with the X or by tapping outside.',
+			'Quests are the heart of it: step-by-step adventures that get you outside and into new hobbies. Along the way you grow a Shared Garden, leave Trailmarks where you have been, and challenge friends to the quests you finish.\n\nThis is a quick 30-second tour. Skip it any time with the X or by tapping outside.',
 		footer: 'Tap Next to continue.',
 		icon: 'mdi:earth',
 		placement: 'center',
