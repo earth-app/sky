@@ -213,6 +213,11 @@ async function waitForUserResolution(timeoutMs: number) {
 }
 
 async function maybeShowOnboarding() {
+	// the tour ends in "sign up" and every quest button inside it is disabled, so running it over
+	// the backend gate buries the one screen that can tell the user what is wrong. `hasOpened` is
+	// left unset so the tour still runs on the next healthy launch
+	if (backendBlocked.value) return;
+
 	let hasOpenedValue: string | null = null;
 	try {
 		const result = await Preferences.get({ key: 'hasOpened' });
