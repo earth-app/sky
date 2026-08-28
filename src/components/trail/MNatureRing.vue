@@ -8,7 +8,7 @@
 				viewBox="0 0 100 100"
 				class="w-full h-full"
 				role="img"
-				:aria-label="`${roundedMinutes} of ${target} Nature Minutes this week`"
+				:aria-label="`${roundedMinutes} Nature Minutes this week`"
 			>
 				<circle
 					cx="50"
@@ -32,14 +32,6 @@
 					:stroke-dashoffset="dashOffset"
 					transform="rotate(-90 50 50)"
 				/>
-				<circle
-					v-if="showBestMarker"
-					:cx="bestMarker.x"
-					:cy="bestMarker.y"
-					r="3.5"
-					class="text-warning"
-					fill="currentColor"
-				/>
 			</svg>
 			<div class="absolute inset-0 flex flex-col items-center justify-center">
 				<UiCountUp
@@ -50,7 +42,7 @@
 				<span
 					v-if="!compact"
 					class="text-3xs opacity-60"
-					>of {{ target }}</span
+					>min</span
 				>
 			</div>
 		</div>
@@ -74,31 +66,27 @@
 const props = withDefaults(
 	defineProps<{
 		minutes: number;
-		target?: number;
 		best?: number;
 		label?: string;
 		size?: number;
 		compact?: boolean;
 	}>(),
-	{ target: 120, best: 0, label: 'Nature Minutes', size: 88, compact: false }
+	{ best: 0, label: 'Nature Minutes', size: 88, compact: false }
 );
+
+// arbitrary ring scale for a first week with no record yet, deliberately local: the server's
+// `target` is 120 min/week, and a figure a user could read as advice does not belong in a
+// component the user looks at
+const FIRST_WEEK_SCALE = 60;
 
 const radius = 42;
 const stroke = 8;
 const circumference = 2 * Math.PI * radius;
 
 const roundedMinutes = computed(() => Math.max(0, Math.round(props.minutes)));
-const pct = computed(() =>
-	Math.min(1, Math.max(0, roundedMinutes.value / Math.max(1, props.target)))
-);
-const dashOffset = computed(() => circumference * (1 - pct.value));
 
-const showBestMarker = computed(
-	() => props.best > 0 && props.best > roundedMinutes.value && props.best <= props.target
-);
-const bestMarker = computed(() => {
-	const fraction = Math.min(1, props.best / Math.max(1, props.target));
-	const angle = (-90 + 360 * fraction) * (Math.PI / 180);
-	return { x: 50 + radius * Math.cos(angle), y: 50 + radius * Math.sin(angle) };
-});
+// the ring fills against your own best week; nothing else scales it
+const scale = computed(() => (props.best > 0 ? props.best : FIRST_WEEK_SCALE));
+const pct = computed(() => Math.min(1, Math.max(0, roundedMinutes.value / scale.value)));
+const dashOffset = computed(() => circumference * (1 - pct.value));
 </script>

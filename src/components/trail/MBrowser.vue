@@ -16,7 +16,6 @@
 					<TrailMNatureRing
 						v-if="natureMinutes"
 						:minutes="natureMinutes.minutes"
-						:target="natureMinutes.target"
 						:best="natureMinutes.best"
 						:size="64"
 						compact
@@ -137,7 +136,7 @@ const trailsTour = computed<SiteTourStep[]>(() => [
 	{
 		title: 'Your Nature Minutes',
 		description:
-			'Time on a trail counts toward your Nature Minutes, tracked on your dashboard and gently aiming for about 120 minutes a week - the amount linked to feeling calmer and more restored. It fills as you walk; it never scolds you for missing a day.',
+			'This ring tracks the time you spend outdoors. Even five minutes out there is associated with feeling calmer and more restored, so short counts. It fills as you walk trails; it never scolds you for missing a day.',
 		footer: 'Time outside is the whole point, not the point total.',
 		icon: 'mdi:timer-sand',
 		placement: 'center'

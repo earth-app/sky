@@ -213,8 +213,9 @@ test.describe('Reduced motion (mobile)', () => {
 		await expect(ring).toBeVisible({ timeout: 15000 });
 		await settleAnimations(page, 'nature ring');
 
-		// the accessible name carries the number the animated sweep encodes
-		await expect(ring).toHaveAttribute('aria-label', /\d+ of \d+ Nature Minutes this week/);
+		// the accessible name carries the number the animated sweep encodes. no denominator: the
+		// weekly target is not a figure we state, so the ring fills against a personal best instead
+		await expect(ring).toHaveAttribute('aria-label', /^\d+ Nature Minutes this week$/);
 
 		const geometry = await page.locator('#nature-ring').evaluate((host) => {
 			const arc = Array.from(host.querySelectorAll('circle')).find((c) =>

@@ -60,7 +60,6 @@
 				<TrailMNatureRing
 					v-if="natureMinutes"
 					:minutes="natureMinutes.minutes"
-					:target="natureMinutes.target"
 					:best="natureMinutes.best"
 					:size="56"
 					compact
