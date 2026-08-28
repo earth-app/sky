@@ -142,22 +142,7 @@ const ionRouter = useIonRouter();
 
 const userId = computed(() => user.value?.id);
 const { quest, questHistory, fetchUserQuest, fetchQuestHistory } = useUser(userId);
-const { quests, fetchQuests, fetchQuest } = useQuests();
-
-// cloud builds an activity quest lazily and never lists it, so each has to be asked for by id.
-// done here rather than through crust's helper: the published layer sky builds against does not
-// export it yet, and a missing id must not reject a Promise.all
-const activityQuestIds = computed(() =>
-	(user.value?.activities ?? [])
-		.map((activity) => activity?.id)
-		.filter((id): id is string => !!id)
-		.map((id) => `activity_quest_${id}`)
-);
-
-async function fetchActivityQuests(force = false) {
-	const ids = activityQuestIds.value;
-	await Promise.all(ids.map((id) => fetchQuest(id, force).catch(() => undefined)));
-}
+const { quests, fetchQuests, fetchActivityQuests } = useQuests();
 
 const search = ref('');
 const isRefreshing = ref(false);
@@ -190,7 +175,7 @@ async function refreshQuestData(): Promise<void> {
 		try {
 			await Promise.all([
 				fetchQuests(true),
-				fetchActivityQuests(true),
+				fetchActivityQuests(user.value?.activities, true),
 				fetchUserQuest(true),
 				fetchQuestHistory({ force: true, limit: HISTORY_PAGE_LIMIT, search: search.value })
 			]);
@@ -221,8 +206,12 @@ onMounted(() => {
 	fetchQuestHistory({ limit: HISTORY_PAGE_LIMIT, search: search.value });
 });
 
-// the user hydrates after mount, so the ids are not known yet when this page first renders
-watch(activityQuestIds, (ids) => ids.length > 0 && void fetchActivityQuests(), { immediate: true });
+// the user hydrates after mount, so the activities are not known yet when this page first renders
+watch(
+	() => user.value?.activities,
+	(activities) => activities?.length && void fetchActivityQuests(activities),
+	{ immediate: true }
+);
 
 // a deep link may arrive while the quests tab is already alive in the outlet
 watch(
