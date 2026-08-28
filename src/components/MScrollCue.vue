@@ -29,6 +29,7 @@
 import { Preferences } from '@capacitor/preferences';
 import { useIonRouter } from '@ionic/vue';
 import slide from '~/animations/slide';
+import { reserveScrollClearance } from '~/utils/scrollCue';
 
 // first-session scroll cue. quest-funneled. only renders for logged-in users on first 2 dashboard visits
 const STORAGE_DISMISSED = 'home_scroll_cue_dismissed_v1';
@@ -51,6 +52,24 @@ const reduced = useMediaQuery('(prefers-reduced-motion: reduce)');
 const visible = ref(false);
 let scrollHandler: ((e: Event) => void) | null = null;
 let attachedEl: HTMLElement | Window | null = null;
+let releaseClearance: (() => void) | null = null;
+
+// the container resolves after mount, so claim the clearance whenever either side becomes ready
+watch(
+	() => [visible.value, props.scrollContainer] as const,
+	([isVisible, container]) => {
+		if (isVisible && container && !releaseClearance) {
+			releaseClearance = reserveScrollClearance(container);
+			return;
+		}
+
+		if (!isVisible) {
+			releaseClearance?.();
+			releaseClearance = null;
+		}
+	},
+	{ immediate: true }
+);
 
 async function dismiss(persist = true) {
 	if (!visible.value) return;
@@ -66,6 +85,9 @@ async function dismiss(persist = true) {
 }
 
 function teardown() {
+	releaseClearance?.();
+	releaseClearance = null;
+
 	if (scrollHandler && attachedEl) {
 		attachedEl.removeEventListener('scroll', scrollHandler as EventListener);
 		scrollHandler = null;
