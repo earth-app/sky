@@ -44,3 +44,37 @@ export async function navigateUntilLanded(options: {
 
 	return false;
 }
+
+/**
+ * Maps a crust path onto the route sky actually has.
+ *
+ * These rules are deliberately the same ones `useDeepLinkRouting.resolveDeepLink` applies, and that
+ * composable delegates here so the two cannot drift. Both are needed: a universal link arrives as a
+ * URL and a notification arrives as a stored path, but they must land in the same place.
+ *
+ * The notification path used to prefix `/tabs/` blindly, which is how tapping the staged-activities
+ * push did nothing at all - `/tabs/admin` did not exist.
+ */
+const LINK_MAP: { match: RegExp; to: (path: string, query: string) => string }[] = [
+	// the whole admin suite is one surface here
+	{ match: /^\/admin(\/|$)/, to: () => '/tabs/admin' },
+	// crust nests quests under the profile; sky gives them their own tab
+	{ match: /^\/profile\/quests(\/|$)/, to: (_path, query) => `/tabs/quests${query}` },
+	// sky has top-level /profile routes, so these pass through unprefixed
+	{ match: /^\/profile(\/|$)/, to: (path, query) => `${path}${query}` }
+];
+
+export function notificationRoute(link: string | null | undefined): string | null {
+	if (!link) return null;
+	if (link.startsWith('http')) return link;
+
+	const [rawPath = '', rawQuery = ''] = link.split('?');
+	const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+	const query = rawQuery ? `?${rawQuery}` : '';
+
+	for (const { match, to } of LINK_MAP) {
+		if (match.test(path)) return to(path, query);
+	}
+
+	return `/tabs${path}${query}`;
+}

@@ -108,14 +108,7 @@ watch(
 	}
 );
 
-const mobileLink = computed(() => {
-	const link = notification?.value?.link;
-	if (!link) return null;
-
-	if (link.startsWith('http')) return link;
-	const normalized = link.startsWith('/') ? link.substring(1) : link;
-	return `/tabs/${normalized}`;
-});
+const mobileLink = computed(() => notificationRoute(notification?.value?.link));
 
 const message = computed(() => {
 	if (!notification.value) return;

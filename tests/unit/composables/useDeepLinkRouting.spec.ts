@@ -93,6 +93,29 @@ describe('useDeepLinkRouting.resolveDeepLink', () => {
 		}
 	});
 
+	// the reset link mantle2 emails carries `token`, which used to read as an oauth return: the
+	// reset token was stored as a session token and the user landed on the dashboard bounce
+	it('does not mistake a password-reset link for an oauth return', () => {
+		expect(resolveDeepLink(`${APP_HOST}/reset-password?uid=u1&token=abc`)).toEqual({
+			type: 'internal',
+			target: '/reset-password?uid=u1&token=abc'
+		});
+	});
+
+	it('still accepts a bare token on an oauth path', () => {
+		expect(resolveDeepLink(`${APP_HOST}/oauth/complete?token=abc&provider=github`)).toMatchObject({
+			type: 'oauth-complete',
+			sessionToken: 'abc'
+		});
+	});
+
+	it('still accepts session_token off an oauth path, as crust sends it', () => {
+		expect(resolveDeepLink(`${APP_HOST}/anything?session_token=abc`)).toMatchObject({
+			type: 'oauth-complete',
+			sessionToken: 'abc'
+		});
+	});
+
 	it('sends external-only legal pages to external', () => {
 		const res = resolveDeepLink(`${APP_HOST}/privacy-policy`);
 		expect(res.type).toBe('external');

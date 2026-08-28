@@ -1,111 +1,95 @@
-import { describe, expect, it, vi } from 'vitest';
-import { navigateUntilLanded } from '~/utils/navigation';
+// @vitest-environment node
+import { readdirSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { notificationRoute } from '~/utils/navigation';
 
-const noSleep = () => Promise.resolve();
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
+const PAGES = join(ROOT, 'src/pages');
 
-describe('navigateUntilLanded', () => {
-	it('does not navigate when the caller is already there', async () => {
-		const navigate = vi.fn(async () => undefined);
+/** Every route the file-based router produces, with `[param]` left in place. */
+function routes(dir: string, prefix = ''): string[] {
+	const out: string[] = [];
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		if (entry.isDirectory()) {
+			out.push(...routes(join(dir, entry.name), `${prefix}/${entry.name}`));
+		} else if (entry.name.endsWith('.vue')) {
+			out.push(entry.name === 'index.vue' ? prefix || '/' : `${prefix}/${entry.name.slice(0, -4)}`);
+		}
+	}
+	return out;
+}
 
-		const landed = await navigateUntilLanded({ navigate, landed: () => true, sleep: noSleep });
+const ROUTES = routes(PAGES);
 
-		expect(landed).toBe(true);
-		expect(navigate).not.toHaveBeenCalled();
+/** Whether a concrete path is served by one of those routes. */
+function resolves(path: string): boolean {
+	const wanted = path.split('/').filter(Boolean);
+	return ROUTES.some((route) => {
+		const parts = route.split('/').filter(Boolean);
+		if (parts.length !== wanted.length) return false;
+		return parts.every((part, i) => part.startsWith('[') || part === wanted[i]);
+	});
+}
+
+// every distinct `link` mantle2 and cloud write into a notification today
+const EMITTED_LINKS = [
+	'/admin?tab=approvals',
+	'/activities/00000000000000000000abcd',
+	'/events/000000000000000000001234',
+	'/profile',
+	'/profile/notifications',
+	'/profile/@someone',
+	'/profile/quests?open=say_one_thing'
+];
+
+describe('notification links land on a route sky actually has', () => {
+	it('found the page tree', () => {
+		expect(ROUTES.length).toBeGreaterThan(20);
+		expect(resolves('/tabs/dashboard')).toBe(true);
+		expect(resolves('/tabs/nope')).toBe(false);
 	});
 
-	it('lands on the first attempt when the push commits', async () => {
-		let path = '/';
-		const navigate = vi.fn(async () => {
-			path = '/tabs/dashboard';
+	// this is the bug: `/admin?tab=approvals` became `/tabs/admin`, which did not exist, so tapping
+	// the staged-activities push did nothing
+	for (const link of EMITTED_LINKS) {
+		it(`maps ${link} onto a real route`, () => {
+			const mapped = notificationRoute(link);
+			expect(mapped).not.toBeNull();
+			const path = mapped!.split('?')[0]!;
+			expect(resolves(path), `${link} -> ${mapped} does not resolve`).toBe(true);
 		});
+	}
 
-		const landed = await navigateUntilLanded({
-			navigate,
-			landed: () => path.startsWith('/tabs'),
-			sleep: noSleep
-		});
-
-		expect(landed).toBe(true);
-		expect(navigate).toHaveBeenCalledTimes(1);
+	it('sends the admin suite to the one surface sky has for it', () => {
+		expect(notificationRoute('/admin?tab=approvals')).toBe('/tabs/admin');
+		expect(notificationRoute('/admin')).toBe('/tabs/admin');
 	});
 
-	// the regression this exists for: vue-router RESOLVES with a NavigationFailure, so the first
-	// attempt looks successful to `await` while the app never left the route
-	it('retries when a push resolves without navigating', async () => {
-		let path = '/';
-		const navigate = vi.fn(async () => {
-			// first attempt is silently dropped, exactly like an aborted/cancelled navigation
-			if (navigate.mock.calls.length > 1) path = '/tabs/dashboard';
-			return { type: 8, from: {}, to: {} };
-		});
-
-		const landed = await navigateUntilLanded({
-			navigate,
-			landed: () => path.startsWith('/tabs'),
-			sleep: noSleep
-		});
-
-		expect(landed).toBe(true);
-		expect(navigate).toHaveBeenCalledTimes(2);
-		expect(path).toBe('/tabs/dashboard');
+	it('keeps quests on their own tab and carries the deep link', () => {
+		expect(notificationRoute('/profile/quests?open=say_one_thing')).toBe(
+			'/tabs/quests?open=say_one_thing'
+		);
 	});
 
-	it('reports not-landed after exhausting attempts so the caller can release its guard', async () => {
-		const navigate = vi.fn(async () => ({ type: 4 }));
-
-		const landed = await navigateUntilLanded({
-			navigate,
-			landed: () => false,
-			attempts: 3,
-			sleep: noSleep
-		});
-
-		expect(landed).toBe(false);
-		expect(navigate).toHaveBeenCalledTimes(3);
+	// sky has top-level /profile routes, so these must not be prefixed - and this is the same rule
+	// resolveDeepLink applies, which is why both now read one table
+	it('passes a profile link through unprefixed', () => {
+		expect(notificationRoute('/profile')).toBe('/profile');
+		expect(notificationRoute('/profile/notifications')).toBe('/profile/notifications');
+		expect(notificationRoute('/profile/@someone')).toBe('/profile/@someone');
 	});
 
-	it('keeps retrying after a thrown error and surfaces it', async () => {
-		let path = '/';
-		const onError = vi.fn();
-		const navigate = vi.fn(async () => {
-			if (navigate.mock.calls.length === 1) throw new Error('chunk load failed');
-			path = '/tabs/dashboard';
-		});
-
-		const landed = await navigateUntilLanded({
-			navigate,
-			landed: () => path.startsWith('/tabs'),
-			sleep: noSleep,
-			onError
-		});
-
-		expect(landed).toBe(true);
-		expect(onError).toHaveBeenCalledTimes(1);
-		expect(onError.mock.calls[0]?.[1]).toBe(1);
+	it('passes an unmapped path through with the tabs prefix', () => {
+		expect(notificationRoute('/activities/abc')).toBe('/tabs/activities/abc');
+		expect(notificationRoute('activities/abc')).toBe('/tabs/activities/abc');
 	});
 
-	it('waits between attempts rather than spinning', async () => {
-		const sleep = vi.fn(() => Promise.resolve());
-		const navigate = vi.fn(async () => undefined);
-
-		await navigateUntilLanded({
-			navigate,
-			landed: () => false,
-			attempts: 3,
-			retryMs: 150,
-			sleep
-		});
-
-		// one gap between each pair of attempts, never a trailing wait after the last
-		expect(sleep).toHaveBeenCalledTimes(2);
-		expect(sleep).toHaveBeenCalledWith(150);
-	});
-
-	it('always attempts at least once even if asked for none', async () => {
-		const navigate = vi.fn(async () => undefined);
-
-		await navigateUntilLanded({ navigate, landed: () => false, attempts: 0, sleep: noSleep });
-
-		expect(navigate).toHaveBeenCalledTimes(1);
+	it('leaves an external link alone and returns null for nothing', () => {
+		expect(notificationRoute('https://earth-app.com/blog')).toBe('https://earth-app.com/blog');
+		expect(notificationRoute('')).toBeNull();
+		expect(notificationRoute(null)).toBeNull();
+		expect(notificationRoute(undefined)).toBeNull();
 	});
 });

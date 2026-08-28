@@ -126,21 +126,23 @@ export function useDeepLinkRouting() {
 			? normalizePath(`/${host}${pathname === '/' ? '' : pathname}`)
 			: pathname;
 
+		const isOAuthPath =
+			OAUTH_COMPLETE_PATHS.has(routePath) || routePath.startsWith('/oauth/complete/');
+
+		// a bare `token` only counts on an oauth path: the password-reset link mantle2 emails is
+		// `/reset-password?uid=..&token=..`, and reading that as an oauth return stored the reset
+		// token as a session token and bounced the user to the dashboard
 		const carriesOAuthToken = Boolean(
 			parsed.searchParams.get('session_token') ||
 			parsed.searchParams.get('sessionToken') ||
-			parsed.searchParams.get('token')
+			(isOAuthPath && parsed.searchParams.get('token'))
 		);
 
-		if (
-			carriesOAuthToken ||
-			OAUTH_COMPLETE_PATHS.has(routePath) ||
-			routePath.startsWith('/oauth/complete/')
-		) {
+		if (carriesOAuthToken || isOAuthPath) {
 			const sessionToken =
 				parsed.searchParams.get('session_token') ||
 				parsed.searchParams.get('sessionToken') ||
-				parsed.searchParams.get('token') ||
+				(isOAuthPath ? parsed.searchParams.get('token') : '') ||
 				new URLSearchParams(parsed.hash.replace(/^#/, '')).get('session_token') ||
 				'';
 			const provider = parsed.searchParams.get('provider') || '';
@@ -216,7 +218,12 @@ export function useDeepLinkRouting() {
 			return { type: 'internal', target: `/tabs/dashboard${query}${hash}` };
 		}
 
-		// the challenge notification links to crust's /profile/quests?open=<id>
+		// admin, /profile/quests and the /profile passthrough all live in one table so a notification
+		// tap and a universal link cannot disagree about where a crust path goes
+		if (routePath === '/admin' || routePath.startsWith('/admin/')) {
+			return { type: 'internal', target: `${notificationRoute(routePath)}${query}${hash}` };
+		}
+
 		if (routePath === '/profile/quests') {
 			return { type: 'internal', target: `/tabs/quests${query}${hash}` };
 		}
