@@ -72,10 +72,30 @@
 					/>
 				</div>
 
+				<div
+					v-if="activityQuests.length > 0"
+					class="flex flex-col items-center gap-6"
+				>
+					<div class="flex flex-col items-center">
+						<h2 class="text-lg mb-0!">From Your Activities</h2>
+						<span class="text-base opacity-90"
+							>{{ activityQuests.length }} Built Around What You Picked</span
+						>
+					</div>
+					<LazyUserQuestMThumbnail
+						v-for="q in activityQuests"
+						:key="q.id"
+						:quest="q"
+						:progress="questHistory.get(q.id)?.progress"
+						:completedAt="questHistory.get(q.id)?.completedAt"
+						hydrate-on-visible
+					/>
+				</div>
+
 				<div class="flex flex-col items-center gap-6 mb-8">
 					<div class="flex flex-col items-center">
 						<h2 class="text-lg mb-0!">All Quests</h2>
-						<span class="text-base opacity-90">{{ shownQuests.length }} shown</span>
+						<span class="text-base opacity-90">{{ questCountLabel }}</span>
 					</div>
 					<template v-if="isRefreshing && shownQuests.length === 0">
 						<MSkeleton
@@ -113,44 +133,77 @@
 
 <script setup lang="ts">
 import { theme } from '~/composables/useSettings';
+import { filterQuests, questCountText } from '~/utils/quest';
 
 const { user } = useAuth();
 const route = useRoute();
+const router = useRouter();
 const ionRouter = useIonRouter();
 
 const userId = computed(() => user.value?.id);
 const { quest, questHistory, fetchUserQuest, fetchQuestHistory } = useUser(userId);
-const { quests, fetchQuests } = useQuests();
+const { quests, fetchQuests, fetchQuest } = useQuests();
+
+// cloud builds an activity quest lazily and never lists it, so each has to be asked for by id.
+// done here rather than through crust's helper: the published layer sky builds against does not
+// export it yet, and a missing id must not reject a Promise.all
+const activityQuestIds = computed(() =>
+	(user.value?.activities ?? [])
+		.map((activity) => activity?.id)
+		.filter((id): id is string => !!id)
+		.map((id) => `activity_quest_${id}`)
+);
+
+async function fetchActivityQuests(force = false) {
+	const ids = activityQuestIds.value;
+	await Promise.all(ids.map((id) => fetchQuest(id, force).catch(() => undefined)));
+}
 
 const search = ref('');
 const isRefreshing = ref(false);
 const showChallengePicker = ref(false);
 
 // challenge / deep-link entry; /tabs/quests?open=<questId> jumps straight to that quest.
-// guard against re-firing on tab re-entry by clearing the query once handled.
+// the query is cleared once handled, so tab re-entry does not re-open it.
 function maybeOpenQuest() {
 	const open = typeof route.query.open === 'string' ? route.query.open : '';
 	if (!open) return;
+
+	const { open: _handled, ...rest } = route.query;
+	void router.replace({ path: route.path, query: rest });
 	ionRouter.navigate(`/tabs/quests/${open}`, 'forward', 'push');
 }
 
 const HISTORY_PAGE_LIMIT = 100;
-async function refreshQuestData() {
-	if (!userId.value || isRefreshing.value) return;
+
+// concurrent callers share one run rather than the later one being dropped; a pull-to-refresh
+// that lands while a view-enter refresh is still going used to complete its spinner having
+// fetched nothing
+let refreshInFlight: Promise<void> | null = null;
+
+async function refreshQuestData(): Promise<void> {
+	if (!userId.value) return;
+	if (refreshInFlight) return refreshInFlight;
+
 	isRefreshing.value = true;
+	refreshInFlight = (async () => {
+		try {
+			await Promise.all([
+				fetchQuests(true),
+				fetchActivityQuests(true),
+				fetchUserQuest(true),
+				fetchQuestHistory({ force: true, limit: HISTORY_PAGE_LIMIT, search: search.value })
+			]);
 
-	try {
-		await Promise.all([
-			fetchQuests(true),
-			fetchUserQuest(true),
-			fetchQuestHistory({ force: true, limit: HISTORY_PAGE_LIMIT, search: search.value })
-		]);
+			// manual checker: re-arm the quest Live Activity now that the active quest is fresh
+			void useQuestLiveActivity().forceResync();
+		} finally {
+			isRefreshing.value = false;
+			refreshInFlight = null;
+		}
+	})();
 
-		// manual checker: re-arm the quest Live Activity now that the active quest is fresh
-		void useQuestLiveActivity().forceResync();
-	} finally {
-		isRefreshing.value = false;
-	}
+	return refreshInFlight;
 }
 
 // pull-to-refresh (parity with the discover tab); always complete the spinner
@@ -166,8 +219,10 @@ onMounted(() => {
 	fetchUserQuest();
 	fetchQuests();
 	fetchQuestHistory({ limit: HISTORY_PAGE_LIMIT, search: search.value });
-	maybeOpenQuest();
 });
+
+// the user hydrates after mount, so the ids are not known yet when this page first renders
+watch(activityQuestIds, (ids) => ids.length > 0 && void fetchActivityQuests(), { immediate: true });
 
 // a deep link may arrive while the quests tab is already alive in the outlet
 watch(
@@ -186,15 +241,22 @@ const allQuests = computed<Quest[]>(() => {
 	return Array.from(merged.values());
 });
 
-const shownQuests = computed(() => {
-	const term = search.value.toLowerCase();
-	return allQuests.value.filter((q) => {
-		const id = q.id?.toLowerCase() ?? '';
-		const title = q.title?.toLowerCase() ?? '';
-		const description = q.description?.toLowerCase() ?? '';
-		return id.includes(term) || title.includes(term) || description.includes(term);
-	});
-});
+// quests built from the user's own activities get their own section above, so like the active
+// quest they never repeat down here
+const activityQuests = computed<Quest[]>(() =>
+	allQuests.value.filter((q) => q.id.startsWith('activity_quest_'))
+);
+
+const shownQuests = computed(() =>
+	filterQuests(allQuests.value, search.value, quest.value?.quest?.id).filter(
+		(q) => !q.id.startsWith('activity_quest_')
+	)
+);
+
+// an unexplained "35 shown" reads like a bug; name the total whenever anything is held back
+const questCountLabel = computed(() =>
+	questCountText(shownQuests.value.length, allQuests.value.length)
+);
 
 watch(userId, () => void refreshQuestData(), { immediate: true });
 
@@ -202,5 +264,11 @@ watch(userId, () => void refreshQuestData(), { immediate: true });
 // elsewhere wouldn't show up until the user logs out and back in
 onIonViewWillEnter(() => {
 	void refreshQuestData();
+});
+
+// pushing from onMounted lands mid-transition and ionic drops it, so the deep link is handled
+// once this page is actually the active view
+onIonViewDidEnter(() => {
+	maybeOpenQuest();
 });
 </script>
