@@ -82,6 +82,16 @@
 						class="text-3xs font-semibold! m-text-danger"
 						>Expires Soon</span
 					>
+					<span
+						v-else-if="row.isBest"
+						class="text-3xs font-semibold! m-text-warning"
+						>Your Longest Yet</span
+					>
+					<span
+						v-else-if="row.best > 0"
+						class="text-3xs opacity-70"
+						>Best: {{ row.best }}</span
+					>
 				</button>
 			</div>
 			<button
@@ -166,6 +176,8 @@ const WARN_THRESHOLD_MS = 12 * 60 * 60 * 1000;
 
 const counts = ref<Record<JourneyType, number>>({ article: 0, prompt: 0, event: 0 });
 const lastWrites = ref<Record<JourneyType, number>>({ article: 0, prompt: 0, event: 0 });
+// server-held record, so it is the same on every device the account signs in from
+const bests = ref<Record<JourneyType, number>>({ article: 0, prompt: 0, event: 0 });
 const now = ref(Date.now());
 let tickHandle: ReturnType<typeof setInterval> | null = null;
 
@@ -174,7 +186,9 @@ const rows = computed(() =>
 		const lw = lastWrites.value[r.type];
 		const remaining = lw ? lw + STREAK_TTL_MS - now.value : 0;
 		const expiringSoon = counts.value[r.type] > 0 && remaining > 0 && remaining < WARN_THRESHOLD_MS;
-		return { ...r, count: counts.value[r.type], expiringSoon };
+		const count = counts.value[r.type];
+		const best = bests.value[r.type];
+		return { ...r, count, expiringSoon, best, isBest: count > 0 && count >= best };
 	})
 );
 
@@ -226,6 +240,7 @@ async function loadJourneys() {
 		if (valid(res)) {
 			counts.value[row.type] = res.data?.count ?? 0;
 			lastWrites.value[row.type] = (res.data as { lastWrite?: number })?.lastWrite ?? 0;
+			bests.value[row.type] = (res.data as { best?: number })?.best ?? 0;
 		}
 	}
 	hasLoaded.value = true;

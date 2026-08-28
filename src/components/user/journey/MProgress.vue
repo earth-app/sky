@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="flex items-center w-32 mr-2"
+		class="flex items-center w-36 mr-2"
 		@click="
 			open = !open;
 			event = $event;
@@ -12,6 +12,12 @@
 		/>
 
 		<div class="flex flex-col items-start justify-center">
+			<span
+				v-if="title"
+				class="text-xs text-muted"
+			>
+				{{ title }}
+			</span>
 			<span
 				v-if="total"
 				class="text-sm font-medium text-gray-900 dark:text-gray-100"
@@ -54,7 +60,7 @@
 				v-if="rank"
 				class="text-sm text-gray-700 dark:text-gray-300"
 			>
-				This user is ranked in this journey at #{{ rank }}!
+				Ranked #{{ rank }} on this journey among all users.
 			</p>
 			<p
 				v-else

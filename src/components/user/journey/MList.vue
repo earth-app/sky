@@ -3,7 +3,7 @@
 		<UserJourneyMProgress
 			v-if="!loading"
 			icon="mdi:leaf"
-			title="Activities"
+			title="Activities Explored"
 			:count="state.activity.count"
 			:total="totalActivities"
 			help="Visit and read about activities to increase this number."
