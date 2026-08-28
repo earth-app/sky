@@ -87,6 +87,41 @@ describe('interleaveFeed', () => {
 		expect(out).toHaveLength(6);
 		expect(maxRun(out)).toBeLessThanOrEqual(1);
 	});
+
+	it('sinks demoted items behind the live ones in the same bucket', () => {
+		const events = [
+			{ type: 'event', id: 1 },
+			{ type: 'stale', id: 2 },
+			{ type: 'event', id: 3 },
+			{ type: 'stale', id: 4 }
+		];
+		const out = interleaveFeed([events], 7, (item) => item.type === 'stale');
+
+		expect(out.map((item) => item.type)).toEqual(['event', 'event', 'stale', 'stale']);
+	});
+
+	it('never leads the blend with a demoted item', () => {
+		const events = [
+			{ type: 'event', id: 1 },
+			{ type: 'stale', id: 2 },
+			{ type: 'stale', id: 3 }
+		];
+		const activities = bucket('activity', 3);
+
+		for (let seed = 0; seed < 25; seed += 1) {
+			const out = interleaveFeed([events, activities], seed, (item) => item.type === 'stale');
+			expect(out).toHaveLength(6);
+			expect(out[0]!.type).not.toBe('stale');
+			// both stale events sit behind the live event from their own bucket
+			const live = out.findIndex((item) => item.type === 'event');
+			expect(live).toBeLessThan(out.findIndex((item) => item.type === 'stale'));
+		}
+	});
+
+	it('keeps every item when a demote predicate matches all of them', () => {
+		const out = interleaveFeed([bucket('event', 3)], 3, () => true);
+		expect(out).toHaveLength(3);
+	});
 });
 
 describe('shouldGroup', () => {

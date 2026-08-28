@@ -22,9 +22,32 @@ function shuffleInPlace<T>(arr: T[], rng: () => number): T[] {
 	return arr;
 }
 
-export function interleaveFeed<T>(buckets: T[][], seed?: number): T[] {
+// stable partition: demoted items keep their relative order but sink behind everything else
+function sinkDemoted<T>(items: T[], demote: (item: T) => boolean): T[] {
+	const keep: T[] = [];
+	const sunk: T[] = [];
+	for (const item of items) (demote(item) ? sunk : keep).push(item);
+	return keep.concat(sunk);
+}
+
+/**
+ * Blend per-type buckets into one feed.
+ *
+ * `demote` sinks items to the back of their own bucket before striding, so stale content (an event
+ * that already ended) lands late in the feed instead of leading a discovery surface.
+ */
+export function interleaveFeed<T>(
+	buckets: T[][],
+	seed?: number,
+	demote?: (item: T) => boolean
+): T[] {
 	const rng = makeRng(seed);
-	const nonEmpty = buckets.filter((b) => b.length > 0).map((b) => shuffleInPlace([...b], rng));
+	const nonEmpty = buckets
+		.filter((b) => b.length > 0)
+		.map((b) => {
+			const shuffled = shuffleInPlace([...b], rng);
+			return demote ? sinkDemoted(shuffled, demote) : shuffled;
+		});
 
 	if (nonEmpty.length === 0) return [];
 	if (nonEmpty.length === 1) return nonEmpty[0]!;

@@ -190,6 +190,7 @@ import { type Event } from 'types/event';
 import { capitalizeFully, comma } from 'utils';
 import { dataSaverModeEnabled } from '~/composables/useNetwork';
 import { theme } from '~/composables/useSettings';
+import { isEventPast } from '~/utils/event';
 import { interleaveFeed } from '~/utils/feed';
 
 const SEARCH_DEBOUNCE_MS = 450;
@@ -587,6 +588,11 @@ async function scrollToTop(durationMs: number = 300) {
 	window.scrollTo({ top: 0, behavior: durationMs > 0 ? 'smooth' : 'auto' });
 }
 
+// only events go stale; everything else in the feed is timeless
+function isStaleDiscoverItem(item: DiscoverResult): boolean {
+	return item.data_type === 'event' && isEventPast(item);
+}
+
 function toDiscoverItems<T extends { id: string }, K extends DiscoverType>(
 	items: T[],
 	type: K
@@ -909,7 +915,8 @@ async function loadRandomResults(generation: number) {
 	if (generation !== queryGeneration.value) return;
 
 	if (buckets.length > 0) {
-		addUniqueResults(interleaveFeed(buckets), RANDOM_LIMIT);
+		// an ended event must not lead a discovery surface, so sink it behind the live ones
+		addUniqueResults(interleaveFeed(buckets, undefined, isStaleDiscoverItem), RANDOM_LIMIT);
 	}
 
 	if (anyReceived || hasMore.value) {

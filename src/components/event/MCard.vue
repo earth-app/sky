@@ -300,23 +300,16 @@ const buttons = computed(() => {
 					if (res?.success) afterRsvp(false);
 				}
 			});
-		} else {
-			const past = isPast.value;
+		} else if (!isPast.value) {
+			// an ended event already carries the "Event Ended" badge; a second copy as a dead
+			// button is the duplicate label, not a second piece of information
 			const full = isAtCapacity.value;
 			array.push({
-				text: past ? 'Event Ended' : full ? 'Event Full' : 'Sign Up',
-				color: past || full ? 'light' : 'primary',
+				text: full ? 'Event Full' : 'Sign Up',
+				color: full ? 'light' : 'primary',
 				size: 'small',
-				disabled: past || full,
+				disabled: full,
 				onClick: async () => {
-					if (past) {
-						await Toast.show({
-							text: 'This event has already ended.',
-							duration: 'long'
-						});
-						return;
-					}
-
 					if (full) {
 						await Toast.show({
 							text: 'This event has reached its maximum capacity.',
