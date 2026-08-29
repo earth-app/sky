@@ -120,6 +120,9 @@ ensure_capacitor_modules() {
 	if [ -f "$ANDROID_DIR/capacitor-cordova-android-plugins/build.gradle" ]; then return 0; fi
 	require_cmd bun
 	log 'regenerating the capacitor gradle modules (cap update android)'
+	# everything under assets/ is gitignored, so a fresh checkout has no directory for
+	# cap update to write capacitor.plugins.json into
+	mkdir -p "$ANDROID_DIR/app/src/main/assets"
 	bunx cap update android
 	[ -f "$ANDROID_DIR/capacitor-cordova-android-plugins/build.gradle" ] \
 		|| die 'cap update android did not produce capacitor-cordova-android-plugins'
