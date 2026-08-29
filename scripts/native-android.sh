@@ -119,13 +119,27 @@ assert_gradle_agp_compat() {
 ensure_capacitor_modules() {
 	if [ -f "$ANDROID_DIR/capacitor-cordova-android-plugins/build.gradle" ]; then return 0; fi
 	require_cmd bun
-	log 'regenerating the capacitor gradle modules (cap update android)'
+	# sync, not update: `cap update` writes build.gradle but not cordova.variables.gradle, and
+	# capacitor.build.gradle includes that file unconditionally, so gradle dies on a half module
+	log 'regenerating the capacitor gradle modules (cap sync android)'
 	# everything under assets/ is gitignored, so a fresh checkout has no directory for
-	# cap update to write capacitor.plugins.json into
+	# the sync to write capacitor.plugins.json into
 	mkdir -p "$ANDROID_DIR/app/src/main/assets"
-	bunx cap update android
-	[ -f "$ANDROID_DIR/capacitor-cordova-android-plugins/build.gradle" ] \
-		|| die 'cap update android did not produce capacitor-cordova-android-plugins'
+	# the copy step needs a webDir and the jvm lane never builds the web app; stand a placeholder
+	# in and take it back out, so nothing can later boot off an empty bundle
+	local placeholder=''
+	if [ ! -f "$ROOT/.output/public/index.html" ]; then
+		placeholder="$ROOT/.output/public"
+		mkdir -p "$placeholder"
+		: > "$placeholder/index.html"
+	fi
+	bunx cap sync android
+	if [ -n "$placeholder" ]; then
+		rm -f "$placeholder/index.html" "$ANDROID_DIR/app/src/main/assets/public/index.html"
+		rmdir "$placeholder" "$ROOT/.output" 2> /dev/null || true
+	fi
+	[ -f "$ANDROID_DIR/capacitor-cordova-android-plugins/cordova.variables.gradle" ] \
+		|| die 'cap sync android did not produce a complete capacitor-cordova-android-plugins'
 }
 
 resolve_sdk() {
