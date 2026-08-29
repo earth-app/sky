@@ -407,7 +407,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [unit, build-android]
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
 
     permissions:
       contents: read
