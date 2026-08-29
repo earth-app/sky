@@ -24,6 +24,22 @@ export async function settleAnimations(page: Page, surface: string): Promise<voi
 			{ timeout: 10_000, message: `${surface}: ion-router-outlet animations never settled` }
 		)
 		.toBe(true);
+	// ionic holds an entering page at opacity 0 until its transition runs, and playwright
+	// calls such an element visible, so a ready() check passes on a page that paints nothing
+	await expect
+		.poll(
+			async () =>
+				await page.evaluate(() => {
+					const content = Array.from(document.querySelectorAll('ion-content')).find(
+						(el) => (el as HTMLElement).offsetParent !== null
+					);
+					const host = content?.closest('.ion-page') as HTMLElement | null;
+					if (!host) return 1;
+					return Number(getComputedStyle(host).opacity);
+				}),
+			{ timeout: 10_000, message: `${surface}: the active ion-page never painted` }
+		)
+		.toBeGreaterThan(0.99);
 	// webfont swap reflows text, which would poison the clipping measurements
 	await page.evaluate(() => document.fonts.ready.then(() => undefined));
 }
