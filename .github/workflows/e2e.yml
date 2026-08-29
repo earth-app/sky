@@ -140,6 +140,7 @@ jobs:
           PLAYWRIGHT_PROD: '1'
           MOCK_DISABLED: '1'
           COVERAGE: '1'
+          NITRO_OUTPUT_DIR: .output-test
       - name: Upload Playwright Artifacts (Failure)
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
