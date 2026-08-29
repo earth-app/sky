@@ -137,6 +137,13 @@ describe('useDeepLinkRouting.resolveDeepLink', () => {
 			expect(res).toEqual({ type: 'internal', target: '/signup?ref=XYZ789' });
 		});
 
+		// chromium before 125 leaves the authority in the path for a non-special scheme, which is
+		// what android 15's webview does; the extra slashes reproduce that shape in a modern engine
+		it('resolves the custom-scheme invite host when the webview leaves it in the path', () => {
+			const res = resolveDeepLink('com.earthapp.sky:////invite/XYZ789');
+			expect(res).toEqual({ type: 'internal', target: '/signup?ref=XYZ789' });
+		});
+
 		it('persists a ?ref= query param even on a non-invite path', () => {
 			resolveDeepLink(`${APP_HOST}/tabs/dashboard?ref=FROMQUERY`);
 			expect(prefsSet).toHaveBeenCalledWith({ key: 'referral_code', value: 'FROMQUERY' });

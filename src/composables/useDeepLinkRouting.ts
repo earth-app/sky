@@ -99,12 +99,22 @@ export function useDeepLinkRouting() {
 		}
 
 		const isCustomScheme = parsed.protocol === 'com.earthapp.sky:';
-		const host = parsed.host.toLowerCase();
+		// chromium only learned to parse non-special urls after 124, and android 15 ships 124, so
+		// there `com.earthapp.sky://invite/x` comes back with an empty host and `//invite/x` as the
+		// path; split the authority off by hand or every custom-scheme link resolves as external
+		let host = parsed.host.toLowerCase();
+		let rawPath = parsed.pathname;
+		if (isCustomScheme && !host && rawPath.startsWith('//')) {
+			const rest = rawPath.slice(2);
+			const cut = rest.indexOf('/');
+			host = (cut === -1 ? rest : rest.slice(0, cut)).toLowerCase();
+			rawPath = cut === -1 ? '/' : rest.slice(cut);
+		}
 		if (!isCustomScheme && !allowedHosts.value.has(host)) {
 			return { type: 'ignore', target: '' };
 		}
 
-		const pathname = normalizePath(parsed.pathname);
+		const pathname = normalizePath(rawPath);
 		const query = parsed.search || '';
 		const hash = parsed.hash || '';
 
