@@ -259,8 +259,8 @@ build_web() {
 # `ssr: false` bakes the base urls into the entry html, so a bundle built for another lane silently
 # talks to a port with nothing behind it
 assert_bundle_host() {
-	local expected="$1" entry="$ROOT/.output/public/200.html"
-	[ -f "$entry" ] || die 'no .output/public/200.html after the build'
+	local expected="$1" entry="${2:-$ROOT/.output/public/200.html}"
+	[ -f "$entry" ] || die "no $entry after the build"
 	grep -q "$expected" "$entry" \
 		|| die "the bundle was not built for $expected; delete .output and re-run"
 	log "bundle points at $expected"
@@ -353,6 +353,10 @@ run_instrumented() {
 
 	if [ "${NATIVE_SKIP_BUILD:-0}" = '1' ]; then
 		warn 'NATIVE_SKIP_BUILD=1; reusing whatever is already in android/app/src/main/assets/public'
+		# a bundle built for another lane points at production and cannot reach the mocks or the
+		# observation bus, which reads as "no breadcrumb arrived" rather than as the wrong bundle
+		assert_bundle_host "$(url_authority "$api_url")" \
+			"$ANDROID_DIR/app/src/main/assets/public/200.html"
 	else
 		build_web "$dotenv"
 		assert_bundle_host "$(url_authority "$api_url")"

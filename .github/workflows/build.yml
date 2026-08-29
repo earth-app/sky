@@ -312,10 +312,6 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     needs: [unit, build-ios]
-    # nightly + manual only. github's hosted ios simulators render in software and time the job out
-    # (actions/runner-images#3239) at 3 vCPU / 7 GB, so gating every commit on a device lane blocks
-    # merges on a hardware limit. the no-device tiers (native-logic-ios, native-unit-android) gate
-    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
       packages: read
@@ -483,8 +479,6 @@ jobs:
           exit 0
       - name: Run Native Instrumented Tests (Android Emulator)
         uses: reactivecircus/android-emulator-runner@v2
-        env:
-          NATIVE_SKIP_BUILD: '1'
         with:
           api-level: 35
           target: google_apis
