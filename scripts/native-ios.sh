@@ -72,9 +72,11 @@ usage: scripts/native-ios.sh [logic|unit|ui|all]
 AppTests is hosted by App (StoreKit and the other bundle-scoped frameworks resolve nothing
 without it), so this tier builds and launches the app.
 
-NATIVE_IOS_DEVICE=<udid> pins the simulator. Worth setting: the newest runtime is picked by
-default, and a runtime whose StoreKit test daemon is broken skips the StoreKit suite - see
-StoreKitEnvironmentTests for the control.
+NATIVE_IOS_DEVICE=<udid> pins the simulator, NATIVE_IOS_RUNTIME=<version> pins the runtime it
+sits on. Worth setting: the newest runtime is picked by default, and a runtime whose StoreKit
+test daemon is broken skips the StoreKit suite - see StoreKitEnvironmentTests for the control.
+Measured 2026-08-29 on the same binary: iOS 26.5 answers every SKTestSession call with
+SKInternalErrorDomain Code=3 and an empty storefront, iOS 26.2 passes. CI pins 26.2.
 EOF
 }
 
@@ -211,16 +213,27 @@ assert_bundle_host() {
 # #region simulator
 
 # deliberately NOT "whatever is already booted": an older-runtime simulator left booted breaks
-# the install. NATIVE_IOS_DEVICE overrides it
+# the install. NATIVE_IOS_DEVICE pins a device, NATIVE_IOS_RUNTIME pins the runtime it sits on
 pick_simulator() {
-	local udid=''
+	local udid='' want="${NATIVE_IOS_RUNTIME:-}"
 	if [ -n "${NATIVE_IOS_DEVICE:-}" ]; then
 		printf '%s' "$NATIVE_IOS_DEVICE"
 		return 0
 	fi
-	# runtimes are listed oldest first, so the last iphone is on the newest one available
-	udid="$(xcrun simctl list devices available | grep -E '^[[:space:]]+iPhone' \
-		| grep -Eo '\([0-9A-Fa-f-]{36}\)' | tr -d '()' | tail -1 || true)"
+	if [ -n "$want" ]; then
+		udid="$(xcrun simctl list devices available | awk -v hdr="-- iOS $want --" '
+			$0 == hdr { block = 1; next }
+			/^-- / { block = 0 }
+			block && /^[[:space:]]+iPhone/ { last = $0 }
+			END { print last }
+		' | grep -Eo '\([0-9A-Fa-f-]{36}\)' | tr -d '()' || true)"
+		[ -n "$udid" ] || warn "no iphone on the ios $want runtime; falling back to the newest"
+	fi
+	if [ -z "$udid" ]; then
+		# runtimes are listed oldest first, so the last iphone is on the newest one available
+		udid="$(xcrun simctl list devices available | grep -E '^[[:space:]]+iPhone' \
+			| grep -Eo '\([0-9A-Fa-f-]{36}\)' | tr -d '()' | tail -1 || true)"
+	fi
 	[ -n "$udid" ] || die "no available iphone simulator; create one in Xcode > Devices"
 	printf '%s' "$udid"
 }

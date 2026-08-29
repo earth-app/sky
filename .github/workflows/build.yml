@@ -387,11 +387,13 @@ jobs:
         run: bash scripts/native-ios.sh unit
         env:
           MAESTRO_DERIVED_DATA: ${{ runner.temp }}/derived-data-ios
+          NATIVE_IOS_RUNTIME: '26.2'
       - name: Run Native UI Tests (Simulator)
         timeout-minutes: 40
         run: bash scripts/native-ios.sh ui
         env:
           MAESTRO_DERIVED_DATA: ${{ runner.temp }}/derived-data-ios
+          NATIVE_IOS_RUNTIME: '26.2'
       - name: Archive Native Test Artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
