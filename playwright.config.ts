@@ -34,6 +34,14 @@ const isCI = !!process.env.CI;
 const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:3001';
 const prodServer = process.env.PLAYWRIGHT_PROD === '1';
 
+// rebuild when any source is newer than the bundle; the old guard only checked that the
+// directory existed, and a two-day-old build served that way produced two false regressions
+const E2E_HTML = `${process.env.NITRO_OUTPUT_DIR || '.output-e2e'}/public/index.html`;
+const buildIfStale =
+	`test -f ${E2E_HTML} ` +
+	`&& test -z "$(find src nuxt.config.ts package.json -newer ${E2E_HTML} -print -quit)" ` +
+	`|| bun run build:e2e`;
+
 const chromiumArgs = [
 	'--disable-background-timer-throttling',
 	'--disable-backgrounding-occluded-windows',
@@ -65,12 +73,11 @@ export default defineConfig<ConfigOptions>({
 	webServer: {
 		// the e2e lane builds into its own .output-e2e so a concurrent native build
 		// into .output cannot swap the bundle out from under a running static server
-		command: prodServer
-			? 'test -d "${NITRO_OUTPUT_DIR:-.output-e2e}/public" || bun run build:e2e && bun run serve:test'
-			: 'bun run dev:test',
+		command: prodServer ? `${buildIfStale} && bun run serve:test` : 'bun run dev:test',
 		url: BASE_URL,
 		reuseExistingServer: !isCI,
-		timeout: prodServer ? 360_000 : 240_000,
+		// prod has to cover a cold `build:e2e`, which runs past six minutes on its own
+		timeout: prodServer ? 900_000 : 240_000,
 		stdout: 'pipe',
 		stderr: 'pipe'
 	},
