@@ -147,8 +147,11 @@ test.describe('Event management', () => {
 		await gotoHydrated('/tabs/events/evt-1');
 
 		await expect(page.locator('#event-profile-card')).toBeVisible({ timeout: 12_000 });
+		// the header control is an IonButton with router-link, so it lands in the tree as a
+		// link; /manage|settings/i used to match the card's own Manage button instead
 		await page
-			.getByRole('button', { name: /manage|settings/i })
+			.getByRole('link', { name: 'Manage Event' })
+			.filter({ visible: true })
 			.first()
 			.click();
 
