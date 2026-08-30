@@ -49,12 +49,16 @@ const onCapture = vi.fn();
 let minLength = 10;
 let disabled = false;
 
+const live: ReturnType<typeof useAudioRecorder>[] = [];
+
 function makeRecorder() {
-	return useAudioRecorder({
+	const r = useAudioRecorder({
 		minLength: () => minLength,
 		disabled: () => disabled,
 		onCapture
 	});
+	live.push(r);
+	return r;
 }
 
 /** init -> ready -> recording, so the recording-stage cases start where they mean to. */
@@ -89,8 +93,12 @@ beforeEach(() => {
 	fs.deleteFile.mockResolvedValue(undefined);
 });
 
-afterEach(() => {
+// the component disposes on unmount; a spec that never does leaves a real 100ms amplitude
+// interval polling into later tests, which lands as one stray getCurrentAmplitude call on a
+// loaded machine. real timers first, so clearInterval matches the clock the interval was made on
+afterEach(async () => {
 	vi.useRealTimers();
+	while (live.length) await live.pop()?.dispose();
 });
 
 describe('shapeAmplitude', () => {
