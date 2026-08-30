@@ -58,6 +58,8 @@ public class PermissionTest {
     /** a bound, not a rule: no android build needs more than a couple of refusals to fix a denial */
     private static final int MAX_REFUSALS = 4;
 
+    private static final String PERMISSION_UI = "com.google.android.permissioncontroller";
+
     private static final Pattern DENY = Pattern.compile("(?i)^(don.t allow|deny)$");
     private static final Pattern ALLOW = Pattern.compile("(?i)^(allow|while using the app)$");
 
@@ -82,6 +84,7 @@ public class PermissionTest {
 
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             AppUnderTest.awaitJs(scenario, "document.readyState === 'complete'", AppUnderTest.BOOT_TIMEOUT_MS);
+            clearBootPermissionDialog();
 
             // rung 1 - never asked: the os offers the dialog
             UiObject2 deny = requestAndWaitFor(scenario, permission, DENY, DIALOG_TIMEOUT_MS);
@@ -154,6 +157,9 @@ public class PermissionTest {
         Assume.assumeFalse(granted(permission));
 
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            AppUnderTest.awaitJs(scenario, "document.readyState === 'complete'", AppUnderTest.BOOT_TIMEOUT_MS);
+            clearBootPermissionDialog();
+
             // a bounded retry, not a single tap: the location dialog animates in on a software
             // renderer and a click landed during that animation is swallowed, which reads exactly
             // like a grant that did not stick
@@ -178,7 +184,6 @@ public class PermissionTest {
         ) == PackageManager.PERMISSION_GRANTED;
     }
 
-    /** fires the request through the real activity and returns the matching dialog button, or null */
     /**
      * The OS dialog re-renders while it animates in, which invalidates a node found a moment
      * earlier and throws StaleObjectException on click. Re-find and retry rather than fail.
@@ -198,6 +203,27 @@ public class PermissionTest {
         return false;
     }
 
+    /**
+     * The web layer asks for POST_NOTIFICATIONS while it boots. Android answers a second request
+     * with "Can request only one set of permissions at a time", shows nothing and returns no error,
+     * so the test's own dialog never appears and reads as "the os never prompted". Dismiss whatever
+     * boot raised before asking for ours.
+     */
+    private void clearBootPermissionDialog() {
+        // exactly one: boot raises a single POST_NOTIFICATIONS prompt, and draining further dialogs
+        // would eat the ones this test raises itself and corrupt its refusal count
+        if (device.wait(Until.findObject(By.pkg(PERMISSION_UI)), 5_000L) == null) return;
+        UiObject2 dismiss = device.findObject(By.text(DENY));
+        if (dismiss == null) return;
+        try {
+            dismiss.click();
+        } catch (StaleObjectException stale) {
+            // the dialog went away on its own between the find and the tap
+        }
+        device.waitForIdle();
+    }
+
+    /** fires the request through the real activity and returns the matching dialog button, or null */
     private UiObject2 requestAndWaitFor(
         ActivityScenario<MainActivity> scenario,
         String permission,
