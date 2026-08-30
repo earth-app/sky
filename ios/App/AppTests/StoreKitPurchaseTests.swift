@@ -78,18 +78,30 @@ final class StoreKitPurchaseTests: XCTestCase {
 	}
 
 	/// The group's own view of what is subscribed, which is what the single-tier account model reads.
+	/// `activeProductID` matters when a purchase REPLACES another inside the group: the count is
+	/// already 1 from the tier being replaced, so waiting on the count alone returns the old tier.
 	private func waitForSubscribedCount(
 		_ expected: Int,
 		in subscription: Product.SubscriptionInfo,
+		activeProductID: String? = nil,
 		attempts: Int = 40
 	) async -> [Product.SubscriptionInfo.Status] {
 		var latest: [Product.SubscriptionInfo.Status] = []
 		for _ in 0 ..< attempts {
 			latest = ((try? await subscription.status) ?? []).filter { $0.state == .subscribed }
-			if latest.count == expected { return latest }
+			if latest.count == expected, Self.activeMatches(latest, activeProductID) { return latest }
 			try? await Task.sleep(nanoseconds: 50_000_000)
 		}
 		return latest
+	}
+
+	private static func activeMatches(
+		_ statuses: [Product.SubscriptionInfo.Status],
+		_ productID: String?
+	) -> Bool {
+		guard let productID else { return true }
+		guard case .verified(let transaction) = statuses.first?.transaction else { return false }
+		return transaction.productID == productID
 	}
 
 	override func setUp() async throws {
@@ -316,7 +328,11 @@ final class StoreKitPurchaseTests: XCTestCase {
 		let writerProducts = try await Product.products(for: [Self.writerID])
 		let writer = try XCTUnwrap(writerProducts.first)
 		let subscription = try XCTUnwrap(writer.subscription)
-		let subscribed = await waitForSubscribedCount(1, in: subscription)
+		let subscribed = await waitForSubscribedCount(
+			1,
+			in: subscription,
+			activeProductID: Self.writerID
+		)
 
 		XCTAssertEqual(subscribed.count, 1, "one group must yield exactly one active tier")
 		guard case .verified(let current) = try XCTUnwrap(subscribed.first).transaction else {
