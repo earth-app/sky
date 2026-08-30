@@ -194,6 +194,11 @@ public class PermissionTest {
             if (node == null) return false;
             try {
                 node.click();
+                // the grant result reaches the app asynchronously: reading granted() or
+                // shouldShowRationale() while the dialog is still tearing down answers from the
+                // state before the tap, and firing the next request there is rejected outright
+                device.wait(Until.gone(By.pkg(PERMISSION_UI)), timeoutMs);
+                device.waitForIdle();
                 return true;
             } catch (StaleObjectException stale) {
                 device.waitForIdle();
@@ -220,6 +225,7 @@ public class PermissionTest {
         } catch (StaleObjectException stale) {
             // the dialog went away on its own between the find and the tap
         }
+        device.wait(Until.gone(By.pkg(PERMISSION_UI)), DIALOG_TIMEOUT_MS);
         device.waitForIdle();
     }
 
@@ -230,6 +236,9 @@ public class PermissionTest {
         Pattern button,
         long timeoutMs
     ) {
+        // android rejects a request made while another dialog is still up, with a log line the
+        // test cannot see and no dialog of its own
+        device.wait(Until.gone(By.pkg(PERMISSION_UI)), timeoutMs);
         scenario.onActivity(activity ->
             ActivityCompat.requestPermissions(activity, new String[] { permission }, 4242)
         );
