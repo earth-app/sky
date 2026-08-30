@@ -14,6 +14,7 @@ import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.uiautomator.By;
+import androidx.test.uiautomator.StaleObjectException;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
@@ -85,7 +86,8 @@ public class PermissionTest {
             // rung 1 - never asked: the os offers the dialog
             UiObject2 deny = requestAndWaitFor(scenario, permission, DENY, DIALOG_TIMEOUT_MS);
             assertNotNull("no OS permission dialog appeared for " + permission, deny);
-            deny.click();
+            assertTrue("the deny button went stale before it could be tapped",
+                tap(deny, DENY, DIALOG_TIMEOUT_MS));
             device.waitForIdle();
             assertFalse("a refused permission must not read as granted", granted(permission));
 
@@ -104,7 +106,7 @@ public class PermissionTest {
             while (shouldShowRationale(scenario, permission) && refusals < MAX_REFUSALS) {
                 UiObject2 again = requestAndWaitFor(scenario, permission, DENY, DIALOG_TIMEOUT_MS);
                 if (again == null) break;
-                again.click();
+                if (!tap(again, DENY, DIALOG_TIMEOUT_MS)) break;
                 device.waitForIdle();
                 refusals++;
             }
@@ -129,7 +131,7 @@ public class PermissionTest {
             device.wait(Until.gone(By.text(DENY)), DIALOG_TIMEOUT_MS);
             UiObject2 lingering = requestAndWaitFor(scenario, permission, DENY, NO_DIALOG_SETTLE_MS);
             if (lingering != null) {
-                lingering.click();
+                tap(lingering, DENY, DIALOG_TIMEOUT_MS);
                 device.waitForIdle();
             }
             assertFalse("a permanently refused permission became granted", granted(permission));
@@ -161,7 +163,7 @@ public class PermissionTest {
                 if (allow == null) continue;
                 sawDialog = true;
                 device.waitForIdle();
-                allow.click();
+                tap(allow, ALLOW, DIALOG_TIMEOUT_MS);
                 AppUnderTest.awaitTrue(() -> granted(permission), DIALOG_TIMEOUT_MS);
             }
             assertTrue("no OS permission dialog ever appeared for " + permission, sawDialog);
@@ -177,6 +179,25 @@ public class PermissionTest {
     }
 
     /** fires the request through the real activity and returns the matching dialog button, or null */
+    /**
+     * The OS dialog re-renders while it animates in, which invalidates a node found a moment
+     * earlier and throws StaleObjectException on click. Re-find and retry rather than fail.
+     */
+    private boolean tap(UiObject2 found, Pattern button, long timeoutMs) {
+        UiObject2 node = found;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            if (node == null) return false;
+            try {
+                node.click();
+                return true;
+            } catch (StaleObjectException stale) {
+                device.waitForIdle();
+                node = device.wait(Until.findObject(By.text(button)), timeoutMs);
+            }
+        }
+        return false;
+    }
+
     private UiObject2 requestAndWaitFor(
         ActivityScenario<MainActivity> scenario,
         String permission,

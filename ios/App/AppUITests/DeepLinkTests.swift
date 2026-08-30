@@ -19,19 +19,29 @@ final class DeepLinkTests: XCTestCase {
         XCUIDevice.shared.system.open(URL(string: url)!)
     }
 
-    // warm: the app is already running, so the link arrives through scene(_:openURLContexts:)
-    func testWarmLinkBringsTheAppBackToTheForeground() {
+    // warm: the app is already running, so the link arrives through scene(_:openURLContexts:).
+    //
+    // measured 2026-08-30 on the iOS 26.2 simulator under Xcode 26.6: `state` answers
+    // runningForeground for every app at once, springboard included, so it cannot witness the
+    // backgrounding - `wait(for: .runningBackground)` never succeeds and `wait(for:
+    // .runningForeground)` passes vacuously. the home press stays for realism and the bus, which
+    // reports the route the app actually took, carries the assertion
+    func testWarmLinkBringsTheAppBackToTheForeground() throws {
+        try requireTestBus()
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 90))
-        _ = app.webViews.firstMatch.waitForExistence(timeout: 90)
+        _ = try TestBus.waitForEvents(named: "boot.resolved", timeout: 90)
 
         XCUIDevice.shared.press(.home)
-        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 30))
+        Thread.sleep(forTimeInterval: 2)
 
         open("\(scheme)://tabs/dashboard")
+        let received = try TestBus.waitForEvents(named: "deeplink.resolved", timeout: 60)
+        let targets = received.compactMap { $0.data?["target"] }
         XCTAssertTrue(
-            app.wait(for: .runningForeground, timeout: 60),
-            "the custom scheme did not bring the app forward; check CFBundleURLSchemes"
+            targets.contains { $0.contains("/tabs/dashboard") },
+            "a warm link resolved \(targets) instead of /tabs/dashboard; check CFBundleURLSchemes "
+                + "and scene(_:openURLContexts:)"
         )
     }
 
