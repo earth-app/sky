@@ -1,4 +1,15 @@
-import type { Page, Route } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import {
+	avatarStates,
+	expectNoPlaceholderWobble,
+	FALLBACK_SRC,
+	PHOTO_ROUTE,
+	PNG_8X8,
+	readAvatarTrace,
+	servePhoto,
+	servePhotoMissing,
+	traceAvatars
+} from './utils/avatar-trace';
 import { expect, integrationMode, skipIfIntegration, test } from './utils/fixtures';
 import { gotoTab } from './utils/journey-helpers';
 import { MANTLE_PORT } from './utils/mock-server';
@@ -6,25 +17,21 @@ import { installNativeMock } from './utils/native-mock';
 
 /**
  * GET /v2/users/{id}/profile_photo is the request most likely to lose a cold-launch race on a
- * phone, and the avatar store used to record any failure as permanent - so one blip pinned the
- * header to the static earth placeholder for the whole session and told the onboarding checklist
- * the user had no photo. These drive the real header avatar through the failure shapes the
- * endpoint actually produces.
+ * phone, and the avatar store used to treat any failure as permanent - one blip pinned the header
+ * to the static placeholder for the whole session. It also cleared its failure flags on entry, so
+ * the mount handlers that call fetchAvatarBlobs directly republished "we don't know yet" over a
+ * verdict already reached, and the avatar swung between the placeholder and an untested photo url
+ * that renders as an empty circle.
+ *
+ * These record the whole src sequence across tab navigation rather than sampling one moment,
+ * because a flicker is a transition and no single assertion can see it.
  *
  * The blob fetch and the <img> load are separate transports on device (the fetch goes through
- * Capacitor's proxy, the image through the webview's own loader), so the route handler fails
- * only the fetch and always serves bytes to the image - the same asymmetry the recovery relies on.
+ * Capacitor's proxy, the image through the webview's own loader), so the handlers fail only the
+ * fetch and always serve bytes to the image - the asymmetry the fall-through relies on.
  */
 
-// 8x8, not 1x1: WebKit refuses to decode a 1x1 png served over a blob url, which makes
-// naturalWidth 0 for a photo that loaded perfectly well
-const PNG_8X8 = Buffer.from(
-	'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEUlEQVR4nGNgaHD4jxePDAUAS79vwTwEAxsAAAAASUVORK5CYII=',
-	'base64'
-);
-
-const PHOTO_ROUTE = /\/profile_photo(\?|$)/;
-const FALLBACK_SRC = /\/(favicon|earth-app)\.png/;
+const AVATAR_CONTAINER = 'a[aria-label="Open Your Profile"]';
 
 const headerAvatar = (page: Page) => page.locator('a[aria-label="Open Your Profile"] img').first();
 
@@ -38,51 +45,52 @@ function photoUser(testId: string) {
 	};
 }
 
-/** Fail the first `failFetches` blob fetches; always serve real bytes to an <img> load. */
-async function servePhoto(page: Page, failFetches = 0, status = 503) {
-	const counts = { fetches: 0, images: 0 };
-
-	await page.route(PHOTO_ROUTE, async (route: Route) => {
-		const isImage = route.request().resourceType() === 'image';
-		if (isImage) {
-			counts.images++;
-			return route.fulfill({ status: 200, contentType: 'image/png', body: PNG_8X8 });
-		}
-
-		counts.fetches++;
-		if (counts.fetches <= failFetches) {
-			return route.fulfill({ status, contentType: 'text/plain', body: 'upstream error' });
-		}
-		return route.fulfill({ status: 200, contentType: 'image/png', body: PNG_8X8 });
-	});
-
-	return counts;
+// the dashboard's leaderboard widget calls fetchAvatarBlobs for every row, bypassing safeUrl's
+// retry gate, so the signed-in user has to be ON the board for their own url to get re-probed.
+// intercepted at the page rather than on the shared mock server, whose overrides reset globally
+// between tests and so cannot survive a parallel run
+async function seedLeaderboardWith(page: Page, userId: string) {
+	await page.route(/\/api\/user\/leaderboard/, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify([
+				{ id: userId, streak: 1500 },
+				{ id: 'author-1', streak: 1200 },
+				{ id: 'host-1', streak: 900 }
+			])
+		})
+	);
 }
 
-/**
- * Sample the src across a window rather than waiting for one good reading. The regression this
- * guards flipped to the placeholder only AFTER the fetch round settled, so a single early
- * assertion caught the remote url still on its way and passed against the broken store.
- */
+async function settle(page: Page) {
+	await expect(headerAvatar(page)).toBeVisible({ timeout: 12_000 });
+	await page.waitForTimeout(2_000);
+}
+
+// a reload rebuilds the store, so a settled verdict would never meet the mount handlers that
+// re-probe it. an in-SPA route change keeps the pinia store warm, which is where the flicker lives
+async function spaGoto(page: Page, path: string) {
+	await page.evaluate((p) => (window as any).useNuxtApp?.().$router?.push(p), path);
+	await expect(page).toHaveURL(new RegExp(path.replace(/[@/]/g, '.')), { timeout: 12_000 });
+	// only the dashboard carries the header avatar, so wait on the route settling rather than on it
+	await page.waitForTimeout(2_000);
+}
+
 async function expectRealPhoto(page: Page) {
 	const img = headerAvatar(page);
 	await expect(img).toBeVisible({ timeout: 12_000 });
-
-	for (let sample = 0; sample < 8; sample++) {
-		await page.waitForTimeout(250);
-		const src = await img.getAttribute('src');
-		expect(src, `src at sample ${sample}`).not.toMatch(FALLBACK_SRC);
-	}
-
+	await expect(img).not.toHaveAttribute('src', FALLBACK_SRC, { timeout: 12_000 });
 	await expect
 		.poll(async () => img.evaluate((el: HTMLImageElement) => el.naturalWidth), { timeout: 12_000 })
 		.toBeGreaterThan(0);
 }
 
 test.describe('Profile photo resilience', () => {
-	test.beforeEach(async ({ context }) => {
+	test.beforeEach(async ({ context, page }) => {
 		skipIfIntegration('drives injected profile_photo failures');
 		await installNativeMock(context, { platform: 'ios' });
+		await traceAvatars(page, AVATAR_CONTAINER);
 	});
 
 	test('a healthy endpoint renders the photo, never the placeholder', async ({
@@ -96,6 +104,8 @@ test.describe('Profile photo resilience', () => {
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await expectRealPhoto(page);
+
+		expectNoPlaceholderWobble(await readAvatarTrace(page));
 
 		// three sizes, one request each - a dashboard full of cards must not multiply that
 		expect(counts.fetches).toBeLessThanOrEqual(3);
@@ -114,6 +124,7 @@ test.describe('Profile photo resilience', () => {
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await expectRealPhoto(page);
 		await expect(headerAvatar(page)).toHaveAttribute('src', /^blob:/, { timeout: 12_000 });
+		expectNoPlaceholderWobble(await readAvatarTrace(page));
 	});
 
 	test('a failure that outlasts the retries still shows the photo via the remote url', async ({
@@ -142,44 +153,45 @@ test.describe('Profile photo resilience', () => {
 			await asUser(photoUser(testId));
 
 			await gotoTab(page, gotoHydrated, '/tabs/dashboard');
-			await expectRealPhoto(page);
+			await settle(page);
+
+			await expect(headerAvatar(page)).not.toHaveAttribute('src', FALLBACK_SRC);
+			expectNoPlaceholderWobble(await readAvatarTrace(page));
 		});
 	}
 
-	// safeUrl() runs inside a computed and kicks off its own fetch, so a failure that keeps
-	// re-rendering the header can drive an unbounded fetch/render loop against the endpoint
-	test('a persistently failing endpoint is not hammered', async ({
+	test('a user with no photo settles on the placeholder and stays there', async ({
 		page,
 		asUser,
 		testId,
 		gotoHydrated
 	}) => {
-		const counts = await servePhoto(page, 99);
-		await asUser(photoUser(testId));
+		const counts = await servePhotoMissing(page);
+		const user = photoUser(testId);
+		await seedLeaderboardWith(page, user.id);
+		await asUser(user);
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
-		await expect(headerAvatar(page)).toBeVisible({ timeout: 12_000 });
+		await settle(page);
+
+		// the verdict is reached once: three sizes, no retry on a 4xx. every mount handler after
+		// that must read the settled state rather than re-probing
+		const afterFirstLoad = counts.fetches;
+		expect(afterFirstLoad).toBeLessThanOrEqual(3);
 		await page.waitForTimeout(4_000);
+		expect(counts.fetches, 'the endpoint was re-probed after settling').toBe(afterFirstLoad);
 
-		// three sizes, two attempts each, and then the retry window holds it off
-		expect(counts.fetches).toBeLessThanOrEqual(6);
-	});
+		// sky gates first paint on auth, so the header avatar mounts AFTER the store has answered
+		// and cannot show the wobble crust does. the journey still guards the invariant for any
+		// future surface that calls fetchAvatarBlobs directly the way MMiniLeaderboard does
+		await spaGoto(page, `/tabs/profile/@${user.username}`);
+		await spaGoto(page, '/tabs/dashboard');
+		await settle(page);
 
-	test('a 404 is the one failure that does fall back', async ({
-		page,
-		asUser,
-		testId,
-		gotoHydrated
-	}) => {
-		// mantle2 answers 404 for a user who never generated a photo; that must stay the
-		// "no custom avatar" signal the onboarding checklist reads
-		await page.route(PHOTO_ROUTE, (route) =>
-			route.fulfill({ status: 404, contentType: 'application/json', body: '{"code":404}' })
-		);
-		await asUser(photoUser(testId));
-
-		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
-		await expect(headerAvatar(page)).toHaveAttribute('src', FALLBACK_SRC, { timeout: 12_000 });
+		const trace = await readAvatarTrace(page);
+		expect(trace.length, 'no avatar src was recorded').toBeGreaterThan(0);
+		expectNoPlaceholderWobble(trace);
+		await expect(headerAvatar(page)).toHaveAttribute('src', FALLBACK_SRC);
 	});
 
 	test('a size that 500s does not blank the sizes that loaded', async ({
@@ -201,55 +213,59 @@ test.describe('Profile photo resilience', () => {
 		await expectRealPhoto(page);
 	});
 
-	test('the photo survives leaving the tab and coming back', async ({
+	test('each avatar element takes at most a couple of srcs across a tab journey', async ({
 		page,
 		asUser,
 		testId,
 		gotoHydrated
 	}) => {
 		await servePhoto(page, 3);
-		await asUser(photoUser(testId));
+		const user = photoUser(testId);
+		await seedLeaderboardWith(page, user.id);
+		await asUser(user);
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
-		await expectRealPhoto(page);
+		await settle(page);
+		await spaGoto(page, `/tabs/profile/@${user.username}`);
+		await spaGoto(page, '/tabs/dashboard');
+		await settle(page);
 
-		await gotoTab(page, gotoHydrated, '/tabs/discover');
-		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
-		await expectRealPhoto(page);
+		const trace = await readAvatarTrace(page);
+		const ids = [...new Set(trace.map((entry) => entry.id))];
+		expect(ids.length).toBeGreaterThan(0);
+
+		for (const id of ids) {
+			const states = avatarStates(trace, id);
+			// photo url, then at most one settle (blob or placeholder). more is oscillation
+			expect(states.length, `img#${id}: ${states.join(' -> ')}`).toBeLessThanOrEqual(2);
+		}
 	});
 });
 
-// runs only against real mantle2 + cloud; proves the endpoint itself is consistent and that
+// runs only against real mantle2 + cloud; proves the published avatar_url is routable and that
 // nothing in the shipped client turns a live photo into the placeholder
 test.describe('Profile photo against the real backend', () => {
 	test.skip(!integrationMode, 'integration lane only');
 
-	test('the header avatar loads bytes from the live endpoint', async ({
+	test('the published avatar_url is routable and renders bytes', async ({
 		page,
 		asUser,
 		gotoHydrated
 	}) => {
+		await traceAvatars(page, AVATAR_CONTAINER);
 		await asUser();
 
-		const responses: number[] = [];
+		const statuses: number[] = [];
 		page.on('response', (res) => {
-			if (PHOTO_ROUTE.test(res.url())) responses.push(res.status());
+			if (PHOTO_ROUTE.test(res.url())) statuses.push(res.status());
 		});
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
-		await expect(headerAvatar(page)).toBeVisible({ timeout: 12_000 });
+		await settle(page);
 
-		// whatever the account has, the endpoint must answer decisively - never a 5xx
-		await expect.poll(() => responses.length, { timeout: 15_000 }).toBeGreaterThan(0);
-		expect(responses.filter((s) => s >= 500)).toEqual([]);
-
-		const src = await headerAvatar(page).getAttribute('src');
-		if (!FALLBACK_SRC.test(src ?? '')) {
-			await expect
-				.poll(async () => headerAvatar(page).evaluate((el: HTMLImageElement) => el.naturalWidth), {
-					timeout: 12_000
-				})
-				.toBeGreaterThan(0);
-		}
+		await expect.poll(() => statuses.length, { timeout: 15_000 }).toBeGreaterThan(0);
+		// a 404 here means the url the API publishes does not match the route it points at
+		expect(statuses.filter((status) => status >= 400)).toEqual([]);
+		expectNoPlaceholderWobble(await readAvatarTrace(page));
 	});
 });
