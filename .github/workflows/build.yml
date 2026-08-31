@@ -175,7 +175,7 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       # the script runs `cap update android` itself when the gitignored capacitor gradle modules
       # are missing, which needs the node deps present first
       - name: Install dependencies
