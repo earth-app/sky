@@ -107,8 +107,12 @@ test.describe('Profile photo resilience', () => {
 
 		expectNoPlaceholderWobble(await readAvatarTrace(page));
 
-		// three sizes, one request each - a dashboard full of cards must not multiply that
-		expect(counts.fetches).toBeLessThanOrEqual(3);
+		// three sizes per page load, and gotoHydrated warms at '/' before pushing to the tab -
+		// so two loads is normal and anything beyond that is the store multiplying by card count
+		expect(counts.fetches).toBeLessThanOrEqual(6);
+		const settled = counts.fetches;
+		await page.waitForTimeout(3_000);
+		expect(counts.fetches, 'the endpoint was re-probed after settling').toBe(settled);
 	});
 
 	test('a blip on every size recovers without a reload', async ({
@@ -174,10 +178,11 @@ test.describe('Profile photo resilience', () => {
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await settle(page);
 
-		// the verdict is reached once: three sizes, no retry on a 4xx. every mount handler after
-		// that must read the settled state rather than re-probing
+		// the verdict is reached once per page load: three sizes, no retry on a 4xx. gotoHydrated
+		// warms at '/' before pushing to the tab, so two loads is normal. what must NOT happen is
+		// any further probe once the answer is in
 		const afterFirstLoad = counts.fetches;
-		expect(afterFirstLoad).toBeLessThanOrEqual(3);
+		expect(afterFirstLoad).toBeLessThanOrEqual(6);
 		await page.waitForTimeout(4_000);
 		expect(counts.fetches, 'the endpoint was re-probed after settling').toBe(afterFirstLoad);
 
