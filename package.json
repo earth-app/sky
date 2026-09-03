@@ -79,7 +79,7 @@
 		"@earth-app/crust": "0.7.0",
 		"@ionic/pwa-elements": "^3.4.0",
 		"@ionic/vue": "8.8.13",
-		"@ionic/vue-router": "8.8.13",
+		"@ionic/vue-router": "9.0.2",
 		"@nuxt/icon": "^2.4.1",
 		"@nuxt/image": "^2.1.0",
 		"@nuxt/ui": "^4.10.0",
@@ -104,7 +104,7 @@
 	"overrides": {
 		"@ionic/core": "8.8.13",
 		"@ionic/vue": "8.8.13",
-		"@ionic/vue-router": "8.8.13",
+		"@ionic/vue-router": "9.0.2",
 		"sharp": "^0.35.3"
 	},
 	"patchedDependencies": {
