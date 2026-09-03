@@ -102,7 +102,7 @@
 		"vue": "^3.5.41"
 	},
 	"overrides": {
-		"@ionic/core": "8.8.13",
+		"@ionic/core": "9.0.2",
 		"@ionic/vue": "8.8.13",
 		"@ionic/vue-router": "8.8.13",
 		"sharp": "^0.35.3"
