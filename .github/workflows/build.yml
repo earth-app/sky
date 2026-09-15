@@ -173,7 +173,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '25.0.4+101.0.LTS'
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
       # the script runs `cap update android` itself when the gitignored capacitor gradle modules
@@ -331,7 +331,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '25.0.4+101.0.LTS'
       - name: Install dependencies
         run: |
           bun install --frozen-lockfile
@@ -429,7 +429,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '25.0.4+101.0.LTS'
       - name: Install dependencies
         run: |
           bun install --frozen-lockfile
