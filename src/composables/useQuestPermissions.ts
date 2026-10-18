@@ -72,6 +72,8 @@ export function useQuestPermissions() {
 	}
 
 	async function ensureDeviceMotion(): Promise<boolean> {
+		// Chromium 156+ also defines requestPermission; only iOS actually gates sensor access on it
+		if (Capacitor.getPlatform() !== 'ios') return true;
 		const evt =
 			typeof DeviceMotionEvent !== 'undefined'
 				? (DeviceMotionEvent as unknown as DeviceMotionEventStatic)

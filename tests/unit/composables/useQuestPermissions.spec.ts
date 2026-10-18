@@ -118,6 +118,27 @@ describe('location permission', () => {
 	});
 });
 
+describe('motion permission', () => {
+	const requestPermission = vi.fn();
+
+	beforeEach(() => {
+		requestPermission.mockResolvedValue('denied');
+		vi.stubGlobal('DeviceMotionEvent', { requestPermission });
+	});
+
+	it('asks iOS for the device motion grant', async () => {
+		cap.platform.mockReturnValue('ios');
+		expect(await useQuestPermissions().ensure('motion')).toBe(false);
+		expect(requestPermission).toHaveBeenCalledTimes(1);
+	});
+
+	it('never asks on android, where Chromium 156 also exposes requestPermission', async () => {
+		cap.platform.mockReturnValue('android');
+		expect(await useQuestPermissions().ensure('motion')).toBe(true);
+		expect(requestPermission).not.toHaveBeenCalled();
+	});
+});
+
 describe('notifyDenied', () => {
 	it('names the permission and points at device settings', async () => {
 		await useQuestPermissions().notifyDenied('camera');

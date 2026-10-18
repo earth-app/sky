@@ -509,6 +509,10 @@ export async function installNativeMock(
 			// getter+no-op-setter on registerPlugin makes core's `cap.registerPlugin = ...`
 			// silently no-op so @capacitor/* plugins resolve through OUR registerPlugin.
 			w.CapacitorCustomPlatform = { name: platform };
+			// WKWebView answers the motion prompt itself; headless Chromium would deny it
+			if (platform === 'ios' && typeof DeviceMotionEvent !== 'undefined') {
+				(DeviceMotionEvent as any).requestPermission = () => Promise.resolve('granted');
+			}
 			w.Capacitor = {
 				isNativePlatform: () => true,
 				getPlatform: () => platform,
