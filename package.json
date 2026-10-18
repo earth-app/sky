@@ -105,7 +105,8 @@
 		"@ionic/core": "9.0.8",
 		"@ionic/vue": "9.0.8",
 		"@ionic/vue-router": "9.0.8",
-		"sharp": "^0.35.3"
+		"sharp": "^0.35.3",
+		"typescript": "5.9.3"
 	},
 	"patchedDependencies": {
 		"@capacitor-community/apple-sign-in@7.1.0": "patches/@capacitor-community%2Fapple-sign-in@7.1.0.patch",
@@ -133,6 +134,7 @@
 		"prettier-plugin-sh": "^0.20.2",
 		"prettier-plugin-tailwindcss": "^0.8.1",
 		"tailwindcss": "4.3.3",
+		"typescript": "5.9.3",
 		"v8-to-istanbul": "^9.3.0",
 		"vitest": "5.0.5",
 		"vue-tsc": "^3.3.13",
