@@ -1081,7 +1081,6 @@ function ensureObserversForTarget(element: HTMLElement) {
 
 function ensureGlobalPositionObservers() {
 	window.addEventListener('scroll', updateBoxPosition, true);
-	document.addEventListener('scroll', updateBoxPosition, true);
 	window.addEventListener('resize', updateBoxPosition);
 	window.addEventListener('resize', refreshSafeAreaInsets);
 	for (const eventName of ionicOverlayEvents) {
@@ -1421,7 +1420,6 @@ function destroyTourHighlight() {
 	}
 	if (import.meta.client) {
 		window.removeEventListener('scroll', updateBoxPosition, true);
-		document.removeEventListener('scroll', updateBoxPosition, true);
 		window.removeEventListener('resize', updateBoxPosition);
 		window.removeEventListener('resize', refreshSafeAreaInsets);
 		for (const eventName of ionicOverlayEvents) {

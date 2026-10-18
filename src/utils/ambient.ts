@@ -149,7 +149,7 @@ export function needsCacheRebuild(prev: AmbientCacheKey | null, next: AmbientCac
 }
 
 /** leading shapes the back cache owns: the sky gradient */
-export const AMBIENT_BACK_LAYERS = 1;
+const AMBIENT_BACK_LAYERS = 1;
 /** trailing shapes the front cache owns: two hill bands, the ground, its seam and the vignette */
 export const AMBIENT_FRONT_LAYERS = 5;
 
@@ -267,7 +267,7 @@ export interface AmbientGates {
 }
 
 /** everything open except `live`: nothing paints until the host has a context */
-export const AMBIENT_GATES_INITIAL: AmbientGates = Object.freeze({
+const AMBIENT_GATES_INITIAL: AmbientGates = Object.freeze({
 	visible: true,
 	onScreen: true,
 	onViewport: true,

@@ -8,6 +8,7 @@ import { Toast } from '@capacitor/toast';
 import { CapacitorPedometer, type Measurement } from '@capgo/capacitor-pedometer';
 // explicit: module-scope reactive state cannot rely on auto-import injection
 import { computed, ref, watch } from 'vue';
+import { logInfo } from './useLogger';
 
 interface HealthKitDistancePlugin {
 	isAvailable(): Promise<{ available: boolean }>;
@@ -943,7 +944,7 @@ async function syncNow(stepRef: DistanceStepRef): Promise<number> {
 }
 
 async function cancelFromMigration(stepRef: DistanceStepRef, reason: string): Promise<void> {
-	console.log(`[tracker] cancelling tracking due to cloud migration: ${reason}`);
+	logInfo('tracker', `cancelling tracking due to cloud migration: ${reason}`);
 	await reset(stepRef);
 	try {
 		await Toast.show({ text: 'This step was updated by the cloud; distance tracking stopped.' });
@@ -1146,7 +1147,7 @@ async function syncQuestLiveActivity(force = false): Promise<void> {
 	const uq = activeQuestProgress();
 
 	if (!uq || uq.completed || !uq.quest) {
-		console.log('[quest-la] sync: no active quest, ending any live activity');
+		logInfo('quest-la', 'sync: no active quest, ending any live activity');
 		if (la.hasActive()) await la.end();
 		laQuestId = null;
 		lastQuestLaJson = '';
@@ -1195,7 +1196,7 @@ async function syncQuestLiveActivity(force = false): Promise<void> {
 				}
 				return;
 			}
-			console.log(`[quest-la] sync: starting for ${content.questId} step ${content.stepIndex}`);
+			logInfo('quest-la', `sync: starting for ${content.questId} step ${content.stepIndex}`);
 			// don't mark the quest active unless the activity actually started; otherwise every later
 			// sync takes the no-op update path and never retries (the silent dead-end)
 			const started = await la.start(content);
@@ -1208,7 +1209,7 @@ async function syncQuestLiveActivity(force = false): Promise<void> {
 			laStartInFlight = false;
 		}
 	} else {
-		console.log(`[quest-la] sync: updating step ${content.stepIndex}`);
+		logInfo('quest-la', `sync: updating step ${content.stepIndex}`);
 		await la.update(content);
 	}
 	lastQuestLaJson = json;

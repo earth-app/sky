@@ -1841,7 +1841,6 @@ const userProfileTour: SiteTourStep[] = [
 
 .select-fill-solid {
 	--border-color: transparent;
-	--background: var(--ion-color-background);
 }
 
 .cosmetics-collapse-enter-active,
