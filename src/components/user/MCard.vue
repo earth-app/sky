@@ -18,7 +18,7 @@
 				class="mr-2"
 			>
 				<UAvatar
-					:src="avatar128 || '/earth-app.png'"
+					:src="avatar"
 					alt="User Avatar"
 					class="w-8 h-8 rounded-full object-cover"
 				/>
@@ -117,9 +117,13 @@ const props = defineProps<{
 }>();
 
 const { user: currentUser } = useAuth();
-const { avatar128, fetchAvatar, user: userState, chipColor, fetchUser } = useUser(props.user.id);
+const { fetchAvatar, user: userState, chipColor, fetchUser } = useUser(() => props.user.id);
+const avatarStore = useAvatarStore();
 
 const user = computed(() => userState.value || props.user);
+
+// keyed on the resolved user so the prop's avatar_url paints before the store user loads
+const avatar = computed(() => avatarStore.safeUrl(user.value?.account?.avatar_url, 'avatar128'));
 
 // read off the resolved user, not the prop snapshot, so the name always belongs to the username
 // rendered beside it; `handle` falls back to @username, so it can only carry the aria label

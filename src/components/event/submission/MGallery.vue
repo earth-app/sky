@@ -20,7 +20,7 @@
 
 					<h2 class="font-bold! text-lg! mt-2 mb-0!">
 						<UAvatar
-							:src="item.avatar128.value || '/earth-app.png'"
+							:src="item.avatar128.value"
 							size="sm"
 							class="mr-1"
 						/>
@@ -41,7 +41,7 @@
 						<IonToolbar class="px-2">
 							<IonTitle>
 								<UAvatar
-									:src="item.avatar128.value || '/earth-app.png'"
+									:src="item.avatar128.value"
 									size="sm"
 									class="mr-1"
 								/>
