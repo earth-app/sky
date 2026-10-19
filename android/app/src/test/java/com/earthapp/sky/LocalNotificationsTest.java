@@ -134,7 +134,7 @@ public class LocalNotificationsTest {
         data.put("name", "Quest Reminders");
         TestPluginCall call = new TestPluginCall(data);
         new NotificationChannelManager(context).createChannel(call);
-        call.assertRejected("Channel missing identifier");
+        call.assertRejected("Channel is missing an identifier.");
         assertTrue(context.getSystemService(NotificationManager.class).getNotificationChannels().isEmpty());
     }
 
@@ -144,7 +144,7 @@ public class LocalNotificationsTest {
         data.put("id", "quest-reminders");
         TestPluginCall call = new TestPluginCall(data);
         new NotificationChannelManager(context).createChannel(call);
-        call.assertRejected("Channel missing name");
+        call.assertRejected("Channel is missing a name.");
     }
 
     // #endregion
@@ -301,7 +301,7 @@ public class LocalNotificationsTest {
         );
 
         org.junit.Assert.assertNull("schedule() reported success with notifications disabled", ids);
-        call.assertRejected("Notifications not enabled on this device");
+        call.assertRejected("Notifications are not enabled on this device.");
         assertTrue(alarms().isEmpty());
     }
 
@@ -364,7 +364,7 @@ public class LocalNotificationsTest {
 
         TestPluginCall call = new TestPluginCall(data);
         manager.cancel(call);
-        call.assertRejected("Must provide notifications array as notifications option");
+        call.assertRejected("Must provide a notifications array as the notifications option.");
         assertEquals("an empty cancel wiped a scheduled reminder", 1, alarms().size());
     }
 
@@ -454,7 +454,7 @@ public class LocalNotificationsTest {
 
     private static LocalNotification build(JSObject data) {
         try {
-            return LocalNotification.buildNotificationFromJSObject(data);
+            return LocalNotification.Companion.buildNotificationFromJSObject(data);
         } catch (Exception e) {
             throw new AssertionError("the plugin could not parse the payload the app sends: " + e);
         }
