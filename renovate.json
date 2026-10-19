@@ -5,6 +5,10 @@
 	"packageRules": [
 		{
 			"matchUpdateTypes": ["minor", "patch", "pin", "digest"]
+		},
+		{
+			"matchPackageNames": ["typescript"],
+			"enabled": false
 		}
 	],
 	"hostRules": [
