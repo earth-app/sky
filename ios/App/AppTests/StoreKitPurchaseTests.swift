@@ -54,8 +54,13 @@ final class StoreKitPurchaseTests: XCTestCase {
 	/// The signed payload the app posts to `/v2/subscriptions/iap/apple/verify` lives on the
 	/// VerificationResult, not on the Transaction, so it has to be read back.
 	private func signedPayload(for productID: String) async throws -> String {
-		// bind before unwrapping: XCTUnwrap takes an autoclosure, which cannot contain an await
-		let latest = await Transaction.latest(for: productID)
+		// the store publishes the transaction asynchronously, so a single read can see nothing yet
+		var latest: VerificationResult<Transaction>?
+		for _ in 0 ..< 40 {
+			latest = await Transaction.latest(for: productID)
+			if latest != nil { break }
+			try? await Task.sleep(nanoseconds: 50_000_000)
+		}
 		return try XCTUnwrap(latest).jwsRepresentation
 	}
 
