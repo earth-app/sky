@@ -243,6 +243,9 @@ function preloadHome(destination: string) {
 
 const router = useRouter();
 
+// nuxt re-applies the initial route once it is idle; navigating before that gets undone
+const nuxtReady = new Promise<void>((resolve) => onNuxtReady(resolve));
+
 let navigatingHome = false;
 async function navigateHome(): Promise<boolean> {
 	/* the tab shell immediately fans out into content fetches, so entering it against a dead or
@@ -253,6 +256,7 @@ async function navigateHome(): Promise<boolean> {
 	// another attempt owns the latch; report not-landed rather than claiming this call did it
 	if (navigatingHome) return false;
 	navigatingHome = true;
+	await nuxtReady;
 	const destination = isOfflineEntryMode() ? '/tabs/downloads' : '/tabs/dashboard';
 	preloadHome(destination);
 	void fetchOnboardingState().catch(() => {}); // best-effort; never block navigation
