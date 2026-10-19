@@ -260,17 +260,42 @@ test.describe('Profile photo against the real backend', () => {
 		await traceAvatars(page, AVATAR_CONTAINER);
 		await asUser();
 
-		const statuses: number[] = [];
-		page.on('response', (res) => {
-			if (PHOTO_ROUTE.test(res.url())) statuses.push(res.status());
+		// the api publishes an absolute production url; send it to the backend under test, or a
+		// user that only exists here gets a 404 from production
+		const apiBase = process.env.NUXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8787';
+		await page.route('https://api.earth-app.com/**', async (route) => {
+			const request = route.request();
+			const { pathname, search } = new URL(request.url());
+			const { host: _host, ...headers } = request.headers();
+			const response = await page.request.fetch(`${apiBase}${pathname}${search}`, {
+				method: request.method(),
+				headers,
+				data: request.postDataBuffer() ?? undefined
+			});
+			await route.fulfill({ response });
+		});
+
+		const photos: string[] = [];
+		page.on('response', async (res) => {
+			if (!PHOTO_ROUTE.test(res.url())) return;
+			const headers = await res.request().allHeaders();
+			photos.push(`${res.status()} ${headers.authorization ? 'auth' : 'anon'} ${res.url()}`);
 		});
 
 		await gotoTab(page, gotoHydrated, '/tabs/dashboard');
 		await settle(page);
 
-		await expect.poll(() => statuses.length, { timeout: 15_000 }).toBeGreaterThan(0);
-		// a 404 here means the url the API publishes does not match the route it points at
-		expect(statuses.filter((status) => status >= 400)).toEqual([]);
+		// only the store's authenticated fetches count: a bare <img> request carries no token, and the
+		// api hides a non-public profile from it on purpose
+		await expect
+			.poll(() => photos.filter((photo) => /^2\d\d auth /.test(photo)).length, { timeout: 15_000 })
+			.toBeGreaterThan(0)
+			.catch((error: Error) => {
+				throw new Error(`${error.message}\nphoto requests:\n${photos.join('\n')}`);
+			});
+		// a 4xx here means the url the API publishes does not match the route it points at, or the
+		// backend cannot reach cloud for the bytes
+		expect(photos.filter((photo) => /^[45]\d\d auth /.test(photo))).toEqual([]);
 		expectNoPlaceholderWobble(await readAvatarTrace(page));
 	});
 });
